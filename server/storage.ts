@@ -58,21 +58,27 @@ export class MemStorage implements IStorage {
   }
 
   private initializeData() {
-    // Initialize schools
+    // Initialize schools - Real River Valley Conference members
     const schoolsData = [
-      { name: "Central Valley High", mascot: "Eagles", location: "Riverside, IL", imageUrl: "https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
-      { name: "Westfield Academy", mascot: "Warriors", location: "Westfield, IL", imageUrl: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
-      { name: "Northbrook High", mascot: "Panthers", location: "Northbrook, IL", imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
-      { name: "Southside Prep", mascot: "Falcons", location: "Southside, IL", imageUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
-      { name: "Lincoln Heights", mascot: "Lions", location: "Lincoln, IL", imageUrl: "https://images.unsplash.com/photo-1497486751825-1233686d5d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
-      { name: "Riverside High", mascot: "Wildcats", location: "Riverside, IL", imageUrl: "https://images.unsplash.com/photo-1576495199011-eb94736d05d6?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
-      { name: "Valley View", mascot: "Vikings", location: "Valley View, IL", imageUrl: "https://images.unsplash.com/photo-1554469384-e58fac16e23a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
-      { name: "Maple Grove", mascot: "Bears", location: "Maple Grove, IL", imageUrl: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" },
+      { name: "Beecher High School", mascot: "Bobcats", location: "Beecher, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/beecher-min.png" },
+      { name: "Central High School", mascot: "Comets", location: "Clifton, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/central-min.png" },
+      { name: "Donovan High School", mascot: "Wildcats", location: "Donovan, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/donovan-min1.png" },
+      { name: "Gardner South Wilmington High School", mascot: "Panthers", location: "Gardner, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gsw-min.png" },
+      { name: "Grace Christian Academy", mascot: "Crusaders", location: "Huntley, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gca-min.png" },
+      { name: "Grant Park High School", mascot: "Dragons", location: "Grant Park, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gp-min.png" },
+      { name: "Illinois Lutheran High School", mascot: "Chargers", location: "Crete, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/ill-luth-min.png" },
+      { name: "Momence High School", mascot: "Redskins", location: "Momence, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/momence-min.png" },
+      { name: "St. Anne High School", mascot: "Cardinals", location: "St. Anne, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/stanne-min.png" },
+      { name: "Tri-Point High School", mascot: "Chargers", location: "Cullom, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/tripoint-min.png" },
     ];
 
     schoolsData.forEach(school => {
       const id = this.currentSchoolId++;
-      this.schools.set(id, { ...school, id });
+      this.schools.set(id, { 
+        ...school, 
+        id,
+        imageUrl: school.imageUrl || null
+      });
     });
 
     // Initialize sports
@@ -100,7 +106,13 @@ export class MemStorage implements IStorage {
 
     gamesData.forEach(game => {
       const id = this.currentGameId++;
-      this.games.set(id, { ...game, id });
+      this.games.set(id, { 
+        ...game, 
+        id,
+        homeScore: game.homeScore || null,
+        awayScore: game.awayScore || null,
+        isCompleted: game.isCompleted || false
+      });
     });
 
     // Initialize standings
@@ -117,7 +129,12 @@ export class MemStorage implements IStorage {
 
     standingsData.forEach(standing => {
       const id = this.currentStandingId++;
-      this.standings.set(id, { ...standing, id });
+      this.standings.set(id, { 
+        ...standing, 
+        id,
+        wins: standing.wins || 0,
+        losses: standing.losses || 0
+      });
     });
 
     // Initialize news
@@ -150,7 +167,11 @@ export class MemStorage implements IStorage {
 
     newsData.forEach(article => {
       const id = this.currentNewsId++;
-      this.news.set(id, { ...article, id });
+      this.news.set(id, { 
+        ...article, 
+        id,
+        imageUrl: article.imageUrl || null
+      });
     });
   }
 
@@ -165,7 +186,7 @@ export class MemStorage implements IStorage {
 
   async createSchool(school: InsertSchool): Promise<School> {
     const id = this.currentSchoolId++;
-    const newSchool: School = { ...school, id };
+    const newSchool: School = { ...school, id, imageUrl: school.imageUrl || null };
     this.schools.set(id, newSchool);
     return newSchool;
   }
