@@ -96,12 +96,16 @@ export class MemStorage implements IStorage {
       this.sports.set(id, { ...sport, id });
     });
 
-    // Initialize sample games
+    // Initialize sample games with River Valley Conference schools
     const gamesData = [
       { homeTeamId: 1, awayTeamId: 2, sportId: 1, gameDate: new Date("2024-10-15"), gameTime: "7:00 PM", homeScore: 28, awayScore: 14, isCompleted: true },
-      { homeTeamId: 3, awayTeamId: 5, sportId: 1, gameDate: new Date("2024-10-22"), gameTime: "7:30 PM", homeScore: 21, awayScore: 17, isCompleted: true },
-      { homeTeamId: 6, awayTeamId: 7, sportId: 1, gameDate: new Date("2024-10-29"), gameTime: "7:00 PM", homeScore: null, awayScore: null, isCompleted: false },
-      { homeTeamId: 4, awayTeamId: 8, sportId: 1, gameDate: new Date("2024-11-05"), gameTime: "7:30 PM", homeScore: null, awayScore: null, isCompleted: false },
+      { homeTeamId: 3, awayTeamId: 4, sportId: 1, gameDate: new Date("2024-10-22"), gameTime: "7:30 PM", homeScore: 21, awayScore: 17, isCompleted: true },
+      { homeTeamId: 5, awayTeamId: 6, sportId: 1, gameDate: new Date("2024-10-29"), gameTime: "7:00 PM", homeScore: null, awayScore: null, isCompleted: false },
+      { homeTeamId: 7, awayTeamId: 8, sportId: 1, gameDate: new Date("2024-11-05"), gameTime: "7:30 PM", homeScore: null, awayScore: null, isCompleted: false },
+      { homeTeamId: 9, awayTeamId: 10, sportId: 1, gameDate: new Date("2024-11-12"), gameTime: "7:00 PM", homeScore: null, awayScore: null, isCompleted: false },
+      { homeTeamId: 1, awayTeamId: 3, sportId: 2, gameDate: new Date("2024-12-03"), gameTime: "7:30 PM", homeScore: 65, awayScore: 58, isCompleted: true },
+      { homeTeamId: 2, awayTeamId: 5, sportId: 2, gameDate: new Date("2024-12-10"), gameTime: "7:00 PM", homeScore: 72, awayScore: 64, isCompleted: true },
+      { homeTeamId: 4, awayTeamId: 7, sportId: 2, gameDate: new Date("2024-12-17"), gameTime: "7:30 PM", homeScore: null, awayScore: null, isCompleted: false },
     ];
 
     gamesData.forEach(game => {
@@ -115,16 +119,22 @@ export class MemStorage implements IStorage {
       });
     });
 
-    // Initialize standings
+    // Initialize standings for River Valley Conference schools
     const standingsData = [
-      { schoolId: 1, sportId: 1, wins: 7, losses: 1, season: "2024-2025" },
-      { schoolId: 3, sportId: 1, wins: 6, losses: 2, season: "2024-2025" },
-      { schoolId: 6, sportId: 1, wins: 5, losses: 3, season: "2024-2025" },
-      { schoolId: 5, sportId: 1, wins: 4, losses: 4, season: "2024-2025" },
-      { schoolId: 2, sportId: 2, wins: 12, losses: 2, season: "2024-2025" },
-      { schoolId: 7, sportId: 2, wins: 10, losses: 4, season: "2024-2025" },
-      { schoolId: 8, sportId: 2, wins: 8, losses: 6, season: "2024-2025" },
-      { schoolId: 4, sportId: 2, wins: 7, losses: 7, season: "2024-2025" },
+      // Football standings
+      { schoolId: 1, sportId: 1, wins: 7, losses: 1, season: "2024-2025" }, // Beecher Bobcats
+      { schoolId: 3, sportId: 1, wins: 6, losses: 2, season: "2024-2025" }, // Donovan Wildcats
+      { schoolId: 5, sportId: 1, wins: 5, losses: 3, season: "2024-2025" }, // Grace Christian Crusaders
+      { schoolId: 8, sportId: 1, wins: 4, losses: 4, season: "2024-2025" }, // Momence Redskins
+      { schoolId: 2, sportId: 1, wins: 3, losses: 5, season: "2024-2025" }, // Central Comets
+      { schoolId: 10, sportId: 1, wins: 2, losses: 6, season: "2024-2025" }, // Tri-Point Chargers
+      // Basketball standings
+      { schoolId: 2, sportId: 2, wins: 12, losses: 2, season: "2024-2025" }, // Central Comets
+      { schoolId: 7, sportId: 2, wins: 10, losses: 4, season: "2024-2025" }, // Illinois Lutheran Chargers
+      { schoolId: 1, sportId: 2, wins: 9, losses: 5, season: "2024-2025" }, // Beecher Bobcats
+      { schoolId: 4, sportId: 2, wins: 8, losses: 6, season: "2024-2025" }, // Gardner South Wilmington Panthers
+      { schoolId: 6, sportId: 2, wins: 7, losses: 7, season: "2024-2025" }, // Grant Park Dragons
+      { schoolId: 9, sportId: 2, wins: 5, losses: 9, season: "2024-2025" }, // St. Anne Cardinals
     ];
 
     standingsData.forEach(standing => {
@@ -230,7 +240,13 @@ export class MemStorage implements IStorage {
 
   async createGame(game: InsertGame): Promise<Game> {
     const id = this.currentGameId++;
-    const newGame: Game = { ...game, id };
+    const newGame: Game = { 
+      ...game, 
+      id,
+      homeScore: game.homeScore || null,
+      awayScore: game.awayScore || null,
+      isCompleted: game.isCompleted || false
+    };
     this.games.set(id, newGame);
     return newGame;
   }
@@ -269,7 +285,12 @@ export class MemStorage implements IStorage {
 
   async createStanding(standing: InsertStanding): Promise<Standing> {
     const id = this.currentStandingId++;
-    const newStanding: Standing = { ...standing, id };
+    const newStanding: Standing = { 
+      ...standing, 
+      id,
+      wins: standing.wins || 0,
+      losses: standing.losses || 0
+    };
     this.standings.set(id, newStanding);
     return newStanding;
   }
@@ -294,7 +315,11 @@ export class MemStorage implements IStorage {
 
   async createNews(news: InsertNews): Promise<News> {
     const id = this.currentNewsId++;
-    const newNews: News = { ...news, id };
+    const newNews: News = { 
+      ...news, 
+      id,
+      imageUrl: news.imageUrl || null
+    };
     this.news.set(id, newNews);
     return newNews;
   }
@@ -306,7 +331,12 @@ export class MemStorage implements IStorage {
 
   async createContact(contact: InsertContact): Promise<Contact> {
     const id = this.currentContactId++;
-    const newContact: Contact = { ...contact, id, createdAt: new Date() };
+    const newContact: Contact = { 
+      ...contact, 
+      id, 
+      createdAt: new Date(),
+      school: contact.school || null
+    };
     this.contacts.set(id, newContact);
     return newContact;
   }

@@ -4,7 +4,7 @@ export default function ConferenceOverview() {
   const stats = [
     {
       icon: School,
-      title: "12 Member Schools",
+      title: "10 Member Schools",
       description: "Representing communities across the River Valley region",
       bgColor: "bg-conference-navy"
     },
