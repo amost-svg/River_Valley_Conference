@@ -4,6 +4,8 @@ import {
   type InsertSchool, type InsertSport, type InsertGame, type InsertStanding, 
   type InsertNews, type InsertContact 
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Schools
@@ -342,4 +344,207 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// DatabaseStorage implementation
+export class DatabaseStorage implements IStorage {
+  // Schools
+  async getSchools(): Promise<School[]> {
+    return await db.select().from(schools);
+  }
+
+  async getSchool(id: number): Promise<School | undefined> {
+    const [school] = await db.select().from(schools).where(eq(schools.id, id));
+    return school || undefined;
+  }
+
+  async createSchool(insertSchool: InsertSchool): Promise<School> {
+    const [school] = await db
+      .insert(schools)
+      .values(insertSchool)
+      .returning();
+    return school;
+  }
+
+  // Sports
+  async getSports(): Promise<Sport[]> {
+    return await db.select().from(sports);
+  }
+
+  async getSport(id: number): Promise<Sport | undefined> {
+    const [sport] = await db.select().from(sports).where(eq(sports.id, id));
+    return sport || undefined;
+  }
+
+  async createSport(sport: InsertSport): Promise<Sport> {
+    const [newSport] = await db
+      .insert(sports)
+      .values(sport)
+      .returning();
+    return newSport;
+  }
+
+  // Games
+  async getGames(): Promise<(Game & { homeTeam: School; awayTeam: School; sport: Sport })[]> {
+    const result = await db
+      .select({
+        game: games,
+        homeTeam: schools,
+        sport: sports,
+      })
+      .from(games)
+      .leftJoin(schools, eq(games.homeTeamId, schools.id))
+      .leftJoin(sports, eq(games.sportId, sports.id));
+
+    // Get away teams separately
+    const gamesWithDetails = [];
+    for (const row of result) {
+      const [awayTeam] = await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId));
+      gamesWithDetails.push({
+        ...row.game,
+        homeTeam: row.homeTeam!,
+        awayTeam: awayTeam!,
+        sport: row.sport!,
+      });
+    }
+
+    return gamesWithDetails;
+  }
+
+  async getGamesBySport(sportId: number): Promise<(Game & { homeTeam: School; awayTeam: School; sport: Sport })[]> {
+    const result = await db
+      .select({
+        game: games,
+        homeTeam: schools,
+        sport: sports,
+      })
+      .from(games)
+      .leftJoin(schools, eq(games.homeTeamId, schools.id))
+      .leftJoin(sports, eq(games.sportId, sports.id))
+      .where(eq(games.sportId, sportId));
+
+    // Get away teams separately
+    const gamesWithDetails = [];
+    for (const row of result) {
+      const [awayTeam] = await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId));
+      gamesWithDetails.push({
+        ...row.game,
+        homeTeam: row.homeTeam!,
+        awayTeam: awayTeam!,
+        sport: row.sport!,
+      });
+    }
+
+    return gamesWithDetails;
+  }
+
+  async createGame(game: InsertGame): Promise<Game> {
+    const [newGame] = await db
+      .insert(games)
+      .values(game)
+      .returning();
+    return newGame;
+  }
+
+  async updateGame(id: number, game: Partial<InsertGame>): Promise<Game | undefined> {
+    const [updatedGame] = await db
+      .update(games)
+      .set(game)
+      .where(eq(games.id, id))
+      .returning();
+    return updatedGame || undefined;
+  }
+
+  // Standings
+  async getStandings(): Promise<(Standing & { school: School; sport: Sport })[]> {
+    const result = await db
+      .select({
+        standing: standings,
+        school: schools,
+        sport: sports,
+      })
+      .from(standings)
+      .leftJoin(schools, eq(standings.schoolId, schools.id))
+      .leftJoin(sports, eq(standings.sportId, sports.id));
+
+    return result.map(row => ({
+      ...row.standing,
+      school: row.school!,
+      sport: row.sport!,
+    }));
+  }
+
+  async getStandingsBySport(sportId: number): Promise<(Standing & { school: School; sport: Sport })[]> {
+    const result = await db
+      .select({
+        standing: standings,
+        school: schools,
+        sport: sports,
+      })
+      .from(standings)
+      .leftJoin(schools, eq(standings.schoolId, schools.id))
+      .leftJoin(sports, eq(standings.sportId, sports.id))
+      .where(eq(standings.sportId, sportId));
+
+    const standingsWithDetails = result.map(row => ({
+      ...row.standing,
+      school: row.school!,
+      sport: row.sport!,
+    }));
+
+    // Sort by win percentage
+    return standingsWithDetails.sort((a, b) => {
+      const aWinPct = a.wins / (a.wins + a.losses);
+      const bWinPct = b.wins / (b.wins + b.losses);
+      return bWinPct - aWinPct;
+    });
+  }
+
+  async createStanding(standing: InsertStanding): Promise<Standing> {
+    const [newStanding] = await db
+      .insert(standings)
+      .values(standing)
+      .returning();
+    return newStanding;
+  }
+
+  async updateStanding(id: number, standing: Partial<InsertStanding>): Promise<Standing | undefined> {
+    const [updatedStanding] = await db
+      .update(standings)
+      .set(standing)
+      .where(eq(standings.id, id))
+      .returning();
+    return updatedStanding || undefined;
+  }
+
+  // News
+  async getNews(): Promise<News[]> {
+    return await db.select().from(news);
+  }
+
+  async getNewsById(id: number): Promise<News | undefined> {
+    const [article] = await db.select().from(news).where(eq(news.id, id));
+    return article || undefined;
+  }
+
+  async createNews(newsItem: InsertNews): Promise<News> {
+    const [newNews] = await db
+      .insert(news)
+      .values(newsItem)
+      .returning();
+    return newNews;
+  }
+
+  // Contacts
+  async getContacts(): Promise<Contact[]> {
+    return await db.select().from(contacts);
+  }
+
+  async createContact(contact: InsertContact): Promise<Contact> {
+    const [newContact] = await db
+      .insert(contacts)
+      .values(contact)
+      .returning();
+    return newContact;
+  }
+}
+
+export const storage = new DatabaseStorage();
