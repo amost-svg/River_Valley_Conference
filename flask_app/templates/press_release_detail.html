@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ release.title }} - RVC News{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <article class="card">
+            <div class="card-header">
+                <h1 class="h3 mb-3">{{ release.title }}</h1>
+                <div class="d-flex align-items-center text-muted">
+                    <div class="me-4">
+                        <i class="fas fa-user me-1"></i>
+                        <strong>{{ release.author_name }}</strong>
+                    </div>
+                    <div class="me-4">
+                        <i class="fas fa-school me-1"></i>
+                        {{ release.school_name }}
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar me-1"></i>
+                        {{ release.created_at[:10] }}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="content">
+                    {{ release.content | replace('\n', '<br>') | safe }}
+                </div>
+                
+                {% if release.attachment_filename %}
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6><i class="fas fa-paperclip me-2"></i>Attachment</h6>
+                    <p class="mb-0">
+                        <strong>{{ release.attachment_filename }}</strong>
+                        <br>
+                        <small class="text-muted">Contact the school directly to request this file.</small>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('press_releases') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Back to News
+                </a>
+                
+                <!-- Social sharing buttons -->
+                <div class="float-end">
+                    <span class="me-2">Share:</span>
+                    <a href="https://twitter.com/intent/tweet?text={{ release.title | urlencode }}&url={{ request.url | urlencode }}" target="_blank" class="btn btn-outline-info btn-sm">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url | urlencode }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                </div>
+            </div>
+        </article>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Related News -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-newspaper me-2"></i>
+                    Recent News
+                </h5>
+            </div>
+            <div class="card-body">
+                {% set recent_releases = [] %}
+                {% if recent_releases %}
+                    {% for recent in recent_releases %}
+                    <div class="mb-3">
+                        <h6><a href="{{ url_for('press_release_detail', id=recent.id) }}" class="text-decoration-none">{{ recent.title }}</a></h6>
+                        <small class="text-muted">{{ recent.school_name }} - {{ recent.created_at[:10] }}</small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-muted">No other recent news available.</p>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('press_releases') }}" class="btn btn-outline-primary btn-sm">
+                        View All News
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-phone me-2"></i>
+                    Contact
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>For more information about this news item, please contact:</p>
+                <p class="mb-0">
+                    <strong>{{ release.school_name }}</strong><br>
+                    <small class="text-muted">
+                        Contact information available on the 
+                        <a href="{{ url_for('public_schedule') }}">main website</a>
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Press Releases - {{ current_user.school_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-edit me-2"></i>
+        {% if current_user.role == 'Principal' %}
+        {{ current_user.school_name }} Press Releases
+        {% else %}
+        My Press Releases
+        {% endif %}
+    </h2>
+    <a href="{{ url_for('create_press_release') }}" class="btn btn-success">
+        <i class="fas fa-plus me-2"></i>
+        Create New Release
+    </a>
+</div>
+
+{% if releases %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for release in releases %}
+                    <tr>
+                        <td>
+                            <strong>{{ release.title }}</strong>
+                            <br>
+                            <small class="text-muted">{{ release.content[:100] }}...</small>
+                        </td>
+                        <td>{{ release.author_name }}</td>
+                        <td>{{ release.created_at[:10] }}</td>
+                        <td>
+                            {% if release.published %}
+                            <span class="badge bg-success">Published</span>
+                            {% else %}
+                            <span class="badge bg-warning">Draft</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('press_release_detail', id=release.id) }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if release.attachment_filename %}
+                            <span class="badge bg-info ms-2">
+                                <i class="fas fa-paperclip"></i>
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h3 class="text-primary">{{ releases|length }}</h3>
+                            <small class="text-muted">Total Releases</small>
+                        </div>
+                        <div class="col-6">
+                            <h3 class="text-success">{{ releases|selectattr('published')|list|length }}</h3>
+                            <small class="text-muted">Published</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Quick Tips
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li>Include compelling headlines to grab attention</li>
+                        <li>Use clear, concise language for better readability</li>
+                        <li>Add relevant attachments to support your story</li>
+                        <li>Share achievements and positive school news</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+    <h5>No press releases yet</h5>
+    <p class="text-muted">
+        {% if current_user.role == 'Principal' %}
+        No press releases have been created for {{ current_user.school_name }} yet.
+        {% else %}
+        You haven't created any press releases yet.
+        {% endif %}
+    </p>
+    <a href="{{ url_for('create_press_release') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>
+        Create Your First Press Release
+    </a>
+</div>
+{% endif %}
+{% endblock %}

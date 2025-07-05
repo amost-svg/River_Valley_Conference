@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}News & Press Releases - RVC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-newspaper me-2"></i>
+        River Valley Conference News
+    </h2>
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('create_press_release') }}" class="btn btn-success">
+        <i class="fas fa-plus me-2"></i>
+        Create Press Release
+    </a>
+    {% endif %}
+</div>
+
+{% if releases %}
+<div class="row">
+    {% for release in releases %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-1">
+                    <a href="{{ url_for('press_release_detail', id=release.id) }}" class="text-decoration-none">
+                        {{ release.title }}
+                    </a>
+                </h5>
+                <small class="text-muted">
+                    <i class="fas fa-user me-1"></i>{{ release.author_name }} - {{ release.school_name }}
+                    <br>
+                    <i class="fas fa-calendar me-1"></i>{{ release.created_at[:10] }}
+                </small>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    {{ release.content[:200] }}{% if release.content|length > 200 %}...{% endif %}
+                </p>
+                {% if release.attachment_filename %}
+                <p class="mb-0">
+                    <i class="fas fa-paperclip me-1"></i>
+                    <small class="text-muted">Attachment: {{ release.attachment_filename }}</small>
+                </p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('press_release_detail', id=release.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-eye me-1"></i>
+                    Read Full Article
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+    <h5>No press releases yet</h5>
+    <p class="text-muted">Check back later for conference news and announcements.</p>
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('create_press_release') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>
+        Create the First Press Release
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- API Information -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-code me-2"></i>
+            API Access
+        </h5>
+    </div>
+    <div class="card-body">
+        <p>Developers can access press release data via our JSON API:</p>
+        <code>GET {{ request.url_root }}api/press_releases</code>
+        
+        <p class="mt-3">Example response includes:</p>
+        <ul>
+            <li>Title, content, and author information</li>
+            <li>Publication date and school affiliation</li>
+            <li>Attachment information (if applicable)</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

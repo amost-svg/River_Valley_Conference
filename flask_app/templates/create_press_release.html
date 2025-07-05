@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Create Press Release - {{ current_user.school_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-newspaper me-2"></i>
+                    Create Press Release
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                        <div class="form-text">Enter a compelling headline for your press release</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Content</label>
+                        <textarea class="form-control" id="content" name="content" rows="12" required></textarea>
+                        <div class="form-text">Write the full content of your press release</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="attachment" class="form-label">Attachment (Optional)</label>
+                        <input type="file" class="form-control" id="attachment" name="attachment" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                        <div class="form-text">
+                            Optional: Upload a PDF, Word document, or image to accompany your press release
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <strong>Author Information:</strong><br>
+                            <i class="fas fa-user me-1"></i> {{ current_user.full_name }}<br>
+                            <i class="fas fa-school me-1"></i> {{ current_user.school_name }}<br>
+                            <i class="fas fa-id-badge me-1"></i> {{ current_user.role }}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-newspaper me-2"></i>
+                        Publish Press Release
+                    </button>
+                    <a href="{{ url_for('press_releases') }}" class="btn btn-secondary ms-2">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Back to News
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Press Release Guidelines
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Content Tips:</h6>
+                <ul class="small">
+                    <li>Start with a compelling headline</li>
+                    <li>Include the who, what, when, where, and why</li>
+                    <li>Use quotes from relevant people</li>
+                    <li>Keep paragraphs short and readable</li>
+                    <li>End with contact information if needed</li>
+                </ul>
+                
+                <h6>Examples:</h6>
+                <ul class="small">
+                    <li>Student Achievement Awards</li>
+                    <li>Athletic Championships</li>
+                    <li>Academic Competition Results</li>
+                    <li>School Event Announcements</li>
+                    <li>Staff Recognition</li>
+                </ul>
+                
+                <div class="alert alert-warning mt-3">
+                    <small>
+                        <strong>Note:</strong> Published press releases will be visible to the public and may be featured on the main RVC website.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-save to localStorage
+const titleInput = document.getElementById('title');
+const contentInput = document.getElementById('content');
+
+// Load saved content
+if (localStorage.getItem('draft_title')) {
+    titleInput.value = localStorage.getItem('draft_title');
+}
+if (localStorage.getItem('draft_content')) {
+    contentInput.value = localStorage.getItem('draft_content');
+}
+
+// Save on input
+titleInput.addEventListener('input', function() {
+    localStorage.setItem('draft_title', this.value);
+});
+
+contentInput.addEventListener('input', function() {
+    localStorage.setItem('draft_content', this.value);
+});
+
+// Clear on successful submit
+document.querySelector('form').addEventListener('submit', function() {
+    localStorage.removeItem('draft_title');
+    localStorage.removeItem('draft_content');
+});
+</script>
+{% endblock %}

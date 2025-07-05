@@ -41,12 +41,23 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('public_schedule') }}">Public Schedule</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('press_releases') }}">News & Press</a>
+                    </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
                     </li>
+                    {% if current_user.role == 'AD' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('upload_schedule') }}">Upload Schedule</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('all_schedules') }}">All Schedules</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('create_press_release') }}">Create Press Release</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -58,6 +69,7 @@
                             <i class="fas fa-user me-1"></i>{{ current_user.school_name }}
                         </a>
                         <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('manage_press_releases') }}">My Press Releases</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('change_password') }}">Change Password</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
