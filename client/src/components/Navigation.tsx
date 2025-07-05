@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Menu, X, Trophy } from "lucide-react";
+import { Menu, X, Trophy, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -53,6 +54,12 @@ export default function Navigation() {
                   {item.label}
                 </button>
               ))}
+              <Link href="/admin">
+                <Button variant="outline" size="sm" className="ml-4 text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin
+                </Button>
+              </Link>
             </div>
           </div>
 

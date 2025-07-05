@@ -12,6 +12,8 @@ export interface IStorage {
   getSchools(): Promise<School[]>;
   getSchool(id: number): Promise<School | undefined>;
   createSchool(school: InsertSchool): Promise<School>;
+  updateSchool(id: number, school: Partial<InsertSchool>): Promise<School | undefined>;
+  deleteSchool(id: number): Promise<boolean>;
 
   // Sports
   getSports(): Promise<Sport[]>;
@@ -60,26 +62,35 @@ export class MemStorage implements IStorage {
   }
 
   private initializeData() {
-    // Initialize schools - Real River Valley Conference members
+    // Initialize schools - Placeholder data (will be replaced by CSV import)
     const schoolsData = [
-      { name: "Beecher High School", mascot: "Bobcats", location: "Beecher, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/beecher-min.png" },
-      { name: "Central High School", mascot: "Comets", location: "Clifton, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/central-min.png" },
-      { name: "Donovan High School", mascot: "Wildcats", location: "Donovan, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/donovan-min1.png" },
-      { name: "Gardner South Wilmington High School", mascot: "Panthers", location: "Gardner, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gsw-min.png" },
-      { name: "Grace Christian Academy", mascot: "Crusaders", location: "Huntley, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gca-min.png" },
-      { name: "Grant Park High School", mascot: "Dragons", location: "Grant Park, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gp-min.png" },
-      { name: "Illinois Lutheran High School", mascot: "Chargers", location: "Crete, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/ill-luth-min.png" },
-      { name: "Momence High School", mascot: "Redskins", location: "Momence, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/momence-min.png" },
-      { name: "St. Anne High School", mascot: "Cardinals", location: "St. Anne, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/stanne-min.png" },
-      { name: "Tri-Point High School", mascot: "Chargers", location: "Cullom, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/tripoint-min.png" },
+      { 
+        name: "Beecher High School", 
+        mascot: "Bobcats", 
+        address: "Beecher, IL", 
+        city: "Beecher",
+        state: "Illinois",
+        phoneNumber: null,
+        superintendentName: null,
+        principalName: null,
+        athleticDirectorName: null,
+        website: null,
+        athleticWebsite: null,
+        ihsaPageLink: null,
+        missionStatement: null,
+        imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/beecher-min.png",
+        liveStreamingUrl: null,
+        liveStreamingPlatform: null,
+        latitude: null,
+        longitude: null
+      },
     ];
 
     schoolsData.forEach(school => {
       const id = this.currentSchoolId++;
       this.schools.set(id, { 
         ...school, 
-        id,
-        imageUrl: school.imageUrl || null
+        id
       });
     });
 
@@ -198,9 +209,62 @@ export class MemStorage implements IStorage {
 
   async createSchool(school: InsertSchool): Promise<School> {
     const id = this.currentSchoolId++;
-    const newSchool: School = { ...school, id, imageUrl: school.imageUrl || null };
+    const newSchool: School = { 
+      ...school, 
+      id,
+      city: school.city || null,
+      state: school.state || null,
+      phoneNumber: school.phoneNumber || null,
+      superintendentName: school.superintendentName || null,
+      principalName: school.principalName || null,
+      athleticDirectorName: school.athleticDirectorName || null,
+      website: school.website || null,
+      athleticWebsite: school.athleticWebsite || null,
+      ihsaPageLink: school.ihsaPageLink || null,
+      missionStatement: school.missionStatement || null,
+      imageUrl: school.imageUrl || null,
+      liveStreamingUrl: school.liveStreamingUrl || null,
+      liveStreamingPlatform: school.liveStreamingPlatform || null,
+      latitude: school.latitude || null,
+      longitude: school.longitude || null
+    };
     this.schools.set(id, newSchool);
     return newSchool;
+  }
+
+  async updateSchool(id: number, school: Partial<InsertSchool>): Promise<School | undefined> {
+    const existingSchool = this.schools.get(id);
+    if (!existingSchool) {
+      return undefined;
+    }
+    
+    const updatedSchool: School = {
+      ...existingSchool,
+      ...school,
+      id,
+      city: school.city !== undefined ? school.city : existingSchool.city,
+      state: school.state !== undefined ? school.state : existingSchool.state,
+      phoneNumber: school.phoneNumber !== undefined ? school.phoneNumber : existingSchool.phoneNumber,
+      superintendentName: school.superintendentName !== undefined ? school.superintendentName : existingSchool.superintendentName,
+      principalName: school.principalName !== undefined ? school.principalName : existingSchool.principalName,
+      athleticDirectorName: school.athleticDirectorName !== undefined ? school.athleticDirectorName : existingSchool.athleticDirectorName,
+      website: school.website !== undefined ? school.website : existingSchool.website,
+      athleticWebsite: school.athleticWebsite !== undefined ? school.athleticWebsite : existingSchool.athleticWebsite,
+      ihsaPageLink: school.ihsaPageLink !== undefined ? school.ihsaPageLink : existingSchool.ihsaPageLink,
+      missionStatement: school.missionStatement !== undefined ? school.missionStatement : existingSchool.missionStatement,
+      imageUrl: school.imageUrl !== undefined ? school.imageUrl : existingSchool.imageUrl,
+      liveStreamingUrl: school.liveStreamingUrl !== undefined ? school.liveStreamingUrl : existingSchool.liveStreamingUrl,
+      liveStreamingPlatform: school.liveStreamingPlatform !== undefined ? school.liveStreamingPlatform : existingSchool.liveStreamingPlatform,
+      latitude: school.latitude !== undefined ? school.latitude : existingSchool.latitude,
+      longitude: school.longitude !== undefined ? school.longitude : existingSchool.longitude,
+    };
+    
+    this.schools.set(id, updatedSchool);
+    return updatedSchool;
+  }
+
+  async deleteSchool(id: number): Promise<boolean> {
+    return this.schools.delete(id);
   }
 
   // Sports
@@ -362,6 +426,23 @@ export class DatabaseStorage implements IStorage {
       .values(insertSchool)
       .returning();
     return school;
+  }
+
+  async updateSchool(id: number, school: Partial<InsertSchool>): Promise<School | undefined> {
+    const [updatedSchool] = await db
+      .update(schools)
+      .set(school)
+      .where(eq(schools.id, id))
+      .returning();
+    return updatedSchool || undefined;
+  }
+
+  async deleteSchool(id: number): Promise<boolean> {
+    const result = await db
+      .delete(schools)
+      .where(eq(schools.id, id))
+      .returning();
+    return result.length > 0;
   }
 
   // Sports

@@ -6,8 +6,22 @@ export const schools = pgTable("schools", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   mascot: text("mascot").notNull(),
-  location: text("location").notNull(),
+  address: text("address").notNull(),
+  city: text("city"),
+  state: text("state"),
+  phoneNumber: text("phone_number"),
+  superintendentName: text("superintendent_name"),
+  principalName: text("principal_name"),
+  athleticDirectorName: text("athletic_director_name"),
+  website: text("website"),
+  athleticWebsite: text("athletic_website"),
+  ihsaPageLink: text("ihsa_page_link"),
+  missionStatement: text("mission_statement"),
   imageUrl: text("image_url"),
+  liveStreamingUrl: text("live_streaming_url"),
+  liveStreamingPlatform: text("live_streaming_platform"), // "YouTube", "NFHS Network", etc.
+  latitude: text("latitude"),
+  longitude: text("longitude"),
 });
 
 export const sports = pgTable("sports", {

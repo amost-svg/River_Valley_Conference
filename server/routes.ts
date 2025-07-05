@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
-import { insertContactSchema } from "@shared/schema";
+import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Schools
@@ -101,6 +101,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Admin Routes - School Management
+  app.post("/api/admin/schools", async (req, res) => {
+    try {
+      const validatedData = insertSchoolSchema.parse(req.body);
+      const school = await storage.createSchool(validatedData);
+      res.status(201).json(school);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create school" });
+    }
+  });
+
+  app.put("/api/admin/schools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertSchoolSchema.parse(req.body);
+      const school = await storage.updateSchool(id, validatedData);
+      if (!school) {
+        return res.status(404).json({ message: "School not found" });
+      }
+      res.json(school);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to update school" });
+    }
+  });
+
+  app.delete("/api/admin/schools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteSchool(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "School not found" });
+      }
+      res.json({ message: "School deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete school" });
+    }
+  });
+
+  // Admin Routes - Sports Management
+  app.post("/api/admin/sports", async (req, res) => {
+    try {
+      const validatedData = insertSportSchema.parse(req.body);
+      const sport = await storage.createSport(validatedData);
+      res.status(201).json(sport);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create sport" });
+    }
+  });
+
+  // Admin Routes - Games Management
+  app.post("/api/admin/games", async (req, res) => {
+    try {
+      const validatedData = insertGameSchema.parse(req.body);
+      const game = await storage.createGame(validatedData);
+      res.status(201).json(game);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create game" });
+    }
+  });
+
+  app.put("/api/admin/games/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertGameSchema.partial().parse(req.body);
+      const game = await storage.updateGame(id, validatedData);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      res.json(game);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to update game" });
+    }
+  });
+
+  // Admin Routes - News Management
+  app.post("/api/admin/news", async (req, res) => {
+    try {
+      const validatedData = insertNewsSchema.parse(req.body);
+      const news = await storage.createNews(validatedData);
+      res.status(201).json(news);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create news article" });
     }
   });
 
