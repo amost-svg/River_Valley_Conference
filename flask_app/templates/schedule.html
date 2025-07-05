@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Public Schedule - RVC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-calendar-alt me-2"></i>
+        River Valley Conference Schedule
+    </h2>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="sport" class="form-label">Sport</label>
+                <select class="form-select" id="sport" name="sport">
+                    <option value="">All Sports</option>
+                    {% for sport in sports %}
+                    <option value="{{ sport.sport }}" {{ 'selected' if sport.sport == sport_filter }}>
+                        {{ sport.sport }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="school" class="form-label">School</label>
+                <select class="form-select" id="school" name="school">
+                    <option value="">All Schools</option>
+                    {% for school in schools %}
+                    <option value="{{ school.school_name }}" {{ 'selected' if school.school_name == school_filter }}>
+                        {{ school.school_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="date" class="form-label">Date</label>
+                <input type="date" class="form-control" id="date" name="date" value="{{ date_filter }}">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>
+                        Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        {% if sport_filter or school_filter or date_filter %}
+        <div class="mt-3">
+            <a href="{{ url_for('public_schedule') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-times me-2"></i>
+                Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Games Table -->
+<div class="card">
+    <div class="card-body">
+        {% if games %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Sport</th>
+                        <th>School</th>
+                        <th>Opponent</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for game in games %}
+                    <tr>
+                        <td>{{ game.date }}</td>
+                        <td>{{ game.time or 'TBD' }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ game.sport }}</span>
+                        </td>
+                        <td>{{ game.school_name }}</td>
+                        <td>{{ game.opponent }}</td>
+                        <td>{{ game.location or 'TBD' }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if game.home_away == 'Home' else 'primary' }}">
+                                {{ game.home_away }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-3">
+            <p class="text-muted">
+                <i class="fas fa-info-circle me-2"></i>
+                Showing {{ games|length }} upcoming games
+            </p>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5>No games found</h5>
+            <p class="text-muted">
+                {% if sport_filter or school_filter or date_filter %}
+                No games match your current filters. Try adjusting the filters above.
+                {% else %}
+                No upcoming games have been scheduled yet.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- API Information -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-code me-2"></i>
+            API Access
+        </h5>
+    </div>
+    <div class="card-body">
+        <p>Developers can access game data via our JSON API:</p>
+        <code>GET {{ request.url_root }}api/games</code>
+        
+        <p class="mt-3">Supported query parameters:</p>
+        <ul>
+            <li><code>sport</code> - Filter by sport name</li>
+            <li><code>school</code> - Filter by school name</li>
+            <li><code>date</code> - Filter by specific date (YYYY-MM-DD)</li>
+        </ul>
+        
+        <p class="mt-3">Example:</p>
+        <code>{{ request.url_root }}api/games?sport=Basketball&school=Beecher</code>
+    </div>
+</div>
+{% endblock %}

@@ -97,11 +97,43 @@ This is a modern, professional website for the River Valley Conference IHSA orga
 - **Seeding**: Initial data population for schools, sports, and sample data
 - **Backup Strategy**: Regular database backups for data protection
 
+## Flask Scheduling Dashboard
+
+### Overview
+A separate Flask web application (`flask_app/`) provides secure scheduling management for Athletic Directors. This runs independently on port 5001 alongside the main website.
+
+### Features
+- **Secure Authentication**: Role-based access for Athletic Directors using school email addresses
+- **CSV Upload System**: Upload schedules for 9 different sports across Fall/Winter/Spring seasons
+- **Public Schedule View**: Conference-wide calendar accessible without login
+- **JSON API**: RESTful endpoint for external application integration
+- **SQLite Database**: Persistent storage for schedules, users, and upload history
+
+### Integration Points
+- Independent Flask application on port 5001
+- Can integrate with main PostgreSQL database for shared data
+- API endpoints available for cross-application data sharing
+- Shared authentication potential for future unified login
+
+### Athletic Director Access
+Default login credentials (password: "password" - should be changed):
+- Beecher: Brandon.DuBois@beecher200u.org
+- Central: DJ.Harris@cusd4.org  
+- Donovan: Kim.Onnen@donovanschools.org
+- Gardner South Wilmington: Amber.Eisha@gswhs73.org
+- Grace Christian Academy: Jon.Chappell@gracecrusaders.org
+- Grant Park: Jared.Thompson@grantparkdragons.org
+- Illinois Lutheran: Nathan.Hinz@ilhs.org
+- Momence: Ted.Rounds@momence.k12.il.us
+- St. Anne: Zach.Kirkland@stanne24.org
+- Tri Point: Alison.Buckley@tripointschools.org
+
 ## Changelog
 
 ```
 Changelog:
 - July 05, 2025. Initial setup
+- July 05, 2025. Added Flask scheduling dashboard for Athletic Directors
 ```
 
 ## User Preferences

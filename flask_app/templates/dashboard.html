@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ current_user.school_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-tachometer-alt me-2"></i>
+        {{ current_user.school_name }} Dashboard
+    </h2>
+    <a href="{{ url_for('upload_schedule') }}" class="btn btn-success">
+        <i class="fas fa-upload me-2"></i>
+        Upload Schedule
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>
+                    Recent Uploads
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if uploads %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Sport</th>
+                                <th>Season</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for upload in uploads %}
+                            <tr>
+                                <td>{{ upload.sport }}</td>
+                                <td>{{ upload.season }}</td>
+                                <td>{{ upload.upload_date[:10] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No schedules uploaded yet.</p>
+                <a href="{{ url_for('upload_schedule') }}" class="btn btn-primary">Upload Your First Schedule</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-check me-2"></i>
+                    Upcoming Games
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_games %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Sport</th>
+                                <th>Opponent</th>
+                                <th>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for game in upcoming_games %}
+                            <tr>
+                                <td>{{ game.date }}</td>
+                                <td>{{ game.sport }}</td>
+                                <td>{{ game.opponent }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if game.home_away == 'Home' else 'primary' }}">
+                                        {{ game.home_away }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No upcoming games scheduled.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    CSV Upload Format
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>When uploading schedule CSV files, please use the following column headers:</p>
+                <div class="alert alert-info">
+                    <strong>Required columns:</strong>
+                    <code>date, time, opponent, location, home_away</code>
+                </div>
+                
+                <h6>Example CSV format:</h6>
+                <pre class="bg-light p-3 rounded">
+date,time,opponent,location,home_away
+2025-01-15,7:00 PM,Central High School,Home Gym,Home
+2025-01-22,6:30 PM,Grant Park,Grant Park HS,Away
+2025-01-29,7:00 PM,Donovan,Home Gym,Home
+                </pre>
+                
+                <div class="alert alert-warning">
+                    <strong>Note:</strong> Date format should be YYYY-MM-DD. Home/Away values should be either "Home" or "Away".
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

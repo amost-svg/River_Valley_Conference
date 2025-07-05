@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}RVC Scheduling Dashboard - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+            <h1 class="display-4">
+                <i class="fas fa-calendar-alt me-3"></i>
+                River Valley Conference
+            </h1>
+            <p class="lead">Secure scheduling dashboard for Athletic Directors</p>
+            <hr class="my-4">
+            <p>Upload and manage your school's athletic schedules with secure, role-based access.</p>
+            
+            {% if not current_user.is_authenticated %}
+            <a class="btn btn-warning btn-lg" href="{{ url_for('login') }}" role="button">
+                <i class="fas fa-sign-in-alt me-2"></i>
+                Athletic Director Login
+            </a>
+            {% else %}
+            <a class="btn btn-warning btn-lg" href="{{ url_for('dashboard') }}" role="button">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Go to Dashboard
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-upload rvc-gold me-2"></i>
+                            Schedule Management
+                        </h5>
+                        <p class="card-text">Athletic Directors can securely upload and manage their school's schedules for all sports and competitions.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-eye rvc-gold me-2"></i>
+                            Public Access
+                        </h5>
+                        <p class="card-text">Conference-wide schedules are available to the public with filtering by date, sport, and school.</p>
+                        <a href="{{ url_for('public_schedule') }}" class="btn btn-primary">View Public Schedule</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h3>Supported Sports</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-volleyball-ball rvc-gold me-2"></i>Volleyball</li>
+                        <li><i class="fas fa-futbol rvc-gold me-2"></i>Soccer</li>
+                        <li><i class="fas fa-basketball-ball rvc-gold me-2"></i>Girls Basketball</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-basketball-ball rvc-gold me-2"></i>Boys Basketball</li>
+                        <li><i class="fas fa-baseball-ball rvc-gold me-2"></i>Baseball</li>
+                        <li><i class="fas fa-baseball-ball rvc-gold me-2"></i>Softball</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-running rvc-gold me-2"></i>Track</li>
+                        <li><i class="fas fa-brain rvc-gold me-2"></i>Scholastic Bowl</li>
+                        <li><i class="fas fa-calculator rvc-gold me-2"></i>Math Competition</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Login - RVC Scheduling Dashboard{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-sign-in-alt me-2"></i>
+                    Athletic Director Login
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">School Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <div class="form-text">Use your official school email address</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Login
+                    </button>
+                </form>
+                
+                <div class="mt-4">
+                    <h6>Default Login Credentials for Athletic Directors:</h6>
+                    <small class="text-muted">
+                        <strong>Password:</strong> password<br>
+                        <em>Please change your password after first login</em>
+                    </small>
+                    
+                    <div class="mt-3">
+                        <strong>School Email Addresses:</strong>
+                        <ul class="small text-muted mt-2">
+                            <li>Brandon.DuBois@beecher200u.org (Beecher)</li>
+                            <li>DJ.Harris@cusd4.org (Central)</li>
+                            <li>Kim.Onnen@donovanschools.org (Donovan)</li>
+                            <li>Amber.Eisha@gswhs73.org (Gardner South Wilmington)</li>
+                            <li>Jon.Chappell@gracecrusaders.org (Grace Christian Academy)</li>
+                            <li>Jared.Thompson@grantparkdragons.org (Grant Park)</li>
+                            <li>Nathan.Hinz@ilhs.org (Illinois Lutheran)</li>
+                            <li>Ted.Rounds@momence.k12.il.us (Momence)</li>
+                            <li>Zach.Kirkland@stanne24.org (St. Anne)</li>
+                            <li>Alison.Buckley@tripointschools.org (Tri Point)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-3">
+            <a href="{{ url_for('public_schedule') }}" class="btn btn-outline-primary">
+                <i class="fas fa-calendar me-2"></i>
+                View Public Schedule
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
