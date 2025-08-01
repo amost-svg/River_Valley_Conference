@@ -15,17 +15,24 @@ export default function Home() {
       <section id="home">
         <Hero />
       </section>
-      <SchedulesResults />
+      <section id="about">
+        <ConferenceOverview />
+      </section>
       <section id="schools">
         <MemberSchools />
       </section>
-      <section id="about">
-        <ConferenceOverview />
+      <section id="schedules">
+        <SchedulesResults />
+      </section>
+      <section id="standings">
+        <ConferenceStandings />
       </section>
       <section id="news">
         <NewsAnnouncements />
       </section>
-      <ContactSection />
+      <section id="contact">
+        <ContactSection />
+      </section>
       <Footer />
     </div>
   );

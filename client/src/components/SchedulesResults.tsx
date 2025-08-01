@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,7 +29,7 @@ const gameResultSchema = insertGameResultSubmissionSchema.extend({
 type GameResultFormData = z.infer<typeof gameResultSchema>;
 
 export default function SchedulesResults() {
-  const [selectedSportId, setSelectedSportId] = useState<number>(1);
+  const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
   const [isSubmissionDialogOpen, setIsSubmissionDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -37,13 +37,22 @@ export default function SchedulesResults() {
     queryKey: ["/api/sports"],
   });
 
+  // Set initial sport when sports are loaded
+  React.useEffect(() => {
+    if (sports && sports.length > 0 && selectedSportId === null) {
+      setSelectedSportId(sports[0].id);
+    }
+  }, [sports, selectedSportId]);
+
   const { data: games, isLoading: gamesLoading } = useQuery<GameWithDetails[]>({
     queryKey: ["/api/games", selectedSportId],
     queryFn: async () => {
+      if (!selectedSportId) return [];
       const response = await fetch(`/api/games?sportId=${selectedSportId}`);
       if (!response.ok) throw new Error('Failed to fetch games');
       return response.json();
     },
+    enabled: !!selectedSportId,
   });
 
   const form = useForm<GameResultFormData>({
@@ -96,7 +105,7 @@ export default function SchedulesResults() {
   };
 
   return (
-    <section id="schedules" className="py-16 bg-white">
+    <div className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Schedules & Results</h2>
@@ -131,7 +140,7 @@ export default function SchedulesResults() {
                           <SelectContent>
                             {games?.filter(game => !game.isCompleted).map((game) => (
                               <SelectItem key={game.id} value={game.id.toString()}>
-                                {game.homeTeam.name} vs {game.awayTeam.name} - {formatDate(game.gameDate)}
+                                {game.homeTeamName || game.homeTeam?.name || 'Home Team'} vs {game.awayTeamName || game.awayTeam?.name || 'Away Team'} - {formatDate(game.gameDate)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -277,10 +286,10 @@ export default function SchedulesResults() {
                             {formatDate(game.gameDate)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {game.homeTeam.name}
+                            {game.homeTeamName || game.homeTeam?.name || 'Home Team'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {game.awayTeam.name}
+                            {game.awayTeamName || game.awayTeam?.name || 'Away Team'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {game.gameTime}
@@ -299,6 +308,6 @@ export default function SchedulesResults() {
           </CardContent>
         </Card>
       </div>
-    </section>
+    </div>
   );
 }

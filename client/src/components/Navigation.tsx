@@ -20,6 +20,7 @@ export default function Navigation() {
 
   const navItems = [
     { id: "home", label: "Home" },
+    { id: "about", label: "About" },
     { id: "schools", label: "Schools" },
     { id: "schedules", label: "Schedules" },
     { id: "standings", label: "Standings" },
