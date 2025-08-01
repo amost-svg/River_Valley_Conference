@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
-import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema } from "@shared/schema";
+import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Schools
@@ -222,6 +222,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       res.status(500).json({ message: "Failed to create news article" });
+    }
+  });
+
+  // Authentication Routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user || user.password !== password) { // In production, use proper password hashing
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({ message: "Account is deactivated" });
+      }
+
+      // In production, create JWT token here
+      res.json({ 
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, schoolId: user.schoolId },
+        message: "Login successful" 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Game Result Submissions (Public)
+  app.post("/api/game-results", async (req, res) => {
+    try {
+      const validatedData = insertGameResultSubmissionSchema.parse(req.body);
+      const submission = await storage.createGameResultSubmission(validatedData);
+      res.status(201).json({ 
+        message: "Game result submitted successfully. It will be reviewed before publishing.",
+        submission 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to submit game result" });
+    }
+  });
+
+  // Get game result submissions (Admin)
+  app.get("/api/admin/game-result-submissions", async (req, res) => {
+    try {
+      const submissions = await storage.getGameResultSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch submissions" });
+    }
+  });
+
+  // Moderate game result submission (Admin)
+  app.post("/api/admin/game-result-submissions/:id/moderate", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { moderatedBy, notes } = req.body;
+      const submission = await storage.moderateGameResultSubmission(id, moderatedBy, notes);
+      if (!submission) {
+        return res.status(404).json({ message: "Submission not found" });
+      }
+      res.json({ message: "Submission moderated successfully", submission });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to moderate submission" });
+    }
+  });
+
+  // News Updated (with author support)
+  app.get("/api/news-updated", async (req, res) => {
+    try {
+      const news = await storage.getNewsUpdated();
+      res.json(news);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch news" });
+    }
+  });
+
+  app.post("/api/admin/news-updated", async (req, res) => {
+    try {
+      const validatedData = insertNewsUpdatedSchema.parse(req.body);
+      const news = await storage.createNewsUpdated(validatedData);
+      res.status(201).json(news);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create news article" });
+    }
+  });
+
+  // Conference Officials
+  app.get("/api/officials", async (req, res) => {
+    try {
+      const officials = await storage.getActiveConferenceOfficials();
+      res.json(officials);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch officials" });
     }
   });
 

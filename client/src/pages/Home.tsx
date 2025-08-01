@@ -12,12 +12,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      <Hero />
-      <ConferenceOverview />
-      <MemberSchools />
+      <section id="home">
+        <Hero />
+      </section>
       <SchedulesResults />
-      <ConferenceStandings />
-      <NewsAnnouncements />
+      <section id="schools">
+        <MemberSchools />
+      </section>
+      <section id="about">
+        <ConferenceOverview />
+      </section>
+      <section id="news">
+        <NewsAnnouncements />
+      </section>
       <ContactSection />
       <Footer />
     </div>

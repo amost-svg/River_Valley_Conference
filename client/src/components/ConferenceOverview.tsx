@@ -1,18 +1,31 @@
 import { School, Calendar, Medal } from "lucide-react";
 
 export default function ConferenceOverview() {
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const offsetTop = element.offsetTop - 64; // Account for sticky header
+      window.scrollTo({
+        top: offsetTop,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const stats = [
     {
       icon: School,
       title: "10 Member Schools",
       description: "Representing communities across the River Valley region",
-      bgColor: "bg-conference-navy"
+      bgColor: "bg-conference-navy",
+      onClick: () => scrollToSection("schools")
     },
     {
       icon: Calendar,
-      title: "15+ Sports",
-      description: "Fall, Winter, and Spring athletic programs",
-      bgColor: "bg-conference-gold"
+      title: "7 Conference Sports",
+      description: "Official RVC sports: Volleyball, Soccer, Basketball, Baseball, Softball, Track",
+      bgColor: "bg-conference-gold",
+      onClick: () => scrollToSection("schedules")
     },
     {
       icon: Medal,
@@ -36,7 +49,11 @@ export default function ConferenceOverview() {
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <div key={index} className="text-center">
+              <div 
+                key={index} 
+                className={`text-center ${stat.onClick ? 'cursor-pointer hover:transform hover:scale-105 transition-transform' : ''}`}
+                onClick={stat.onClick}
+              >
                 <div className={`${stat.bgColor} text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4`}>
                   <Icon className="h-8 w-8" />
                 </div>

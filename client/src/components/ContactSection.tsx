@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { Mail, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertContactSchema } from "@shared/schema";
@@ -60,35 +60,18 @@ export default function ContactSection() {
 
   const contactInfo = [
     {
-      icon: MapPin,
-      title: "Address",
-      content: "123 Conference Drive\nRiver Valley, IL 62025",
-      bgColor: "bg-conference-navy"
-    },
-    {
-      icon: Phone,
-      title: "Phone",
-      content: "(618) 555-0123",
-      bgColor: "bg-conference-gold"
-    },
-    {
       icon: Mail,
-      title: "Email",
-      content: "info@rivervalleyconference.org",
-      bgColor: "bg-conference-green"
-    },
-    {
-      icon: Clock,
-      title: "Office Hours",
-      content: "Monday - Friday: 8:00 AM - 5:00 PM\nSaturday: 9:00 AM - 1:00 PM",
-      bgColor: "bg-blue-500"
+      title: "General Inquiries",
+      content: "principals@rvc-il.com",
+      bgColor: "bg-conference-navy"
     }
   ];
 
   const personnel = [
-    { title: "Commissioner", name: "Sarah Johnson" },
-    { title: "Assistant Commissioner", name: "Mike Davis" },
-    { title: "Athletic Director Liaison", name: "Jennifer Martinez" },
+    { title: "President", name: "Aaron Most", school: "TBD" },
+    { title: "Vice-President", name: "Mike Meyer", school: "TBD" },
+    { title: "Treasurer", name: "Ben O'Brien", school: "TBD" },
+    { title: "AD Liaison", name: "Nathan Hinz", school: "Illinois Lutheran" },
   ];
 
   return (
@@ -121,14 +104,20 @@ export default function ContactSection() {
               })}
             </div>
 
-            {/* Key Personnel */}
+            {/* Conference Officials */}
             <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900">Key Personnel</h3>
+              <h4 className="text-lg font-semibold mb-4 text-gray-900">Conference Officials</h4>
               <div className="space-y-3">
                 {personnel.map((person, index) => (
-                  <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200">
-                    <span className="font-medium">{person.title}</span>
-                    <span className="text-gray-600">{person.name}</span>
+                  <div key={index} className="flex items-center">
+                    <div className="bg-conference-green text-white p-2 rounded-lg mr-3 flex-shrink-0">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{person.title}</p>
+                      <p className="text-gray-600">{person.name}</p>
+                      {person.school && <p className="text-sm text-gray-500">{person.school}</p>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -177,7 +166,7 @@ export default function ContactSection() {
                       <FormItem>
                         <FormLabel>School/Organization</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your school or organization" {...field} />
+                          <Input placeholder="Your school or organization" {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -1,11 +1,14 @@
 import { 
-  schools, sports, games, standings, news, contacts,
+  schools, sports, games, standings, news, contacts, users, newsUpdated, 
+  gameResultSubmissions, conferenceOfficials,
   type School, type Sport, type Game, type Standing, type News, type Contact,
+  type User, type NewsUpdated, type GameResultSubmission, type ConferenceOfficial,
   type InsertSchool, type InsertSport, type InsertGame, type InsertStanding, 
-  type InsertNews, type InsertContact 
+  type InsertNews, type InsertContact, type InsertUser, type InsertNewsUpdated,
+  type InsertGameResultSubmission, type InsertConferenceOfficial
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // Schools
@@ -40,6 +43,28 @@ export interface IStorage {
   // Contacts
   getContacts(): Promise<Contact[]>;
   createContact(contact: InsertContact): Promise<Contact>;
+
+  // Users (Authentication)
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+
+  // News Updated (with author support)
+  getNewsUpdated(): Promise<(NewsUpdated & { author: User })[]>;
+  getNewsUpdatedById(id: number): Promise<(NewsUpdated & { author: User }) | undefined>;
+  createNewsUpdated(news: InsertNewsUpdated): Promise<NewsUpdated>;
+  updateNewsUpdated(id: number, news: Partial<InsertNewsUpdated>): Promise<NewsUpdated | undefined>;
+
+  // Game Result Submissions
+  getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]>;
+  createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission>;
+  moderateGameResultSubmission(id: number, moderatedBy: number, notes?: string): Promise<GameResultSubmission | undefined>;
+
+  // Conference Officials
+  getConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]>;
+  getActiveConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]>;
+  createConferenceOfficial(official: InsertConferenceOfficial): Promise<ConferenceOfficial>;
+  updateConferenceOfficial(id: number, official: Partial<InsertConferenceOfficial>): Promise<ConferenceOfficial | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -94,14 +119,15 @@ export class MemStorage implements IStorage {
       });
     });
 
-    // Initialize sports
+    // Initialize official RVC sports only
     const sportsData = [
-      { name: "Football", season: "fall" },
-      { name: "Basketball", season: "winter" },
-      { name: "Soccer", season: "fall" },
-      { name: "Baseball", season: "spring" },
-      { name: "Track & Field", season: "spring" },
       { name: "Volleyball", season: "fall" },
+      { name: "Soccer", season: "fall" },
+      { name: "Girls Basketball", season: "winter" },
+      { name: "Boys Basketball", season: "winter" },
+      { name: "Softball", season: "spring" },
+      { name: "Baseball", season: "spring" },
+      { name: "Track", season: "spring" },
     ];
 
     sportsData.forEach(sport => {
@@ -406,6 +432,22 @@ export class MemStorage implements IStorage {
     this.contacts.set(id, newContact);
     return newContact;
   }
+
+  // Stub implementations for new features (use DatabaseStorage for production)
+  async getUserByEmail(email: string): Promise<User | undefined> { return undefined; }
+  async createUser(user: InsertUser): Promise<User> { return { ...user, id: 1, createdAt: new Date(), isActive: true }; }
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> { return undefined; }
+  async getNewsUpdated(): Promise<(NewsUpdated & { author: User })[]> { return []; }
+  async getNewsUpdatedById(id: number): Promise<(NewsUpdated & { author: User }) | undefined> { return undefined; }
+  async createNewsUpdated(news: InsertNewsUpdated): Promise<NewsUpdated> { return { ...news, id: 1, isPublished: true, excerpt: news.excerpt || null, imageUrl: news.imageUrl || null, pdfUrl: news.pdfUrl || null }; }
+  async updateNewsUpdated(id: number, news: Partial<InsertNewsUpdated>): Promise<NewsUpdated | undefined> { return undefined; }
+  async getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]> { return []; }
+  async createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission> { return { ...submission, id: 1, submissionDate: new Date(), isModerated: false, moderatedBy: null, moderationNotes: null }; }
+  async moderateGameResultSubmission(id: number, moderatedBy: number, notes?: string): Promise<GameResultSubmission | undefined> { return undefined; }
+  async getConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]> { return []; }
+  async getActiveConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]> { return []; }
+  async createConferenceOfficial(official: InsertConferenceOfficial): Promise<ConferenceOfficial> { return { ...official, id: 1, isActive: true, endDate: official.endDate || null }; }
+  async updateConferenceOfficial(id: number, official: Partial<InsertConferenceOfficial>): Promise<ConferenceOfficial | undefined> { return undefined; }
 }
 
 // DatabaseStorage implementation
@@ -625,6 +667,183 @@ export class DatabaseStorage implements IStorage {
       .values(contact)
       .returning();
     return newContact;
+  }
+
+  // Users (Authentication)
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db
+      .insert(users)
+      .values(user)
+      .returning();
+    return newUser;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(user)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser || undefined;
+  }
+
+  // News Updated (with author support)
+  async getNewsUpdated(): Promise<(NewsUpdated & { author: User })[]> {
+    const result = await db
+      .select({
+        news: newsUpdated,
+        author: users,
+      })
+      .from(newsUpdated)
+      .leftJoin(users, eq(newsUpdated.authorId, users.id))
+      .where(eq(newsUpdated.isPublished, true));
+
+    return result.map(row => ({
+      ...row.news,
+      author: row.author!,
+    }));
+  }
+
+  async getNewsUpdatedById(id: number): Promise<(NewsUpdated & { author: User }) | undefined> {
+    const [result] = await db
+      .select({
+        news: newsUpdated,
+        author: users,
+      })
+      .from(newsUpdated)
+      .leftJoin(users, eq(newsUpdated.authorId, users.id))
+      .where(eq(newsUpdated.id, id));
+
+    if (!result) return undefined;
+
+    return {
+      ...result.news,
+      author: result.author!,
+    };
+  }
+
+  async createNewsUpdated(news: InsertNewsUpdated): Promise<NewsUpdated> {
+    const [newNews] = await db
+      .insert(newsUpdated)
+      .values(news)
+      .returning();
+    return newNews;
+  }
+
+  async updateNewsUpdated(id: number, news: Partial<InsertNewsUpdated>): Promise<NewsUpdated | undefined> {
+    const [updatedNews] = await db
+      .update(newsUpdated)
+      .set(news)
+      .where(eq(newsUpdated.id, id))
+      .returning();
+    return updatedNews || undefined;
+  }
+
+  // Game Result Submissions
+  async getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]> {
+    const result = await db
+      .select({
+        submission: gameResultSubmissions,
+        game: games,
+        homeTeam: schools,
+        sport: sports,
+      })
+      .from(gameResultSubmissions)
+      .leftJoin(games, eq(gameResultSubmissions.gameId, games.id))
+      .leftJoin(schools, eq(games.homeTeamId, schools.id))
+      .leftJoin(sports, eq(games.sportId, sports.id));
+
+    // Get away teams separately
+    const submissionsWithDetails = [];
+    for (const row of result) {
+      const [awayTeam] = await db.select().from(schools).where(eq(schools.id, row.game!.awayTeamId));
+      submissionsWithDetails.push({
+        ...row.submission,
+        game: {
+          ...row.game!,
+          homeTeam: row.homeTeam!,
+          awayTeam: awayTeam!,
+          sport: row.sport!,
+        },
+      });
+    }
+
+    return submissionsWithDetails;
+  }
+
+  async createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission> {
+    const [newSubmission] = await db
+      .insert(gameResultSubmissions)
+      .values(submission)
+      .returning();
+    return newSubmission;
+  }
+
+  async moderateGameResultSubmission(id: number, moderatedBy: number, notes?: string): Promise<GameResultSubmission | undefined> {
+    const [updatedSubmission] = await db
+      .update(gameResultSubmissions)
+      .set({
+        isModerated: true,
+        moderatedBy,
+        moderationNotes: notes || null,
+      })
+      .where(eq(gameResultSubmissions.id, id))
+      .returning();
+    return updatedSubmission || undefined;
+  }
+
+  // Conference Officials
+  async getConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]> {
+    const result = await db
+      .select({
+        official: conferenceOfficials,
+        school: schools,
+      })
+      .from(conferenceOfficials)
+      .leftJoin(schools, eq(conferenceOfficials.schoolId, schools.id));
+
+    return result.map(row => ({
+      ...row.official,
+      school: row.school!,
+    }));
+  }
+
+  async getActiveConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]> {
+    const result = await db
+      .select({
+        official: conferenceOfficials,
+        school: schools,
+      })
+      .from(conferenceOfficials)
+      .leftJoin(schools, eq(conferenceOfficials.schoolId, schools.id))
+      .where(eq(conferenceOfficials.isActive, true));
+
+    return result.map(row => ({
+      ...row.official,
+      school: row.school!,
+    }));
+  }
+
+  async createConferenceOfficial(official: InsertConferenceOfficial): Promise<ConferenceOfficial> {
+    const [newOfficial] = await db
+      .insert(conferenceOfficials)
+      .values(official)
+      .returning();
+    return newOfficial;
+  }
+
+  async updateConferenceOfficial(id: number, official: Partial<InsertConferenceOfficial>): Promise<ConferenceOfficial | undefined> {
+    const [updatedOfficial] = await db
+      .update(conferenceOfficials)
+      .set(official)
+      .where(eq(conferenceOfficials.id, id))
+      .returning();
+    return updatedOfficial || undefined;
   }
 }
 
