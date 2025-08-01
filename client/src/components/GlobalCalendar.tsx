@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DayPicker as Calendar } from "react-day-picker";
+import { DayPicker } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -171,7 +171,7 @@ export default function GlobalCalendar() {
         </CardHeader>
         <CardContent>
           <div className="calendar-container">
-            <Calendar
+            <DayPicker
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
