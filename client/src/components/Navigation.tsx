@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Menu, X, Trophy, Settings } from "lucide-react";
+import { Menu, X, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import rvcLogo from "@assets/RVC logo (3)_1754081720129.png";
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,7 +35,7 @@ export default function Navigation() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <Trophy className="text-conference-gold h-8 w-8 mr-3" />
+              <img src={rvcLogo} alt="RVC Logo" className="h-8 w-8 mr-3" />
               <span className="text-white font-bold text-xl">River Valley Conference</span>
             </div>
           </div>
