@@ -34,6 +34,7 @@ import { insertGameSchema, insertNewsSchema } from "@shared/schema";
 import GlobalCalendar from "@/components/GlobalCalendar";
 import SchoolEditor from "@/components/SchoolEditor";
 import ScheduleUploader from "@/components/ScheduleUploader";
+import rvcLogoPath from "@assets/RVC logo (3)_1754075250117.png";
 
 // Form schemas
 const gameSchema = insertGameSchema.extend({
@@ -160,21 +161,35 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-conference-navy shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-white">RVC Admin Dashboard</h1>
-            <Button variant="outline" className="text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
+    <div 
+      className="min-h-screen bg-gray-50 relative"
+      style={{
+        backgroundImage: `url(${rvcLogoPath})`,
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '400px 400px',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {/* Subtle overlay to make background more transparent */}
+      <div className="absolute inset-0 bg-white bg-opacity-92 pointer-events-none"></div>
+      
+      {/* Content wrapper */}
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="bg-conference-navy bg-opacity-95 shadow-sm backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <h1 className="text-2xl font-bold text-white">RVC Admin Dashboard</h1>
+              <Button variant="outline" className="text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -715,6 +730,7 @@ export default function Admin() {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );
