@@ -29,9 +29,10 @@ export default function ConferenceOverview() {
     },
     {
       icon: Medal,
-      title: "Excellence",
-      description: "Commitment to athletic and academic achievement",
-      bgColor: "bg-conference-green"
+      title: "Latest News",
+      description: "Stay updated with conference announcements and results",
+      bgColor: "bg-conference-green",
+      onClick: () => scrollToSection("news")
     }
   ];
 
@@ -51,7 +52,7 @@ export default function ConferenceOverview() {
             return (
               <div 
                 key={index} 
-                className={`text-center ${stat.onClick ? 'cursor-pointer hover:transform hover:scale-105 transition-transform' : ''}`}
+                className={`text-center ${stat.onClick !== undefined ? 'cursor-pointer hover:transform hover:scale-105 transition-transform' : ''}`}
                 onClick={stat.onClick}
               >
                 <div className={`${stat.bgColor} text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4`}>
