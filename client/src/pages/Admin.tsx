@@ -194,7 +194,7 @@ export default function Admin() {
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
-            <TabsTrigger value="upload">Upload Schedule</TabsTrigger>
+            <TabsTrigger value="upload">Calendar Instructions</TabsTrigger>
             <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
