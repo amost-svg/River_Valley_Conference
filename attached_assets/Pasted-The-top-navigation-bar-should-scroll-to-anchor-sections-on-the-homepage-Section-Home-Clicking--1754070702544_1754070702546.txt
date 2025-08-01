@@ -1,0 +1,125 @@
+The top navigation bar should scroll to anchor sections on the homepage.
+
+🏠 Section: Home
+Clicking “Home” should scroll to the top of the page (already working).
+
+📅 Section: Schedules and Results
+Fix this section to include only official RVC sports:
+
+Volleyball
+
+Soccer
+
+Girls Basketball
+
+Boys Basketball
+
+Softball
+
+Baseball
+
+Track
+
+Other sports like football, wrestling, swimming, etc., are not official RVC sports.
+
+This section will pull data from a backend database uploaded by ADs.
+
+Display upcoming games across all sports.
+
+Add ability for visitors to report game results via a form (pending moderation).
+
+🏫 Section: Member Schools
+No edits needed. Each card links to school data from the database.
+
+🧭 Section: About Our Conference
+The blurb with the mission statement is great.
+
+Update the “10 Member Schools” and “Conference Sports” image blocks to link to the Schools and Schedules sections respectively.
+
+Change the "15+ Sports" text to reflect the actual 7 official RVC sports.
+
+📰 Section: Latest News
+Should function like a blog/press release archive.
+
+Link to a backend database where Principals or ADs can log in and post:
+
+News briefs
+
+PDF uploads
+
+Full blog-style press releases
+
+Posts should display the title, date, author, optional image, and body content.
+
+Example posts: Scholar-Athlete of the Year, RVC Band, All-Conference Teams, etc.
+
+📬 Section: Contact
+Remove physical address, phone number, and hours.
+
+Display:
+
+President: Aaron Most
+
+Vice-President: Mike Meyer
+
+Treasurer: Ben O'Brien
+
+AD Liaison: Nathan Hinz
+
+These should be linked to their respective schools using the database.
+
+When someone uses the “Send a Message” form, send the email to: principals@rvc-il.com
+
+🔐 ADMIN DASHBOARD (For ADs and Principals)
+Accessible only by secure login with school-based email verification.
+
+✅ Auth & Role Control
+Use Flask-Login for authentication.
+
+Two roles: “AD” and “Principal”
+
+Only ADs can upload schedules.
+
+Only ADs/Principals can post news items.
+
+📋 AD Dashboard Functions
+Upload sport-specific schedules per school and season (CSV format).
+
+View a conference-wide calendar for each sport (auto-aggregated).
+
+Editable per sport: Volleyball, Soccer, Girls Basketball, etc.
+
+Option to use Google Calendar as the underlying backend for visualization.
+
+All uploads update the “Schedules and Results” section of the homepage.
+
+📰 News/Press Posting Panel
+Upload formatted press releases or blog-style posts.
+
+Attach optional PDF or featured image.
+
+Auto-publish to the “Latest News” section of the homepage.
+
+📦 DATABASE & TECH REQUIREMENTS
+Flask + Flask-Login + SQLAlchemy (or Replit DB)
+
+Use HTML/Jinja for front-end templates
+
+Store:
+
+Users (name, email, role)
+
+Schedules (sport, school, date, opponent, time, location)
+
+News (title, date, content, author, PDF/image link)
+
+Use Bootstrap for mobile responsiveness
+
+✨ Bonus Suggestions (Optional)
+Allow CSV schedule parsing and validation before saving.
+
+Add file viewer for uploaded PDFs.
+
+Add JSON API route for external site embedding (/api/schedules, /api/news)
+
+Add search or filter tools in the admin dashboard.
