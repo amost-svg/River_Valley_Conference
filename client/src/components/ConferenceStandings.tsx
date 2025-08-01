@@ -42,6 +42,54 @@ export default function ConferenceStandings() {
     return ((wins + ties * 0.5) / total).toFixed(3);
   };
 
+  const getSportGradient = (sportName: string) => {
+    switch (sportName?.toLowerCase()) {
+      case 'volleyball':
+        return 'bg-gradient-to-r from-purple-600 to-pink-600';
+      case 'soccer':
+        return 'bg-gradient-to-r from-green-600 to-emerald-600';
+      case 'basketball':
+        return 'bg-gradient-to-r from-orange-600 to-red-600';
+      case 'baseball':
+        return 'bg-gradient-to-r from-blue-600 to-indigo-600';
+      case 'softball':
+        return 'bg-gradient-to-r from-yellow-600 to-orange-600';
+      case 'track':
+        return 'bg-gradient-to-r from-red-600 to-rose-600';
+      case 'cross country':
+        return 'bg-gradient-to-r from-teal-600 to-cyan-600';
+      case 'scholastic bowl':
+        return 'bg-gradient-to-r from-indigo-600 to-purple-600';
+      default:
+        return 'bg-gradient-to-r from-conference-navy to-central-blue';
+    }
+  };
+
+  const getSportTabColor = (sportName: string, isSelected: boolean) => {
+    if (!isSelected) return "text-gray-500 hover:text-conference-navy border-transparent";
+    
+    switch (sportName?.toLowerCase()) {
+      case 'volleyball':
+        return 'text-purple-600 border-purple-600 bg-purple-50';
+      case 'soccer':
+        return 'text-green-600 border-green-600 bg-green-50';
+      case 'basketball':
+        return 'text-orange-600 border-orange-600 bg-orange-50';
+      case 'baseball':
+        return 'text-blue-600 border-blue-600 bg-blue-50';
+      case 'softball':
+        return 'text-yellow-600 border-yellow-600 bg-yellow-50';
+      case 'track':
+        return 'text-red-600 border-red-600 bg-red-50';
+      case 'cross country':
+        return 'text-teal-600 border-teal-600 bg-teal-50';
+      case 'scholastic bowl':
+        return 'text-indigo-600 border-indigo-600 bg-indigo-50';
+      default:
+        return 'text-conference-navy border-conference-navy bg-blue-50';
+    }
+  };
+
   const selectedSport = sports?.find(sport => sport.id === selectedSportId);
 
   // Sort standings by win percentage
@@ -83,11 +131,7 @@ export default function ConferenceStandings() {
                   key={sport.id}
                   variant="ghost"
                   onClick={() => setSelectedSportId(sport.id)}
-                  className={`px-6 py-3 font-semibold border-b-2 rounded-none ${
-                    selectedSportId === sport.id
-                      ? "text-conference-navy border-conference-navy"
-                      : "text-gray-500 hover:text-conference-navy border-transparent"
-                  }`}
+                  className={`px-6 py-3 font-semibold border-b-2 rounded-none transition-all duration-200 ${getSportTabColor(sport.name, selectedSportId === sport.id)}`}
                 >
                   {sport.name}
                 </Button>
@@ -98,7 +142,7 @@ export default function ConferenceStandings() {
         {/* Standings Table */}
         {selectedSportId && (
           <Card className="shadow overflow-hidden max-w-4xl mx-auto">
-            <CardHeader className="bg-conference-navy text-white">
+            <CardHeader className={`${getSportGradient(selectedSport?.name || '')} text-white`}>
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <Trophy className="h-5 w-5" />
                 {selectedSport?.name} Standings

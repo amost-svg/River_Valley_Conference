@@ -44,19 +44,12 @@ export default function Hero() {
   ];
 
   return (
-    <section id="home" className="relative bg-hero-gradient text-white">
-      <div className="absolute inset-0 bg-black/10"></div>
-      <div 
-        className="relative bg-cover bg-center h-96" 
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080')"
-        }}
-      >
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-          <div className="text-center w-full">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">River Valley Conference</h1>
-            <p className="text-xl md:text-2xl mb-8 text-gray-200">Excellence in High School Athletics</p>
+    <section id="home" className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-white text-white min-h-screen flex items-center">
+      <div className="relative w-full h-full flex items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="text-center w-full py-20">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white drop-shadow-lg">River Valley Conference</h1>
+            <p className="text-xl md:text-2xl mb-8 text-blue-50">Excellence in High School Athletics</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button 
                 onClick={() => scrollToSection("schedules")}
