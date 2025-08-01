@@ -32,6 +32,7 @@ type GameResultFormData = z.infer<typeof gameResultSchema>;
 export default function SchedulesResults() {
   const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
   const [isSubmissionDialogOpen, setIsSubmissionDialogOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<GameWithDetails | null>(null);
   const { toast } = useToast();
 
   const { data: sports, isLoading: sportsLoading } = useQuery<Sport[]>({
@@ -77,6 +78,7 @@ export default function SchedulesResults() {
         description: "Thank you! Your game result submission will be reviewed before publishing.",
       });
       form.reset();
+      setSelectedGame(null);
       setIsSubmissionDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
     },
@@ -118,14 +120,14 @@ export default function SchedulesResults() {
     return `${game.homeScore}-${game.awayScore}`;
   };
 
-  // Get next 5 games for the selected sport
+  // Get next 6 games for the selected sport
   const getUpcomingGames = (games: GameWithDetails[] | undefined) => {
     if (!games) return [];
     const now = new Date();
     return games
       .filter(game => new Date(game.gameDate) >= now || !game.isCompleted)
       .sort((a, b) => new Date(a.gameDate).getTime() - new Date(b.gameDate).getTime())
-      .slice(0, 5);
+      .slice(0, 6);
   };
 
   return (
@@ -144,35 +146,48 @@ export default function SchedulesResults() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Submit Game Result</DialogTitle>
+                <DialogTitle>
+                  {selectedGame 
+                    ? `Report Result: ${selectedGame.awayTeam?.name || 'Away'} @ ${selectedGame.homeTeam?.name || 'Home'}`
+                    : 'Submit Game Result'
+                  }
+                </DialogTitle>
               </DialogHeader>
+              
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> All game results will be reviewed and approved before being published on the website.
+                </p>
+              </div>
               
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmitResult)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="gameId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Select Game</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value.toString()}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose a game" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {games?.filter(game => !game.isCompleted).map((game) => (
-                              <SelectItem key={game.id} value={game.id.toString()}>
-                                {game.homeTeamName || game.homeTeam?.name || 'Home Team'} vs {game.awayTeamName || game.awayTeam?.name || 'Away Team'} - {formatDate(game.gameDate)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {!selectedGame && (
+                    <FormField
+                      control={form.control}
+                      name="gameId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Select Game</FormLabel>
+                          <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value.toString()}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choose a game" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {games?.filter(game => !game.isCompleted).map((game) => (
+                                <SelectItem key={game.id} value={game.id.toString()}>
+                                  {game.homeTeamName || game.homeTeam?.name || 'Home Team'} vs {game.awayTeamName || game.awayTeam?.name || 'Away Team'} - {formatDate(game.gameDate)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
@@ -284,7 +299,7 @@ export default function SchedulesResults() {
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {gamesLoading
-                ? Array.from({ length: 5 }).map((_, index) => (
+                ? Array.from({ length: 6 }).map((_, index) => (
                     <Card key={index} className="hover:shadow-lg transition-shadow">
                       <CardContent className="p-6">
                         <Skeleton className="h-4 w-24 mb-3" />
@@ -296,7 +311,15 @@ export default function SchedulesResults() {
                   ))
                 : getUpcomingGames(games).length > 0 ? (
                     getUpcomingGames(games).map((game) => (
-                      <Card key={game.id} className="hover:shadow-lg transition-shadow">
+                      <Card 
+                        key={game.id} 
+                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => {
+                          setSelectedGame(game);
+                          form.setValue('gameId', game.id);
+                          setIsSubmissionDialogOpen(true);
+                        }}
+                      >
                         <CardContent className="p-6">
                           <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
                             <Calendar className="h-4 w-4" />
@@ -318,6 +341,14 @@ export default function SchedulesResults() {
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <MapPin className="h-4 w-4" />
                               <span>{game.location}</span>
+                            </div>
+                          )}
+                          
+                          {!game.isCompleted && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <p className="text-xs text-gray-500 text-center">
+                                Click to report result
+                              </p>
                             </div>
                           )}
                         </CardContent>
