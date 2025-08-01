@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Send } from "lucide-react";
+import { Plus, Send, Calendar, MapPin, Clock } from "lucide-react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Sport, Game, School } from "@shared/schema";
@@ -94,7 +95,20 @@ export default function SchedulesResults() {
 
   const formatDate = (date: string | Date) => {
     const d = new Date(date);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-US', { 
+      weekday: 'short',
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const formatTime = (date: string | Date) => {
+    const d = new Date(date);
+    return d.toLocaleTimeString('en-US', { 
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   const formatResult = (game: GameWithDetails) => {
@@ -102,6 +116,16 @@ export default function SchedulesResults() {
       return "TBD";
     }
     return `${game.homeScore}-${game.awayScore}`;
+  };
+
+  // Get next 5 games for the selected sport
+  const getUpcomingGames = (games: GameWithDetails[] | undefined) => {
+    if (!games) return [];
+    const now = new Date();
+    return games
+      .filter(game => new Date(game.gameDate) >= now || !game.isCompleted)
+      .sort((a, b) => new Date(a.gameDate).getTime() - new Date(b.gameDate).getTime())
+      .slice(0, 5);
   };
 
   return (
@@ -255,58 +279,75 @@ export default function SchedulesResults() {
           }
         </div>
 
-        {/* Schedule Table */}
-        <Card className="shadow overflow-hidden">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Home Team</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Away Team</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {gamesLoading
-                    ? Array.from({ length: 4 }).map((_, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-4 w-16" /></td>
-                          <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-4 w-32" /></td>
-                          <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-4 w-32" /></td>
-                          <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-4 w-20" /></td>
-                          <td className="px-6 py-4 whitespace-nowrap"><Skeleton className="h-4 w-16" /></td>
-                        </tr>
-                      ))
-                    : games?.map((game) => (
-                        <tr key={game.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(game.gameDate)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {game.homeTeamName || game.homeTeam?.name || 'Home Team'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {game.awayTeamName || game.awayTeam?.name || 'Away Team'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {game.gameTime}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                            <span className={game.isCompleted ? "text-green-600" : "text-gray-500"}>
+        {/* Upcoming Games Cards */}
+        {selectedSportId && (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {gamesLoading
+                ? Array.from({ length: 5 }).map((_, index) => (
+                    <Card key={index} className="hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <Skeleton className="h-4 w-24 mb-3" />
+                        <Skeleton className="h-6 w-full mb-2" />
+                        <Skeleton className="h-4 w-32 mb-3" />
+                        <Skeleton className="h-8 w-16" />
+                      </CardContent>
+                    </Card>
+                  ))
+                : getUpcomingGames(games).length > 0 ? (
+                    getUpcomingGames(games).map((game) => (
+                      <Card key={game.id} className="hover:shadow-lg transition-shadow">
+                        <CardContent className="p-6">
+                          <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                            <Calendar className="h-4 w-4" />
+                            <span>{formatDate(game.gameDate)}</span>
+                            <Clock className="h-4 w-4 ml-2" />
+                            <span>{formatTime(game.gameDate)}</span>
+                          </div>
+                          
+                          <div className="mb-3">
+                            <div className="text-lg font-semibold text-gray-900 mb-1">
+                              {game.awayTeam?.name || 'Away Team'} @ {game.homeTeam?.name || 'Home Team'}
+                            </div>
+                            <div className="text-2xl font-bold text-conference-navy">
                               {formatResult(game)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                  }
-                </tbody>
-              </table>
+                            </div>
+                          </div>
+                          
+                          {game.location && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <MapPin className="h-4 w-4" />
+                              <span>{game.location}</span>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card className="md:col-span-2 lg:col-span-3">
+                      <CardContent className="p-8 text-center">
+                        <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Upcoming Games</h3>
+                        <p className="text-gray-600">No games scheduled for this sport yet.</p>
+                      </CardContent>
+                    </Card>
+                  )
+              }
             </div>
-          </CardContent>
-        </Card>
+            
+            {/* See Full Schedule Button */}
+            {games && games.length > 0 && (
+              <div className="text-center">
+                <Link href={`/sports/${selectedSportId}/calendar`}>
+                  <Button variant="outline" className="border-conference-navy text-conference-navy hover:bg-conference-navy hover:text-white">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    See Full Conference Schedule
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ export interface IStorage {
   // Sports
   getSports(): Promise<Sport[]>;
   getSport(id: number): Promise<Sport | undefined>;
+  getSportById(id: number): Promise<Sport | undefined>;
   createSport(sport: InsertSport): Promise<Sport>;
 
   // Games
@@ -530,6 +531,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSport(id: number): Promise<Sport | undefined> {
+    const [sport] = await db.select().from(sports).where(eq(sports.id, id));
+    return sport || undefined;
+  }
+
+  async getSportById(id: number): Promise<Sport | undefined> {
     const [sport] = await db.select().from(sports).where(eq(sports.id, id));
     return sport || undefined;
   }

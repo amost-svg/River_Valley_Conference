@@ -92,6 +92,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/sports/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const sport = await storage.getSportById(id);
+      if (!sport) {
+        return res.status(404).json({ message: "Sport not found" });
+      }
+      res.json(sport);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch sport" });
+    }
+  });
+
   // Games
   app.get("/api/games", async (req, res) => {
     try {
