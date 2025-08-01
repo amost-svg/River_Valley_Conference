@@ -33,6 +33,7 @@ import type { School, Sport, Game, News, GameResultSubmission, User } from "@sha
 import { insertGameSchema, insertNewsSchema } from "@shared/schema";
 import GlobalCalendar from "@/components/GlobalCalendar";
 import SchoolEditor from "@/components/SchoolEditor";
+import ScheduleUploader from "@/components/ScheduleUploader";
 
 // Form schemas
 const gameSchema = insertGameSchema.extend({
@@ -175,9 +176,10 @@ export default function Admin() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
+            <TabsTrigger value="upload">Upload Schedule</TabsTrigger>
             <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
@@ -253,6 +255,17 @@ export default function Admin() {
               </Badge>
             </div>
             <SchoolEditor />
+          </TabsContent>
+
+          {/* Schedule Upload Tab */}
+          <TabsContent value="upload" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Upload Athletic Schedule</h2>
+              <Badge variant="outline" className="text-blue-600">
+                Conference & Non-Conference Games
+              </Badge>
+            </div>
+            <ScheduleUploader />
           </TabsContent>
 
           {/* Games Tab */}

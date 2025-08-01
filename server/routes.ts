@@ -1,8 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
 import { z } from "zod";
 import { storage } from "./storage";
 import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema } from "@shared/schema";
+import { ICalParser } from "./ical-parser";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Schools
@@ -411,6 +413,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating school:", error);
       res.status(500).json({ message: "Failed to update school" });
+    }
+  });
+
+  // Configure multer for file uploads
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype === 'text/calendar' || 
+          file.originalname.endsWith('.ics') || 
+          file.originalname.endsWith('.ical')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only .ics and .ical files are allowed'));
+      }
+    }
+  });
+
+  // iCal file upload endpoint
+  app.post("/api/admin/upload-schedule", upload.single('icalFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "No file uploaded" 
+        });
+      }
+
+      const schoolId = parseInt(req.body.schoolId);
+      const userId = parseInt(req.body.userId);
+
+      if (!schoolId || !userId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "School ID and User ID are required" 
+        });
+      }
+
+      // Parse the iCal file
+      const icalContent = req.file.buffer.toString('utf8');
+      const parsedEvents = await ICalParser.parseICalContent(icalContent);
+
+      let imported = 0;
+      let skipped = 0;
+
+      // Process each event
+      for (const event of parsedEvents) {
+        try {
+          // Map sport name to sport ID
+          const sportId = ICalParser.mapSportNameToId(event.sport);
+          if (!sportId) {
+            skipped++;
+            continue;
+          }
+
+          // Determine team IDs for RVC schools
+          let homeTeamId = null;
+          let awayTeamId = null;
+          let homeTeamName = event.homeTeam;
+          let awayTeamName = event.awayTeam;
+
+          if (event.isConferenceGame) {
+            homeTeamId = ICalParser.mapSchoolNameToId(event.homeTeam);
+            awayTeamId = ICalParser.mapSchoolNameToId(event.awayTeam);
+          }
+
+          // Create the game entry
+          const gameData = {
+            homeTeamId,
+            awayTeamId,
+            sportId,
+            gameDate: event.start,
+            gameTime: event.start.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }),
+            homeTeamName,
+            awayTeamName,
+            isConferenceGame: event.isConferenceGame || false,
+            location: event.location,
+            level: event.level,
+            notes: event.description,
+            externalEventId: event.uid,
+            uploadedBy: userId,
+            isCompleted: false
+          };
+
+          // Check for duplicates based on external event ID
+          const existingGames = await storage.getGames();
+          const isDuplicate = existingGames.some(game => 
+            game.externalEventId === event.uid && event.uid
+          );
+
+          if (isDuplicate) {
+            skipped++;
+            continue;
+          }
+
+          await storage.createGame(gameData);
+          imported++;
+
+        } catch (gameError) {
+          console.error('Error creating game:', gameError);
+          skipped++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully processed ${parsedEvents.length} events`,
+        events: parsedEvents,
+        imported,
+        skipped
+      });
+
+    } catch (error) {
+      console.error('Error uploading schedule:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : "Failed to process calendar file"
+      });
     }
   });
 

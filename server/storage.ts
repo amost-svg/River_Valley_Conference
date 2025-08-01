@@ -24,8 +24,8 @@ export interface IStorage {
   createSport(sport: InsertSport): Promise<Sport>;
 
   // Games
-  getGames(): Promise<(Game & { homeTeam: School; awayTeam: School; sport: Sport })[]>;
-  getGamesBySport(sportId: number): Promise<(Game & { homeTeam: School; awayTeam: School; sport: Sport })[]>;
+  getGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
+  getGamesBySport(sportId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
   createGame(game: InsertGame): Promise<Game>;
   updateGame(id: number, game: Partial<InsertGame>): Promise<Game | undefined>;
 
@@ -56,7 +56,7 @@ export interface IStorage {
   updateNewsUpdated(id: number, news: Partial<InsertNewsUpdated>): Promise<NewsUpdated | undefined>;
 
   // Game Result Submissions
-  getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]>;
+  getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport } })[]>;
   createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission>;
   moderateGameResultSubmission(id: number, moderatedBy: number, notes?: string): Promise<GameResultSubmission | undefined>;
 
@@ -310,22 +310,22 @@ export class MemStorage implements IStorage {
   }
 
   // Games
-  async getGames(): Promise<(Game & { homeTeam: School; awayTeam: School; sport: Sport })[]> {
+  async getGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]> {
     const games = Array.from(this.games.values());
     return games.map(game => ({
       ...game,
-      homeTeam: this.schools.get(game.homeTeamId)!,
-      awayTeam: this.schools.get(game.awayTeamId)!,
+      homeTeam: game.homeTeamId ? this.schools.get(game.homeTeamId) || null : null,
+      awayTeam: game.awayTeamId ? this.schools.get(game.awayTeamId) || null : null,
       sport: this.sports.get(game.sportId)!,
     }));
   }
 
-  async getGamesBySport(sportId: number): Promise<(Game & { homeTeam: School; awayTeam: School; sport: Sport })[]> {
-    const games = Array.from(this.games.values()).filter(game => game.sportId === sportId);
+  async getGamesBySport(sportId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]> {
+    const games = Array.from(this.games.values()).filter(game => game.sportId === sportId);  
     return games.map(game => ({
       ...game,
-      homeTeam: this.schools.get(game.homeTeamId)!,
-      awayTeam: this.schools.get(game.awayTeamId)!,
+      homeTeam: game.homeTeamId ? this.schools.get(game.homeTeamId) || null : null,
+      awayTeam: game.awayTeamId ? this.schools.get(game.awayTeamId) || null : null,
       sport: this.sports.get(game.sportId)!,
     }));
   }
@@ -335,9 +335,20 @@ export class MemStorage implements IStorage {
     const newGame: Game = { 
       ...game, 
       id,
+      homeTeamId: game.homeTeamId || null,
+      awayTeamId: game.awayTeamId || null,
       homeScore: game.homeScore || null,
       awayScore: game.awayScore || null,
-      isCompleted: game.isCompleted || false
+      isCompleted: game.isCompleted || false,
+      homeTeamName: game.homeTeamName || null,
+      awayTeamName: game.awayTeamName || null,
+      isConferenceGame: game.isConferenceGame !== undefined ? game.isConferenceGame : true,
+      location: game.location || null,
+      level: game.level || null,
+      notes: game.notes || null,
+      externalEventId: game.externalEventId || null,
+      uploadedBy: game.uploadedBy || null,
+      createdAt: game.createdAt || new Date()
     };
     this.games.set(id, newGame);
     return newGame;
@@ -847,4 +858,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage: IStorage = new DatabaseStorage();

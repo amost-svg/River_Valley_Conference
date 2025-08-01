@@ -32,14 +32,24 @@ export const sports = pgTable("sports", {
 
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
-  homeTeamId: integer("home_team_id").references(() => schools.id).notNull(),
-  awayTeamId: integer("away_team_id").references(() => schools.id).notNull(),
+  homeTeamId: integer("home_team_id").references(() => schools.id),
+  awayTeamId: integer("away_team_id").references(() => schools.id),
   sportId: integer("sport_id").references(() => sports.id).notNull(),
   gameDate: timestamp("game_date").notNull(),
   gameTime: text("game_time").notNull(),
   homeScore: integer("home_score"),
   awayScore: integer("away_score"),
   isCompleted: boolean("is_completed").default(false),
+  // Enhanced fields for non-conference games
+  homeTeamName: text("home_team_name"), // For non-RVC opponents
+  awayTeamName: text("away_team_name"), // For non-RVC opponents
+  isConferenceGame: boolean("is_conference_game").default(true),
+  location: text("location"),
+  level: text("level"), // "JV", "Varsity", "Both"
+  notes: text("notes"),
+  externalEventId: text("external_event_id"), // For tracking imported calendar events
+  uploadedBy: integer("uploaded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const standings = pgTable("standings", {
