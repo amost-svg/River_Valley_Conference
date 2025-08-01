@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 import { 
   Plus, 
   Edit, 
@@ -25,12 +26,15 @@ import {
   XCircle,
   Clock,
   Upload,
-  Eye
+  Eye,
+  ImageIcon,
+  FileIcon,
+  X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { School, Sport, Game, News, GameResultSubmission, User } from "@shared/schema";
-import { insertGameSchema, insertNewsSchema } from "@shared/schema";
+import type { School, Sport, Game, News, GameResultSubmission, User, NewsUpdated } from "@shared/schema";
+import { insertGameSchema, insertNewsSchema, insertNewsUpdatedSchema } from "@shared/schema";
 import GlobalCalendar from "@/components/GlobalCalendar";
 import SchoolEditor from "@/components/SchoolEditor";
 import ScheduleUploader from "@/components/ScheduleUploader";
@@ -48,20 +52,38 @@ const newsSchema = insertNewsSchema.extend({
   content: z.string().min(1, "Content is required"),
 });
 
+// Enhanced news schema for the new system
+const enhancedNewsSchema = insertNewsUpdatedSchema.extend({
+  title: z.string().min(1, "Title is required"),
+  authorId: z.number().min(1, "Author is required"),
+});
+
 type GameFormData = z.infer<typeof gameSchema>;
 type NewsFormData = z.infer<typeof newsSchema>;
+type EnhancedNewsFormData = z.infer<typeof enhancedNewsSchema>;
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isGameDialogOpen, setIsGameDialogOpen] = useState(false);
   const [isNewsDialogOpen, setIsNewsDialogOpen] = useState(false);
+  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // File input refs
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   // Data queries
   const { data: schools } = useQuery<School[]>({ queryKey: ["/api/schools"] });
   const { data: sports } = useQuery<Sport[]>({ queryKey: ["/api/sports"] });
   const { data: games } = useQuery<Game[]>({ queryKey: ["/api/games"] });
   const { data: news } = useQuery<News[]>({ queryKey: ["/api/news"] });
+  const { data: enhancedNews } = useQuery<(NewsUpdated & { author: User })[]>({ 
+    queryKey: ["/api/news-updated"] 
+  });
   const { data: submissions } = useQuery<GameResultSubmission[]>({ 
     queryKey: ["/api/admin/game-result-submissions"] 
   });
@@ -92,6 +114,83 @@ export default function Admin() {
       imageUrl: "",
     },
   });
+
+  const enhancedNewsForm = useForm<EnhancedNewsFormData>({
+    resolver: zodResolver(enhancedNewsSchema),
+    defaultValues: {
+      title: "",
+      excerpt: "",
+      content: "",
+      category: "General",
+      publishDate: new Date(),
+      imageUrl: "",
+      pdfUrl: "",
+      authorId: 1, // Default to first user, should be dynamic in production
+      isPublished: true,
+    },
+  });
+
+  const pdfForm = useForm({
+    defaultValues: {
+      title: "",
+      category: "General",
+      excerpt: "",
+    },
+  });
+
+  // File handling functions
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePdfSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setSelectedPdf(file);
+    } else {
+      toast({
+        title: "Invalid File",
+        description: "Please select a PDF file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const clearImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+
+  const clearPdf = () => {
+    setSelectedPdf(null);
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = '';
+    }
+  };
+
+  const resetNewsForm = () => {
+    enhancedNewsForm.reset();
+    clearImage();
+    clearPdf();
+    setIsNewsDialogOpen(false);
+  };
+
+  const resetPdfForm = () => {
+    pdfForm.reset();
+    clearPdf();
+    setIsPdfDialogOpen(false);
+  };
 
   // Mutations
   const createGameMutation = useMutation({
@@ -124,6 +223,81 @@ export default function Admin() {
     },
   });
 
+  // Enhanced news mutation with file uploads
+  const createEnhancedNewsMutation = useMutation({
+    mutationFn: async (data: EnhancedNewsFormData) => {
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(data));
+      
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
+      
+      if (selectedPdf) {
+        formData.append('pdf', selectedPdf);
+      }
+
+      const response = await fetch('/api/admin/news-enhanced', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create news article');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Enhanced news article created successfully" });
+      resetNewsForm();
+      queryClient.invalidateQueries({ queryKey: ["/api/news-updated"] });
+    },
+    onError: (error) => {
+      console.error("Enhanced news creation error:", error);
+      toast({ title: "Error", description: "Failed to create enhanced news article", variant: "destructive" });
+    },
+  });
+
+  // PDF-only article mutation
+  const createPdfArticleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!selectedPdf) {
+        throw new Error('No PDF file selected');
+      }
+
+      const formData = new FormData();
+      formData.append('data', JSON.stringify({
+        ...data,
+        authorId: 1, // Default to first user
+        publishDate: new Date(),
+        isPublished: true,
+        content: data.excerpt || `PDF Document: ${selectedPdf.name}`,
+      }));
+      formData.append('pdf', selectedPdf);
+
+      const response = await fetch('/api/admin/news-enhanced', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create PDF article');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "PDF article created successfully" });
+      resetPdfForm();
+      queryClient.invalidateQueries({ queryKey: ["/api/news-updated"] });
+    },
+    onError: (error) => {
+      console.error("PDF article creation error:", error);
+      toast({ title: "Error", description: "Failed to create PDF article", variant: "destructive" });
+    },
+  });
+
   const moderateSubmissionMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: number; notes?: string }) => {
       return apiRequest("POST", `/api/admin/game-result-submissions/${id}/moderate`, {
@@ -146,6 +320,14 @@ export default function Admin() {
 
   const onSubmitNews = (data: NewsFormData) => {
     createNewsMutation.mutate(data);
+  };
+
+  const onSubmitEnhancedNews = (data: EnhancedNewsFormData) => {
+    createEnhancedNewsMutation.mutate(data);
+  };
+
+  const onSubmitPdfArticle = (data: any) => {
+    createPdfArticleMutation.mutate(data);
   };
 
   const moderateSubmission = (id: number, notes?: string) => {
@@ -462,105 +644,340 @@ export default function Admin() {
           <TabsContent value="news" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-900">News Management</h2>
-              <Dialog open={isNewsDialogOpen} onOpenChange={setIsNewsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-conference-navy hover:bg-blue-800">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Article
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Create News Article</DialogTitle>
-                  </DialogHeader>
-                  
-                  <Form {...newsForm}>
-                    <form onSubmit={newsForm.handleSubmit(onSubmitNews)} className="space-y-4">
-                      <FormField
-                        control={newsForm.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Title</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Article title" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={newsForm.control}
-                        name="excerpt"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Excerpt</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="Brief summary..." {...field} value={field.value || ""} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={newsForm.control}
-                        name="content"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Content</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="Full article content..." {...field} rows={6} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={newsForm.control}
-                        name="category"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <div className="flex space-x-2">
+                <Dialog open={isNewsDialogOpen} onOpenChange={setIsNewsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-conference-navy hover:bg-blue-800">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Article
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Create News Article with Media</DialogTitle>
+                    </DialogHeader>
+                    
+                    <Form {...enhancedNewsForm}>
+                      <form onSubmit={enhancedNewsForm.handleSubmit(onSubmitEnhancedNews)} className="space-y-4">
+                        <FormField
+                          control={enhancedNewsForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Title</FormLabel>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
+                                <Input placeholder="Article title" {...field} />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Sports">Sports</SelectItem>
-                                <SelectItem value="Academic">Academic</SelectItem>
-                                <SelectItem value="General">General</SelectItem>
-                                <SelectItem value="Championship">Championship</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-conference-navy hover:bg-blue-800"
-                        disabled={createNewsMutation.isPending}
-                      >
-                        {createNewsMutation.isPending ? "Publishing..." : "Publish Article"}
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
+                        <FormField
+                          control={enhancedNewsForm.control}
+                          name="category"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Category</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="General">General</SelectItem>
+                                  <SelectItem value="Sports">Sports</SelectItem>
+                                  <SelectItem value="Announcement">Announcement</SelectItem>
+                                  <SelectItem value="Event">Event</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={enhancedNewsForm.control}
+                          name="excerpt"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Excerpt</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Brief summary..." {...field} value={field.value || ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Image Upload Section */}
+                        <div className="space-y-2">
+                          <Label>Article Image</Label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                            {imagePreview ? (
+                              <div className="relative">
+                                <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded" />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute top-2 right-2"
+                                  onClick={clearImage}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="text-center">
+                                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                                <div className="mt-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => imageInputRef.current?.click()}
+                                  >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload Image
+                                  </Button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
+                              </div>
+                            )}
+                            <input
+                              ref={imageInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageSelect}
+                              className="hidden"
+                            />
+                          </div>
+                        </div>
+
+                        <FormField
+                          control={enhancedNewsForm.control}
+                          name="content"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Content</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Full article content..." {...field} rows={8} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-conference-navy hover:bg-blue-800"
+                          disabled={createEnhancedNewsMutation.isPending}
+                        >
+                          {createEnhancedNewsMutation.isPending ? "Publishing..." : "Publish Article"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="border-conference-navy text-conference-navy hover:bg-conference-navy hover:text-white">
+                      <FileIcon className="h-4 w-4 mr-2" />
+                      Upload PDF
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Upload PDF Article</DialogTitle>
+                    </DialogHeader>
+                    
+                    <Form {...pdfForm}>
+                      <form onSubmit={pdfForm.handleSubmit(onSubmitPdfArticle)} className="space-y-4">
+                        <FormField
+                          control={pdfForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Title</FormLabel>
+                              <FormControl>
+                                <Input placeholder="PDF article title" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={pdfForm.control}
+                          name="category"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Category</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="General">General</SelectItem>
+                                  <SelectItem value="Sports">Sports</SelectItem>
+                                  <SelectItem value="Announcement">Announcement</SelectItem>
+                                  <SelectItem value="Document">Document</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={pdfForm.control}
+                          name="excerpt"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Brief description of the PDF content..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* PDF Upload Section */}
+                        <div className="space-y-2">
+                          <Label>PDF File</Label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                            {selectedPdf ? (
+                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <div className="flex items-center">
+                                  <FileIcon className="h-6 w-6 text-red-500 mr-2" />
+                                  <span className="text-sm font-medium">{selectedPdf.name}</span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={clearPdf}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="text-center">
+                                <FileIcon className="mx-auto h-12 w-12 text-gray-400" />
+                                <div className="mt-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => pdfInputRef.current?.click()}
+                                  >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload PDF
+                                  </Button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">PDF files up to 10MB</p>
+                              </div>
+                            )}
+                            <input
+                              ref={pdfInputRef}
+                              type="file"
+                              accept=".pdf"
+                              onChange={handlePdfSelect}
+                              className="hidden"
+                            />
+                          </div>
+                        </div>
+
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-conference-navy hover:bg-blue-800"
+                          disabled={createPdfArticleMutation.isPending || !selectedPdf}
+                        >
+                          {createPdfArticleMutation.isPending ? "Uploading..." : "Upload PDF Article"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
 
+            {/* News Articles Display */}
             <Card>
+              <CardHeader>
+                <CardTitle>Published Articles</CardTitle>
+              </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {news && news.length > 0 ? (
-                    news.map((article) => (
+                  {enhancedNews && enhancedNews.length > 0 ? (
+                    enhancedNews.map((article) => (
                       <div key={article.id} className="flex items-start justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h3 className="font-medium">{article.title}</h3>
+                            {article.pdfUrl && (
+                              <Badge variant="secondary" className="text-xs">
+                                <FileIcon className="h-3 w-3 mr-1" />
+                                PDF
+                              </Badge>
+                            )}
+                            {article.imageUrl && (
+                              <Badge variant="secondary" className="text-xs">
+                                <ImageIcon className="h-3 w-3 mr-1" />
+                                Image
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{article.excerpt}</p>
+                          <div className="flex items-center mt-2 space-x-4">
+                            <Badge variant="outline">{article.category}</Badge>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(article.publishDate)}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              by {article.author.name}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {article.pdfUrl && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => window.open(article.pdfUrl || '', '_blank')}
+                            >
+                              <FileIcon className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No enhanced articles published yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legacy News Articles */}
+            {news && news.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Legacy Articles</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {news.map((article) => (
+                      <div key={article.id} className="flex items-start justify-between p-4 border rounded-lg bg-gray-50">
                         <div className="flex-1">
                           <h3 className="font-medium">{article.title}</h3>
                           <p className="text-sm text-gray-600 mt-1">{article.excerpt}</p>
@@ -580,13 +997,11 @@ export default function Admin() {
                           </Button>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No news articles</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Submissions Tab */}

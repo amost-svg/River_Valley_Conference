@@ -1,10 +1,62 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import path from "path";
+import fs from "fs/promises";
 import { z } from "zod";
 import { storage } from "./storage";
 import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema } from "@shared/schema";
 import { ICalParser } from "./ical-parser";
+
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), 'uploads');
+
+// Ensure upload directories exist
+async function ensureDirectoriesExist() {
+  await fs.mkdir(path.join(uploadDir, 'images'), { recursive: true });
+  await fs.mkdir(path.join(uploadDir, 'pdfs'), { recursive: true });
+}
+
+// Initialize directories
+ensureDirectoriesExist().catch(console.error);
+
+// Configure multer storage
+const storage_multer = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const subDir = file.mimetype.startsWith('image/') ? 'images' : 'pdfs';
+    cb(null, path.join(uploadDir, subDir));
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with timestamp
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+// File filter for images and PDFs
+const fileFilter = (req: any, file: any, cb: any) => {
+  const allowedTypes = [
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf'
+  ];
+  
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed.'), false);
+  }
+};
+
+// Configure multer instance
+const upload = multer({
+  storage: storage_multer,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Schools
@@ -325,6 +377,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // File Upload Routes
+  app.post("/api/admin/upload/image", upload.single('image'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      const imageUrl = `/uploads/images/${req.file.filename}`;
+      res.json({ 
+        message: "Image uploaded successfully",
+        imageUrl: imageUrl
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
+  app.post("/api/admin/upload/pdf", upload.single('pdf'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No PDF file provided" });
+      }
+      
+      const pdfUrl = `/uploads/pdfs/${req.file.filename}`;
+      res.json({ 
+        message: "PDF uploaded successfully",
+        pdfUrl: pdfUrl,
+        filename: req.file.originalname
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upload PDF" });
+    }
+  });
+
+  // News with both text content and PDF support
+  app.post("/api/admin/news-enhanced", upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'pdf', maxCount: 1 }
+  ]), async (req, res) => {
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      // Parse the JSON data from the form
+      const formData = typeof req.body.data === 'string' ? JSON.parse(req.body.data) : req.body;
+      
+      // Add file URLs if files were uploaded
+      if (files.image && files.image[0]) {
+        formData.imageUrl = `/uploads/images/${files.image[0].filename}`;
+      }
+      
+      if (files.pdf && files.pdf[0]) {
+        formData.pdfUrl = `/uploads/pdfs/${files.pdf[0].filename}`;
+        // If PDF is provided, content can be optional (just title and excerpt)
+        if (!formData.content) {
+          formData.content = formData.excerpt || `PDF Document: ${files.pdf[0].originalname}`;
+        }
+      }
+
+      const validatedData = insertNewsUpdatedSchema.parse(formData);
+      const news = await storage.createNewsUpdated(validatedData);
+      
+      res.status(201).json({
+        message: "News article created successfully",
+        news: news
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      console.error("News creation error:", error);
+      res.status(500).json({ message: "Failed to create news article" });
+    }
+  });
+
   // Conference Officials
   app.get("/api/officials", async (req, res) => {
     try {
@@ -416,8 +545,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Configure multer for file uploads
-  const upload = multer({ 
+  // Configure separate multer for iCal files
+  const icalUpload = multer({ 
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req, file, cb) => {
@@ -431,8 +560,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Static file serving for uploads
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
   // iCal file upload endpoint
-  app.post("/api/admin/upload-schedule", upload.single('icalFile'), async (req, res) => {
+  app.post("/api/admin/upload-schedule", icalUpload.single('icalFile'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ 
