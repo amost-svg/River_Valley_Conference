@@ -134,6 +134,14 @@ Default login credentials (password: "password" - should be changed):
 
 ## Recent Features
 
+### News Management System (Enhanced August 2025)
+- **PDF Upload Functionality**: Dedicated "Upload PDF" button for principal-created letterhead documents
+- **Enhanced Add Article**: Native article creation with image upload and drag-and-drop interface
+- **File Upload Backend**: Complete multer-based file handling supporting images and PDFs up to 10MB
+- **Visual Media Indicators**: Enhanced news display with badges showing attached PDFs and images
+- **Static File Serving**: Secure file access with proper routing for uploaded content
+- **Dual Upload Options**: Separate workflows for rich articles (with images) and quick PDF uploads
+
 ### Authentication & Admin System
 - **Role-based Access**: Separate authentication for Athletic Directors and conference officials
 - **Admin Dashboard**: Comprehensive admin interface with game management, news publishing, and submission moderation
@@ -148,8 +156,8 @@ Default login credentials (password: "password" - should be changed):
 
 ### Technical Infrastructure
 - **Calendar Service**: Backend service for Google Calendar API integration with iCal support
-- **Database Schema**: Extended schema supporting users, game submissions, news management, and conference officials
-- **API Endpoints**: RESTful APIs for authentication, game result submissions, and calendar synchronization
+- **Database Schema**: Extended schema supporting users, game submissions, news management, conference officials, and file uploads
+- **API Endpoints**: RESTful APIs for authentication, game result submissions, calendar synchronization, and file uploads
 - **Type Safety**: Full TypeScript coverage with Zod validation schemas
 
 ## Google Calendar Integration
@@ -174,6 +182,7 @@ Default login credentials (password: "password" - should be changed):
 
 ```
 Changelog:
+- August 01, 2025. Added comprehensive news management with PDF upload and image upload capabilities
 - August 01, 2025. Enhanced with comprehensive admin dashboard and Google Calendar integration
 - August 01, 2025. Added game result submission system for public users
 - August 01, 2025. Implemented authentication system for Athletic Directors
