@@ -1,0 +1,98 @@
+Build a centralized, dynamic web application for the River Valley Conference (RVC) that serves:
+
+Public users (parents, students, fans)
+
+Authenticated Athletic Directors (ADs)
+
+🛠️ Backend Functionality
+📚 Database/Spreadsheet Integration
+A spreadsheet (RVC Calendars.xlsx) contains metadata for each RVC sport, including:
+
+Sport name (e.g., Volleyball)
+
+Google Calendar ID
+
+JV/Varsity designation (optional)
+
+Internal tag for frontend reference
+
+🧠 Replit Server Logic
+Use Python (FastAPI or Flask) or Node.js backend with these key modules:
+
+Google Calendar API (google-api-python-client or @googleapis/calendar)
+
+OAuth 2.0 for secure access
+
+SQLite or Replit DB to cache/serve filtered data if needed
+
+🔁 Steps to Communicate with Each Calendar
+Authenticate with Google Calendar API (using service account or OAuth 2.0)
+
+Read RVC Calendars.xlsx or import it as a JSON/CSV config into Replit
+
+For each calendar entry:
+
+Extract the calendar_id
+
+Query events using Google Calendar API
+
+python
+Copy
+Edit
+service.events().list(
+    calendarId='calendar_id_here',
+    timeMin=datetime.utcnow().isoformat() + 'Z',
+    timeMax=desired_time_range,
+    singleEvents=True,
+    orderBy='startTime'
+).execute()
+Filter and tag results by sport and level (e.g., JV vs. Varsity)
+
+Store or serve results to the frontend via API endpoints like:
+
+bash
+Copy
+Edit
+GET /api/schedule/volleyball
+GET /api/schedule/basketball?team=Grace
+🔐 Authenticated AD Dashboard
+Google OAuth Login for ADs (Google Workspace domain whitelist for @schoolname.org)
+
+After login, ADs can:
+
+View a conference-wide calendar (aggregated across sport calendars)
+
+Upload their school’s schedule via:
+
+Manual entry form
+
+.ics file upload (parsed into events)
+
+Edit or reschedule games they submitted
+
+Add notes to their events
+
+🌐 Frontend Functionality
+Schedules & Results Section
+Users navigate by sport using sub-navigation (Volleyball, Baseball, etc.)
+
+At the top of each sport’s section:
+
+“See Full Schedule” button → links to a full calendar/table view
+
+Beneath it: Game cards showing daily matchups
+
+Game Card Content:
+Logos from school DB (e.g., Grace vs. Momence)
+
+Date, time, level (JV/Varsity)
+
+Optional: location, notes
+
+Game Results
+A public-facing form for submitting scores or corrections (optional admin approval)
+
+🔄 Sync Logic for Google Calendars
+Scheduled job or real-time API calls retrieve upcoming games
+
+Optional: Cache upcoming games (next 7–14 days) in Replit DB for speed

@@ -333,6 +333,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Calendar Integration Routes
+  app.get("/api/calendar/events/:sportId", async (req, res) => {
+    try {
+      const sportId = parseInt(req.params.sportId);
+      const days = parseInt(req.query.days as string) || 14;
+      
+      // For now, return placeholder events since Google Calendar API setup requires credentials
+      // In production, use the calendar service with proper authentication
+      const events = [
+        {
+          id: `event-${sportId}-1`,
+          title: `Sample Game 1`,
+          start: new Date(),
+          end: new Date(Date.now() + 2 * 60 * 60 * 1000),
+          sportId,
+          level: 'Varsity',
+          location: 'Home Field',
+          homeTeam: 'Home Team',
+          awayTeam: 'Away Team'
+        },
+        {
+          id: `event-${sportId}-2`,
+          title: `Sample Game 2`,
+          start: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+          end: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+          sportId,
+          level: 'JV',
+          location: 'Away Field',
+          homeTeam: 'Home Team',
+          awayTeam: 'Away Team'
+        }
+      ];
+      
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch calendar events" });
+    }
+  });
+
+  app.get("/api/calendar/configs", async (req, res) => {
+    try {
+      // Return Google Calendar configuration data
+      const configs = [
+        {
+          name: 'RVC Volleyball',
+          publicUrl: 'https://calendar.google.com/calendar/embed?src=c_40f66f13378e3ec527a356f7c55fdc48a5d4b13d72bd54f04061018229c241b8%40group.calendar.google.com&ctz=America%2FChicago',
+          icalUrl: 'https://calendar.google.com/calendar/ical/c_40f66f13378e3ec527a356f7c55fdc48a5d4b13d72bd54f04061018229c241b8%40group.calendar.google.com/public/basic.ics',
+          sportId: 3
+        },
+        {
+          name: 'RVC Soccer',
+          publicUrl: 'https://calendar.google.com/calendar/embed?src=c_a45049bcece6ca8d0da01a1bd306a475c4815c7a4551be1e3533c2f808449f3b%40group.calendar.google.com&ctz=America%2FChicago',
+          icalUrl: 'https://calendar.google.com/calendar/ical/c_a45049bcece6ca8d0da01a1bd306a475c4815c7a4551be1e3533c2f808449f3b%40group.calendar.google.com/public/basic.ics',
+          sportId: 4
+        },
+        {
+          name: 'RVC Basketball',
+          publicUrl: 'https://calendar.google.com/calendar/embed?src=c_7a93f9537a04e44d4dd106a4b22f08c1f0ec015b2240838e216a8903d7a0b78a%40group.calendar.google.com&ctz=America%2FChicago',
+          icalUrl: 'https://calendar.google.com/calendar/ical/c_7a93f9537a04e44d4dd106a4b22f08c1f0ec015b2240838e216a8903d7a0b78a%40group.calendar.google.com/public/basic.ics',
+          sportId: 2
+        }
+      ];
+      
+      res.json(configs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch calendar configs" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

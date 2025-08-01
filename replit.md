@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a modern, professional website for the River Valley Conference IHSA organization featuring school directories, sports schedules, conference standings, and news announcements. The application serves as a central hub for the 10 member schools in the conference, providing information about athletics, schedules, results, and school details.
+This is a comprehensive, dynamic web application for the River Valley Conference IHSA organization featuring school directories, sports schedules, conference standings, news announcements, and administrative capabilities. The platform serves public users (parents, students, fans), authenticated Athletic Directors, and conference officials with role-based access and functionality. The application integrates with Google Calendar APIs for automated schedule synchronization and provides game result submission capabilities for community engagement.
 
 ## System Architecture
 
@@ -34,18 +34,21 @@ This is a modern, professional website for the River Valley Conference IHSA orga
 - **Contacts**: Contact form submissions for communication
 
 ### User Interface Components
-- **Navigation**: Sticky header with smooth scrolling to sections
+- **Navigation**: Sticky header with smooth scrolling to homepage sections
 - **Hero Section**: Conference branding with call-to-action buttons
 - **Member Schools**: Interactive school directory with detailed information
-- **Schedules & Results**: Filterable game schedules with real-time results
+- **Schedules & Results**: Filterable game schedules with game result submission form
 - **Conference Standings**: Live standings tables for different sports
 - **News Section**: Latest conference news and announcements
-- **Contact Form**: Inquiry system with form validation
+- **Contact Form**: Inquiry system with conference officials contact information
 
-### Admin Interface
-- **School Management**: CRUD operations for school information
-- **Content Management**: Admin panel for managing schools, games, and news
-- **Data Import**: CSV import functionality for bulk data operations
+### Admin Dashboard
+- **Authentication System**: Role-based access for Athletic Directors and officials
+- **Game Management**: Create, edit, and manage game schedules with form validation
+- **News Management**: Create and publish news articles with rich content
+- **Submission Moderation**: Review and approve public game result submissions
+- **Google Calendar Integration**: Real-time synchronization with sport-specific calendars
+- **Data Analytics**: Dashboard metrics for schools, sports, games, and submissions
 
 ## Data Flow
 
@@ -74,6 +77,7 @@ This is a modern, professional website for the River Valley Conference IHSA orga
 - **drizzle-kit**: Database migration and schema management tools
 
 ### Third-party Services
+- **Google Calendar API**: Automated schedule synchronization for 8 sports
 - **NFHS Network**: Live streaming platform integration
 - **YouTube**: Video streaming platform integration
 - **IHSA**: Illinois High School Association integration
@@ -128,12 +132,53 @@ Default login credentials (password: "password" - should be changed):
 - St. Anne: Zach.Kirkland@stanne24.org
 - Tri Point: Alison.Buckley@tripointschools.org
 
+## Recent Features
+
+### Authentication & Admin System
+- **Role-based Access**: Separate authentication for Athletic Directors and conference officials
+- **Admin Dashboard**: Comprehensive admin interface with game management, news publishing, and submission moderation
+- **Game Result Submissions**: Public form allowing visitors to submit game results for review
+- **Google Calendar Integration**: Real-time synchronization with 8 sport-specific Google Calendars
+
+### Enhanced User Experience
+- **Homepage Restructuring**: Updated section ordering with proper anchor navigation (Home → Schedules → Schools → About → News → Contact)
+- **Interactive Schedules**: Game result submission dialog integrated into schedules section
+- **Conference Officials Contact**: Updated contact section to feature conference leadership instead of physical addresses
+- **Form Validation**: Comprehensive validation for all user inputs with real-time feedback
+
+### Technical Infrastructure
+- **Calendar Service**: Backend service for Google Calendar API integration with iCal support
+- **Database Schema**: Extended schema supporting users, game submissions, news management, and conference officials
+- **API Endpoints**: RESTful APIs for authentication, game result submissions, and calendar synchronization
+- **Type Safety**: Full TypeScript coverage with Zod validation schemas
+
+## Google Calendar Integration
+
+### Sport Calendars
+- RVC Volleyball
+- RVC Soccer  
+- RVC Girls Basketball
+- RVC Boys Basketball
+- RVC Baseball
+- RVC Softball
+- RVC Track
+- RVC Scholastic Bowl
+
+### Sync Capabilities
+- Automated event retrieval from Google Calendar API
+- iCal format support for external calendar applications
+- Real-time schedule updates across all sports
+- Event parsing for team matchups and game details
+
 ## Changelog
 
 ```
 Changelog:
-- July 05, 2025. Initial setup
+- August 01, 2025. Enhanced with comprehensive admin dashboard and Google Calendar integration
+- August 01, 2025. Added game result submission system for public users
+- August 01, 2025. Implemented authentication system for Athletic Directors
 - July 05, 2025. Added Flask scheduling dashboard for Athletic Directors
+- July 05, 2025. Initial setup
 ```
 
 ## User Preferences
