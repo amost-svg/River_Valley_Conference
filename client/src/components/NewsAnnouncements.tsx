@@ -53,9 +53,9 @@ export default function NewsAnnouncements() {
   }
 
   return (
-    <section id="news" className="py-16 bg-white">
+    <section id="news" className="py-16 bg-section-gradient-4">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 section-divider pb-8">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Latest News</h2>
           <p className="text-lg text-gray-600">Stay informed with conference updates and announcements</p>
         </div>
@@ -78,7 +78,7 @@ export default function NewsAnnouncements() {
                 </Card>
               ))
             : news?.map((article) => (
-                <Card key={article.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                <Card key={article.id} className="card-hover shadow-red hover:shadow-lg transition-all duration-300 overflow-hidden border-t-4 border-t-conference-red">
                   <img 
                     src={article.imageUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400"} 
                     alt={article.title}

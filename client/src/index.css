@@ -24,10 +24,35 @@
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
   
-  /* Conference Colors */
+  /* Enhanced Conference & School Colors */
   --conference-navy: hsl(220, 90%, 36%);
   --conference-gold: hsl(38, 92%, 50%);
   --conference-green: hsl(158, 64%, 52%);
+  --conference-red: hsl(0, 73%, 48%);
+  
+  /* School-specific colors */
+  --beecher-orange: hsl(24, 100%, 50%);
+  --central-blue: hsl(223, 76%, 34%);
+  --grant-park-green: hsl(120, 61%, 28%);
+  --grant-park-gold: hsl(51, 100%, 50%);
+  --lutheran-navy: hsl(208, 68%, 24%);
+  --lutheran-teal: hsl(174, 72%, 56%);
+  --donovan-gold: hsl(33, 82%, 65%);
+  --st-anne-red: hsl(348, 83%, 47%);
+  --momence-red: hsl(348, 83%, 47%);
+  
+  /* Modern gradient backgrounds */
+  --hero-gradient: linear-gradient(135deg, var(--conference-navy) 0%, var(--central-blue) 25%, var(--lutheran-navy) 50%, var(--conference-navy) 100%);
+  --section-gradient-1: linear-gradient(120deg, hsl(24, 100%, 97%) 0%, hsl(120, 61%, 97%) 100%);
+  --section-gradient-2: linear-gradient(120deg, hsl(223, 76%, 97%) 0%, hsl(174, 72%, 97%) 100%);
+  --section-gradient-3: linear-gradient(120deg, hsl(348, 83%, 97%) 0%, hsl(51, 100%, 97%) 100%);
+  --section-gradient-4: linear-gradient(120deg, hsl(158, 64%, 97%) 0%, hsl(33, 82%, 97%) 100%);
+  
+  /* Enhanced shadows with color tints */
+  --shadow-orange: 0 10px 25px -5px hsl(24, 100%, 50%, 0.1), 0 4px 10px -2px hsl(24, 100%, 50%, 0.05);
+  --shadow-blue: 0 10px 25px -5px hsl(223, 76%, 34%, 0.1), 0 4px 10px -2px hsl(223, 76%, 34%, 0.05);
+  --shadow-green: 0 10px 25px -5px hsl(120, 61%, 28%, 0.1), 0 4px 10px -2px hsl(120, 61%, 28%, 0.05);
+  --shadow-red: 0 10px 25px -5px hsl(348, 83%, 47%, 0.1), 0 4px 10px -2px hsl(348, 83%, 47%, 0.05);
 }
 
 .dark {
@@ -50,9 +75,19 @@
   --destructive: hsl(0, 62.8%, 30.6%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --ring: hsl(240, 4.9%, 83.9%);
-  --conference-navy: hsl(220, 90%, 36%);
-  --conference-gold: hsl(38, 92%, 50%);
-  --conference-green: hsl(158, 64%, 52%);
+  
+  /* Dark mode enhanced colors */
+  --conference-navy: hsl(220, 90%, 46%);
+  --conference-gold: hsl(38, 92%, 60%);
+  --conference-green: hsl(158, 64%, 62%);
+  --conference-red: hsl(0, 73%, 58%);
+  
+  /* Dark mode gradients */
+  --hero-gradient: linear-gradient(135deg, hsl(220, 90%, 16%) 0%, hsl(223, 76%, 14%) 25%, hsl(208, 68%, 14%) 50%, hsl(220, 90%, 16%) 100%);
+  --section-gradient-1: linear-gradient(120deg, hsl(24, 100%, 5%) 0%, hsl(120, 61%, 5%) 100%);
+  --section-gradient-2: linear-gradient(120deg, hsl(223, 76%, 5%) 0%, hsl(174, 72%, 5%) 100%);
+  --section-gradient-3: linear-gradient(120deg, hsl(348, 83%, 5%) 0%, hsl(51, 100%, 5%) 100%);
+  --section-gradient-4: linear-gradient(120deg, hsl(158, 64%, 5%) 0%, hsl(33, 82%, 5%) 100%);
 }
 
 @layer base {
@@ -67,55 +102,81 @@
 }
 
 @layer utilities {
-  .conference-navy {
-    color: var(--conference-navy);
+  /* Conference Color Utilities */
+  .conference-navy { color: var(--conference-navy); }
+  .bg-conference-navy { background-color: var(--conference-navy); }
+  .conference-gold { color: var(--conference-gold); }
+  .bg-conference-gold { background-color: var(--conference-gold); }
+  .conference-green { color: var(--conference-green); }
+  .bg-conference-green { background-color: var(--conference-green); }
+  .conference-red { color: var(--conference-red); }
+  .bg-conference-red { background-color: var(--conference-red); }
+  
+  /* School Color Utilities */
+  .beecher-orange { color: var(--beecher-orange); }
+  .bg-beecher-orange { background-color: var(--beecher-orange); }
+  .central-blue { color: var(--central-blue); }
+  .bg-central-blue { background-color: var(--central-blue); }
+  .grant-park-green { color: var(--grant-park-green); }
+  .bg-grant-park-green { background-color: var(--grant-park-green); }
+  .grant-park-gold { color: var(--grant-park-gold); }
+  .bg-grant-park-gold { background-color: var(--grant-park-gold); }
+  .lutheran-navy { color: var(--lutheran-navy); }
+  .bg-lutheran-navy { background-color: var(--lutheran-navy); }
+  .lutheran-teal { color: var(--lutheran-teal); }
+  .bg-lutheran-teal { background-color: var(--lutheran-teal); }
+  .donovan-gold { color: var(--donovan-gold); }
+  .bg-donovan-gold { background-color: var(--donovan-gold); }
+  .st-anne-red { color: var(--st-anne-red); }
+  .bg-st-anne-red { background-color: var(--st-anne-red); }
+  .momence-red { color: var(--momence-red); }
+  .bg-momence-red { background-color: var(--momence-red); }
+  
+  /* Gradient Background Utilities */
+  .bg-hero-gradient { background: var(--hero-gradient); }
+  .bg-section-gradient-1 { background: var(--section-gradient-1); }
+  .bg-section-gradient-2 { background: var(--section-gradient-2); }
+  .bg-section-gradient-3 { background: var(--section-gradient-3); }
+  .bg-section-gradient-4 { background: var(--section-gradient-4); }
+  
+  /* Enhanced Shadow Utilities */
+  .shadow-orange { box-shadow: var(--shadow-orange); }
+  .shadow-blue { box-shadow: var(--shadow-blue); }
+  .shadow-green { box-shadow: var(--shadow-green); }
+  .shadow-red { box-shadow: var(--shadow-red); }
+  
+  /* Modern section dividers */
+  .section-divider {
+    @apply relative;
   }
   
-  .bg-conference-navy {
-    background-color: var(--conference-navy);
+  .section-divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--conference-navy), var(--conference-gold));
+    transform: translateX(-50%);
+    border-radius: 2px;
   }
   
-  .conference-gold {
-    color: var(--conference-gold);
+  /* Enhanced card hover effects */
+  .card-hover {
+    @apply transition-all duration-300 ease-in-out;
   }
   
-  .bg-conference-gold {
-    background-color: var(--conference-gold);
+  .card-hover:hover {
+    transform: translateY(-4px);
   }
   
-  .conference-green {
-    color: var(--conference-green);
-  }
-  
-  .bg-conference-green {
-    background-color: var(--conference-green);
-  }
-  
-  .border-conference-navy {
-    border-color: var(--conference-navy);
-  }
-  
-  .border-conference-gold {
-    border-color: var(--conference-gold);
-  }
-  
-  .border-conference-green {
-    border-color: var(--conference-green);
-  }
-  
-  .hover\:bg-conference-navy:hover {
-    background-color: var(--conference-navy);
-  }
-  
-  .hover\:bg-conference-gold:hover {
-    background-color: var(--conference-gold);
-  }
-  
-  .hover\:conference-gold:hover {
-    color: var(--conference-gold);
-  }
-  
-  .hover\:conference-navy:hover {
-    color: var(--conference-navy);
-  }
+  /* Legacy utilities for backward compatibility */
+  .border-conference-navy { border-color: var(--conference-navy); }
+  .border-conference-gold { border-color: var(--conference-gold); }
+  .border-conference-green { border-color: var(--conference-green); }
+  .hover\:bg-conference-navy:hover { background-color: var(--conference-navy); }
+  .hover\:bg-conference-gold:hover { background-color: var(--conference-gold); }
+  .hover\:conference-gold:hover { color: var(--conference-gold); }
+  .hover\:conference-navy:hover { color: var(--conference-navy); }
 }

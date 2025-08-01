@@ -131,9 +131,9 @@ export default function SchedulesResults() {
   };
 
   return (
-    <div className="py-16 bg-white">
+    <div className="py-16 bg-section-gradient-1">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 section-divider pb-8">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Schedules & Results</h2>
           <p className="text-lg text-gray-600 mb-6">Stay up to date with all conference games and results</p>
           
@@ -313,7 +313,7 @@ export default function SchedulesResults() {
                     getUpcomingGames(games).map((game) => (
                       <Card 
                         key={game.id} 
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        className="card-hover shadow-blue hover:shadow-lg transition-all duration-300 cursor-pointer border-l-4 border-l-conference-navy"
                         onClick={() => {
                           setSelectedGame(game);
                           form.setValue('gameId', game.id);
