@@ -1,6 +1,9 @@
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Trophy } from "lucide-react";
 import type { Standing, School, Sport } from "@shared/schema";
 
 type StandingWithDetails = Standing & {
@@ -9,18 +12,44 @@ type StandingWithDetails = Standing & {
 };
 
 export default function ConferenceStandings() {
-  const { data: standings, isLoading, error } = useQuery<StandingWithDetails[]>({
-    queryKey: ["/api/standings"],
+  const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
+
+  const { data: sports, isLoading: sportsLoading } = useQuery<Sport[]>({
+    queryKey: ["/api/sports"],
   });
 
-  const calculateWinPercentage = (wins: number, losses: number) => {
-    const total = wins + losses;
-    if (total === 0) return 0;
-    return (wins / total).toFixed(3);
+  // Set initial sport when sports are loaded
+  React.useEffect(() => {
+    if (sports && sports.length > 0 && selectedSportId === null) {
+      setSelectedSportId(sports[0].id);
+    }
+  }, [sports, selectedSportId]);
+
+  const { data: standings, isLoading: standingsLoading, error } = useQuery<StandingWithDetails[]>({
+    queryKey: ["/api/standings", selectedSportId],
+    queryFn: async () => {
+      if (!selectedSportId) return [];
+      const response = await fetch(`/api/standings?sportId=${selectedSportId}`);
+      if (!response.ok) throw new Error('Failed to fetch standings');
+      return response.json();
+    },
+    enabled: !!selectedSportId,
+  });
+
+  const calculateWinPercentage = (wins: number, losses: number, ties: number = 0) => {
+    const total = wins + losses + ties;
+    if (total === 0) return "0.000";
+    return ((wins + ties * 0.5) / total).toFixed(3);
   };
 
-  const footballStandings = standings?.filter(s => s.sport.name === "Football") || [];
-  const basketballStandings = standings?.filter(s => s.sport.name === "Basketball") || [];
+  const selectedSport = sports?.find(sport => sport.id === selectedSportId);
+
+  // Sort standings by win percentage
+  const sortedStandings = standings?.sort((a, b) => {
+    const aWinPct = parseFloat(calculateWinPercentage(a.wins, a.losses, a.ties));
+    const bWinPct = parseFloat(calculateWinPercentage(b.wins, b.losses, b.ties));
+    return bWinPct - aWinPct;
+  }) || [];
 
   if (error) {
     return (
@@ -40,100 +69,102 @@ export default function ConferenceStandings() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Conference Standings</h2>
-          <p className="text-lg text-gray-600">Current season standings across all sports</p>
+          <p className="text-lg text-gray-600">Current season standings updated from game results</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Football Standings */}
-          <Card className="shadow overflow-hidden">
+        {/* Sport Tabs */}
+        <div className="flex flex-wrap justify-center mb-8 border-b gap-2">
+          {sportsLoading
+            ? Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} className="h-12 w-24" />
+              ))
+            : sports?.map((sport) => (
+                <Button
+                  key={sport.id}
+                  variant="ghost"
+                  onClick={() => setSelectedSportId(sport.id)}
+                  className={`px-6 py-3 font-semibold border-b-2 rounded-none ${
+                    selectedSportId === sport.id
+                      ? "text-conference-navy border-conference-navy"
+                      : "text-gray-500 hover:text-conference-navy border-transparent"
+                  }`}
+                >
+                  {sport.name}
+                </Button>
+              ))
+          }
+        </div>
+
+        {/* Standings Table */}
+        {selectedSportId && (
+          <Card className="shadow overflow-hidden max-w-4xl mx-auto">
             <CardHeader className="bg-conference-navy text-white">
-              <CardTitle className="text-lg font-semibold">Football Standings</CardTitle>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                {selectedSport?.name} Standings
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team</th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">W</th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">L</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">T</th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pct</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {isLoading
-                      ? Array.from({ length: 4 }).map((_, index) => (
+                    {standingsLoading
+                      ? Array.from({ length: 6 }).map((_, index) => (
                           <tr key={index}>
+                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
                             <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
+                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
                             <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
                             <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
                             <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-12" /></td>
                           </tr>
                         ))
-                      : footballStandings.map((standing, index) => (
-                          <tr key={standing.id} className={index === 0 ? "bg-yellow-50" : ""}>
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                              {standing.school.name} {standing.school.mascot}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.wins}</td>
-                            <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.losses}</td>
-                            <td className="px-6 py-4 text-sm text-center font-semibold text-green-600">
-                              {calculateWinPercentage(standing.wins, standing.losses)}
+                      : sortedStandings.length > 0 ? (
+                          sortedStandings.map((standing, index) => (
+                            <tr key={standing.id} className={index === 0 ? "bg-yellow-50" : index === 1 ? "bg-gray-50" : ""}>
+                              <td className="px-6 py-4 text-sm text-center font-semibold text-gray-900">
+                                #{index + 1}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                <div className="flex items-center gap-2">
+                                  {index === 0 && <Trophy className="h-4 w-4 text-yellow-500" />}
+                                  {standing.school.name} {standing.school.mascot}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-center text-gray-900 font-semibold">{standing.wins}</td>
+                              <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.losses}</td>
+                              <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.ties || 0}</td>
+                              <td className="px-6 py-4 text-sm text-center font-bold text-conference-navy">
+                                {calculateWinPercentage(standing.wins, standing.losses, standing.ties)}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                              <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                              <p className="text-lg font-semibold mb-1">No Standings Available</p>
+                              <p className="text-sm">Standings will appear after games are completed and results are recorded.</p>
                             </td>
                           </tr>
-                        ))
+                        )
                     }
                   </tbody>
                 </table>
               </div>
             </CardContent>
           </Card>
-
-          {/* Basketball Standings */}
-          <Card className="shadow overflow-hidden">
-            <CardHeader className="bg-conference-gold text-white">
-              <CardTitle className="text-lg font-semibold">Basketball Standings</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">W</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">L</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pct</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {isLoading
-                      ? Array.from({ length: 4 }).map((_, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-12" /></td>
-                          </tr>
-                        ))
-                      : basketballStandings.map((standing, index) => (
-                          <tr key={standing.id} className={index === 0 ? "bg-yellow-50" : ""}>
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                              {standing.school.name} {standing.school.mascot}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.wins}</td>
-                            <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.losses}</td>
-                            <td className="px-6 py-4 text-sm text-center font-semibold text-green-600">
-                              {calculateWinPercentage(standing.wins, standing.losses)}
-                            </td>
-                          </tr>
-                        ))
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        )}
       </div>
     </section>
   );

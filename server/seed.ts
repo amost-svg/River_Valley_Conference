@@ -49,20 +49,31 @@ async function seedDatabase() {
   await db.insert(games).values(gamesData);
   console.log("Games inserted");
 
-  // Insert standings
+  // Insert standings for multiple sports with comprehensive data
   const standingsData = [
-    { schoolId: 1, sportId: 1, wins: 7, losses: 1, season: "2024-2025" },
-    { schoolId: 3, sportId: 1, wins: 6, losses: 2, season: "2024-2025" },
-    { schoolId: 5, sportId: 1, wins: 5, losses: 3, season: "2024-2025" },
-    { schoolId: 8, sportId: 1, wins: 4, losses: 4, season: "2024-2025" },
-    { schoolId: 2, sportId: 1, wins: 3, losses: 5, season: "2024-2025" },
-    { schoolId: 10, sportId: 1, wins: 2, losses: 6, season: "2024-2025" },
-    { schoolId: 2, sportId: 2, wins: 12, losses: 2, season: "2024-2025" },
-    { schoolId: 7, sportId: 2, wins: 10, losses: 4, season: "2024-2025" },
-    { schoolId: 1, sportId: 2, wins: 9, losses: 5, season: "2024-2025" },
-    { schoolId: 4, sportId: 2, wins: 8, losses: 6, season: "2024-2025" },
-    { schoolId: 6, sportId: 2, wins: 7, losses: 7, season: "2024-2025" },
-    { schoolId: 9, sportId: 2, wins: 5, losses: 9, season: "2024-2025" },
+    // Soccer (Fall) - includes ties
+    { schoolId: 1, sportId: 1, wins: 6, losses: 2, ties: 2, pointsFor: 18, pointsAgainst: 12, season: "2024-2025" },
+    { schoolId: 2, sportId: 1, wins: 5, losses: 3, ties: 2, pointsFor: 16, pointsAgainst: 14, season: "2024-2025" },
+    { schoolId: 3, sportId: 1, wins: 5, losses: 4, ties: 1, pointsFor: 15, pointsAgainst: 16, season: "2024-2025" },
+    { schoolId: 4, sportId: 1, wins: 4, losses: 4, ties: 2, pointsFor: 14, pointsAgainst: 15, season: "2024-2025" },
+    { schoolId: 5, sportId: 1, wins: 3, losses: 6, ties: 1, pointsFor: 12, pointsAgainst: 18, season: "2024-2025" },
+    { schoolId: 6, sportId: 1, wins: 2, losses: 6, ties: 2, pointsFor: 10, pointsAgainst: 20, season: "2024-2025" },
+    
+    // Basketball (Winter)
+    { schoolId: 2, sportId: 2, wins: 12, losses: 2, ties: 0, pointsFor: 1423, pointsAgainst: 1189, season: "2024-2025" },
+    { schoolId: 7, sportId: 2, wins: 10, losses: 4, ties: 0, pointsFor: 1345, pointsAgainst: 1278, season: "2024-2025" },
+    { schoolId: 1, sportId: 2, wins: 9, losses: 5, ties: 0, pointsFor: 1301, pointsAgainst: 1298, season: "2024-2025" },
+    { schoolId: 4, sportId: 2, wins: 8, losses: 6, ties: 0, pointsFor: 1289, pointsAgainst: 1201, season: "2024-2025" },
+    { schoolId: 6, sportId: 2, wins: 7, losses: 7, ties: 0, pointsFor: 1245, pointsAgainst: 1367, season: "2024-2025" },
+    { schoolId: 9, sportId: 2, wins: 5, losses: 9, ties: 0, pointsFor: 1198, pointsAgainst: 1389, season: "2024-2025" },
+    
+    // Volleyball (Fall)
+    { schoolId: 1, sportId: 7, wins: 8, losses: 2, ties: 0, pointsFor: 245, pointsAgainst: 178, season: "2024-2025" },
+    { schoolId: 2, sportId: 7, wins: 7, losses: 3, ties: 0, pointsFor: 223, pointsAgainst: 189, season: "2024-2025" },
+    { schoolId: 3, sportId: 7, wins: 6, losses: 4, ties: 0, pointsFor: 201, pointsAgainst: 198, season: "2024-2025" },
+    { schoolId: 4, sportId: 7, wins: 5, losses: 5, ties: 0, pointsFor: 189, pointsAgainst: 201, season: "2024-2025" },
+    { schoolId: 5, sportId: 7, wins: 4, losses: 6, ties: 0, pointsFor: 175, pointsAgainst: 215, season: "2024-2025" },
+    { schoolId: 6, sportId: 7, wins: 3, losses: 7, ties: 0, pointsFor: 165, pointsAgainst: 225, season: "2024-2025" },
   ];
 
   await db.insert(standings).values(standingsData);

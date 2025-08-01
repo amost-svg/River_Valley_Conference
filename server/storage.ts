@@ -387,7 +387,60 @@ export class MemStorage implements IStorage {
     };
 
     this.games.set(gameResult.gameId, updatedGame);
+    
+    // Update standings automatically
+    await this.updateStandingsFromGame(updatedGame);
+    
     return updatedGame;
+  }
+
+  // Helper method to update standings when a game is completed
+  private async updateStandingsFromGame(game: Game): Promise<void> {
+    if (!game.isCompleted || game.homeScore === null || game.awayScore === null) {
+      return;
+    }
+
+    // Determine winner and loser
+    const homeWin = game.homeScore > game.awayScore;
+    const tie = game.homeScore === game.awayScore;
+
+    // Update home team standing
+    if (game.homeTeamId) {
+      await this.updateTeamStanding(game.homeTeamId, game.sportId, homeWin, tie);
+    }
+
+    // Update away team standing  
+    if (game.awayTeamId) {
+      await this.updateTeamStanding(game.awayTeamId, game.sportId, !homeWin && !tie, tie);
+    }
+  }
+
+  // Helper method to update a team's standing
+  private async updateTeamStanding(schoolId: number, sportId: number, won: boolean, tied: boolean): Promise<void> {
+    // Find existing standing for this team/sport combination
+    let standing = Array.from(this.standings.values())
+      .find(s => s.schoolId === schoolId && s.sportId === sportId);
+
+    if (!standing) {
+      // Create new standing if none exists
+      standing = await this.createStanding({
+        schoolId,
+        sportId,
+        wins: 0,
+        losses: 0,
+        ties: 0
+      });
+    }
+
+    // Update wins/losses/ties
+    const updatedStanding = {
+      ...standing,
+      wins: won ? standing.wins + 1 : standing.wins,
+      losses: (!won && !tied) ? standing.losses + 1 : standing.losses,
+      ties: tied ? (standing.ties || 0) + 1 : (standing.ties || 0)
+    };
+
+    this.standings.set(standing.id, updatedStanding);
   }
 
   // Standings
@@ -419,7 +472,8 @@ export class MemStorage implements IStorage {
       ...standing, 
       id,
       wins: standing.wins || 0,
-      losses: standing.losses || 0
+      losses: standing.losses || 0,
+      ties: standing.ties || 0
     };
     this.standings.set(id, newStanding);
     return newStanding;
@@ -828,6 +882,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async moderateGameResultSubmission(id: number, moderatedBy: number, notes?: string): Promise<GameResultSubmission | undefined> {
+    // First get the submission details
+    const [submission] = await db
+      .select()
+      .from(gameResultSubmissions)
+      .where(eq(gameResultSubmissions.id, id));
+    
+    if (!submission) return undefined;
+
+    // Update the submission as moderated
     const [updatedSubmission] = await db
       .update(gameResultSubmissions)
       .set({
@@ -837,6 +900,16 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(gameResultSubmissions.id, id))
       .returning();
+
+    // If approved (no rejection notes), update the actual game and standings
+    if (updatedSubmission && (!notes || !notes.toLowerCase().includes('reject'))) {
+      await this.updateGameResult({
+        gameId: submission.gameId,
+        homeScore: submission.homeScore,
+        awayScore: submission.awayScore,
+      }, moderatedBy);
+    }
+    
     return updatedSubmission || undefined;
   }
 

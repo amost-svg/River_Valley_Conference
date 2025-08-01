@@ -358,7 +358,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!submission) {
         return res.status(404).json({ message: "Submission not found" });
       }
-      res.json({ message: "Submission moderated successfully", submission });
+      
+      const isApproved = !notes || !notes.toLowerCase().includes('reject');
+      const message = isApproved 
+        ? "Submission approved successfully. Game result and standings have been updated."
+        : "Submission reviewed and rejected.";
+      
+      res.json({ message, submission, approved: isApproved });
     } catch (error) {
       res.status(500).json({ message: "Failed to moderate submission" });
     }
@@ -467,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Game result submission for Athletic Directors
+  // Game result submission for Athletic Directors (directly updates game and standings)
   app.post("/api/admin/game-results", async (req, res) => {
     try {
       const gameResult = req.body;
@@ -478,7 +484,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Game not found" });
       }
       
-      res.json(updatedGame);
+      res.json({
+        message: "Game result updated successfully. Standings have been automatically updated.",
+        game: updatedGame
+      });
     } catch (error) {
       console.error("Game result submission error:", error);
       res.status(500).json({ message: "Failed to submit game result" });
