@@ -36,7 +36,7 @@ export default function Hero() {
               <Button 
                 onClick={() => scrollToSection("schools")}
                 variant="outline"
-                className="border-2 border-white text-white hover:bg-white hover:text-conference-navy px-8 py-3 text-lg font-semibold"
+                className="border-2 border-white hover:bg-white hover:text-conference-navy px-8 py-3 text-lg font-semibold text-[#23252f]"
               >
                 Member Schools
               </Button>
