@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -58,18 +58,44 @@ const enhancedNewsSchema = insertNewsUpdatedSchema.extend({
   authorId: z.number().min(1, "Author is required"),
 });
 
+// Game result schema for Athletic Directors
+const gameResultSchema = z.object({
+  gameId: z.number(),
+  homeScore: z.number().min(0, "Score must be 0 or greater"),
+  awayScore: z.number().min(0, "Score must be 0 or greater"),
+  gameSummary: z.string().optional(),
+  keyPlayers: z.string().optional(),
+  gameHighlights: z.string().optional(),
+  nextGameInfo: z.string().optional(),
+  recordAfterGame: z.string().optional(),
+  conferenceRecord: z.string().optional(),
+});
+
+// PDF article schema  
+const pdfArticleSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  category: z.string().min(1, "Category is required"), 
+  excerpt: z.string().optional(),
+});
+
 type GameFormData = z.infer<typeof gameSchema>;
 type NewsFormData = z.infer<typeof newsSchema>;
 type EnhancedNewsFormData = z.infer<typeof enhancedNewsSchema>;
+type GameResultFormData = z.infer<typeof gameResultSchema>;
+type PdfArticleFormData = z.infer<typeof pdfArticleSchema>;
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isGameDialogOpen, setIsGameDialogOpen] = useState(false);
   const [isNewsDialogOpen, setIsNewsDialogOpen] = useState(false);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [isGameResultDialogOpen, setIsGameResultDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [selectedSchoolFilter, setSelectedSchoolFilter] = useState<string>("all");
+  const [selectedSportFilter, setSelectedSportFilter] = useState<string>("all");
   const { toast } = useToast();
   
   // File input refs
@@ -130,11 +156,27 @@ export default function Admin() {
     },
   });
 
-  const pdfForm = useForm({
+  const pdfForm = useForm<PdfArticleFormData>({
+    resolver: zodResolver(pdfArticleSchema),
     defaultValues: {
       title: "",
       category: "General",
       excerpt: "",
+    },
+  });
+
+  const gameResultForm = useForm<GameResultFormData>({
+    resolver: zodResolver(gameResultSchema),
+    defaultValues: {
+      gameId: 0,
+      homeScore: 0,
+      awayScore: 0,
+      gameSummary: "",
+      keyPlayers: "",
+      gameHighlights: "",
+      nextGameInfo: "",
+      recordAfterGame: "",
+      conferenceRecord: "",
     },
   });
 
@@ -298,6 +340,24 @@ export default function Admin() {
     },
   });
 
+  // Game result submission mutation  
+  const submitGameResultMutation = useMutation({
+    mutationFn: async (data: GameResultFormData) => {
+      return apiRequest("POST", "/api/admin/game-results", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Game result saved successfully" });
+      setIsGameResultDialogOpen(false);
+      gameResultForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/standings"] });
+    },
+    onError: (error) => {
+      console.error("Game result submission error:", error);
+      toast({ title: "Error", description: "Failed to save game result", variant: "destructive" });
+    },
+  });
+
   const moderateSubmissionMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: number; notes?: string }) => {
       return apiRequest("POST", `/api/admin/game-result-submissions/${id}/moderate`, {
@@ -329,6 +389,43 @@ export default function Admin() {
   const onSubmitPdfArticle = (data: any) => {
     createPdfArticleMutation.mutate(data);
   };
+
+  const onSubmitGameResult = (data: GameResultFormData) => {
+    submitGameResultMutation.mutate(data);
+  };
+
+  // Helper functions for Results tab
+  const openGameResultDialog = (game: Game) => {
+    setSelectedGame(game);
+    gameResultForm.reset({
+      gameId: game.id,
+      homeScore: game.homeScore || 0,
+      awayScore: game.awayScore || 0,
+      gameSummary: game.gameSummary || "",
+      keyPlayers: game.keyPlayers || "",
+      gameHighlights: game.gameHighlights || "",
+      nextGameInfo: game.nextGameInfo || "",
+      recordAfterGame: game.recordAfterGame || "",
+      conferenceRecord: game.conferenceRecord || "",
+    });
+    setIsGameResultDialogOpen(true);
+  };
+
+  // Filtered games for Results tab
+  const filteredGames = useMemo(() => {
+    if (!games) return [];
+    
+    return games.filter((game) => {
+      const schoolMatch = selectedSchoolFilter === "all" || 
+        game.homeTeamId?.toString() === selectedSchoolFilter || 
+        game.awayTeamId?.toString() === selectedSchoolFilter;
+      
+      const sportMatch = selectedSportFilter === "all" || 
+        game.sportId?.toString() === selectedSportFilter;
+      
+      return schoolMatch && sportMatch;
+    });
+  }, [games, selectedSchoolFilter, selectedSportFilter]);
 
   const moderateSubmission = (id: number, notes?: string) => {
     moderateSubmissionMutation.mutate({ id, notes });
@@ -1004,87 +1101,320 @@ export default function Admin() {
             )}
           </TabsContent>
 
-          {/* Submissions Tab */}
+          {/* Results Tab */}
           <TabsContent value="submissions" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Game Result Submissions</h2>
-              <Badge variant="outline" className="text-sm">
-                {submissions?.filter(s => !s.isModerated).length || 0} Pending Review
-              </Badge>
+              <h2 className="text-2xl font-bold text-gray-900">Game Results Management</h2>
+              <div className="flex items-center space-x-4">
+                <Select value={selectedSchoolFilter} onValueChange={setSelectedSchoolFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by school" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Schools</SelectItem>
+                    {schools?.map((school) => (
+                      <SelectItem key={school.id} value={school.id.toString()}>
+                        {school.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedSportFilter} onValueChange={setSelectedSportFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by sport" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sports</SelectItem>
+                    {sports?.map((sport) => (
+                      <SelectItem key={sport.id} value={sport.id.toString()}>
+                        {sport.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <Card>
-              <CardContent>
-                <div className="space-y-4">
-                  {submissions && submissions.length > 0 ? (
-                    submissions.map((submission) => (
-                      <div key={submission.id} className="p-4 border rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <h3 className="font-medium">Game Result Submission</h3>
-                              <Badge variant={submission.isModerated ? "default" : "secondary"}>
-                                {submission.isModerated ? "Reviewed" : "Pending"}
+            {/* Game Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredGames && filteredGames.length > 0 ? (
+                filteredGames.map((game) => {
+                  const homeTeamName = game.homeTeam?.name || game.homeTeamName || "TBD";
+                  const awayTeamName = game.awayTeam?.name || game.awayTeamName || "TBD";
+                  const isCompleted = game.isCompleted;
+                  
+                  return (
+                    <Card 
+                      key={game.id} 
+                      className={`cursor-pointer transition-all hover:shadow-lg ${
+                        isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-200 hover:border-conference-navy'
+                      }`}
+                      onClick={() => openGameResultDialog(game)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <Badge variant={isCompleted ? "default" : "secondary"}>
+                            {isCompleted ? "Final" : "Scheduled"}
+                          </Badge>
+                          <span className="text-xs text-gray-500">{game.sport?.name}</span>
+                        </div>
+                        <CardTitle className="text-lg">{homeTeamName} vs {awayTeamName}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">
+                              {formatDate(game.gameDate)} • {game.gameTime}
+                            </span>
+                            {game.level && (
+                              <Badge variant="outline" className="text-xs">
+                                {game.level}
                               </Badge>
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <p><strong>Submitted by:</strong> {submission.submitterName} ({submission.submitterEmail})</p>
-                              <p><strong>Date:</strong> {submission.submissionDate ? formatDate(submission.submissionDate) : 'Unknown'}</p>
-                              <p><strong>Score:</strong> Home {submission.homeScore} - Away {submission.awayScore}</p>
-                              {submission.moderationNotes && (
-                                <p><strong>Notes:</strong> {submission.moderationNotes}</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {!submission.isModerated && (
-                              <>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => moderateSubmission(submission.id, "Approved")}
-                                  disabled={moderateSubmissionMutation.isPending}
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => moderateSubmission(submission.id, "Rejected")}
-                                  disabled={moderateSubmissionMutation.isPending}
-                                >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Reject
-                                </Button>
-                              </>
                             )}
                           </div>
+                          
+                          {isCompleted && game.homeScore !== null && game.awayScore !== null ? (
+                            <div className="bg-gray-100 rounded-lg p-3">
+                              <div className="flex items-center justify-between text-lg font-semibold">
+                                <span className={game.homeScore > game.awayScore ? "text-green-600" : ""}>
+                                  {homeTeamName}: {game.homeScore}
+                                </span>
+                                <span className={game.awayScore > game.homeScore ? "text-green-600" : ""}>
+                                  {awayTeamName}: {game.awayScore}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-2">
+                              <Button variant="outline" size="sm">
+                                <Plus className="h-4 w-4 mr-1" />
+                                Enter Result
+                              </Button>
+                            </div>
+                          )}
+                          
+                          {game.location && (
+                            <p className="text-xs text-gray-500">@ {game.location}</p>
+                          )}
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No submissions to review</p>
-                  )}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-gray-500">No games found for the selected filters</p>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
+
+            {/* Game Result Entry Dialog */}
+            <Dialog open={isGameResultDialogOpen} onOpenChange={setIsGameResultDialogOpen}>
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Enter Game Result</DialogTitle>
+                  {selectedGame && (
+                    <p className="text-sm text-gray-600">
+                      {selectedGame.homeTeam?.name || selectedGame.homeTeamName} vs {selectedGame.awayTeam?.name || selectedGame.awayTeamName} • {formatDate(selectedGame.gameDate)}
+                    </p>
+                  )}
+                </DialogHeader>
+                
+                {selectedGame && (
+                  <Form {...gameResultForm}>
+                    <form onSubmit={gameResultForm.handleSubmit(onSubmitGameResult)} className="space-y-4">
+                      {/* Score Entry */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={gameResultForm.control}
+                          name="homeScore"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{selectedGame.homeTeam?.name || selectedGame.homeTeamName} Score</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  placeholder="0" 
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={gameResultForm.control}
+                          name="awayScore"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{selectedGame.awayTeam?.name || selectedGame.awayTeamName} Score</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  placeholder="0" 
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Game Summary */}
+                      <FormField
+                        control={gameResultForm.control}
+                        name="gameSummary"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Game Summary</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Brief summary of the game..."
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Key Players */}
+                      <FormField
+                        control={gameResultForm.control}
+                        name="keyPlayers"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Key Players</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Notable performances and key contributors..."
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Game Highlights */}
+                      <FormField
+                        control={gameResultForm.control}
+                        name="gameHighlights"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Game Highlights</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Key moments and highlights from the game..."
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Records */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={gameResultForm.control}
+                          name="recordAfterGame"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Team Record After Game</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="e.g., 5-2"
+                                  {...field}
+                                  value={field.value || ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={gameResultForm.control}
+                          name="conferenceRecord"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Conference Record</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="e.g., 3-1"
+                                  {...field}
+                                  value={field.value || ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Next Game Info */}
+                      <FormField
+                        control={gameResultForm.control}
+                        name="nextGameInfo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Next Game Information</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Information about the next scheduled game..."
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex justify-end space-x-2 pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsGameResultDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="bg-conference-navy hover:bg-blue-800"
+                          disabled={submitGameResultMutation.isPending}
+                        >
+                          {submitGameResultMutation.isPending ? "Saving..." : "Save Result"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                )}
+              </DialogContent>
+            </Dialog>
+
           </TabsContent>
 
           {/* Calendar Tab */}
           <TabsContent value="calendar" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Google Calendar Integration</h2>
-              <Button className="bg-conference-navy hover:bg-blue-800">
-                <Upload className="h-4 w-4 mr-2" />
-                Sync Calendars
-              </Button>
+              <h2 className="text-2xl font-bold text-gray-900">Calendar Integration</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Available Sport Calendars</CardTitle>
+                  <CardTitle>Connected Calendars</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -1097,8 +1427,8 @@ export default function Admin() {
                       'RVC Softball',
                       'RVC Track',
                       'RVC Scholastic Bowl'
-                    ].map((calendar, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    ].map((calendar) => (
+                      <div key={calendar} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center">
                           <Calendar className="h-5 w-5 text-conference-navy mr-3" />
                           <span className="font-medium">{calendar}</span>

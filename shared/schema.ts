@@ -50,6 +50,15 @@ export const games = pgTable("games", {
   externalEventId: text("external_event_id"), // For tracking imported calendar events
   uploadedBy: integer("uploaded_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  // Enhanced game results for newspaper reporting
+  gameSummary: text("game_summary"), // Brief game summary for media
+  keyPlayers: text("key_players"), // JSON array of player highlights
+  gameHighlights: text("game_highlights"), // Key moments or plays
+  nextGameInfo: text("next_game_info"), // Information about upcoming games
+  recordAfterGame: text("record_after_game"), // Team record after this game
+  conferenceRecord: text("conference_record"), // Conference record after this game
+  resultEnteredBy: integer("result_entered_by").references(() => users.id),
+  resultEnteredAt: timestamp("result_entered_at"),
 });
 
 export const standings = pgTable("standings", {
@@ -58,7 +67,14 @@ export const standings = pgTable("standings", {
   sportId: integer("sport_id").references(() => sports.id).notNull(),
   wins: integer("wins").default(0).notNull(),
   losses: integer("losses").default(0).notNull(),
+  ties: integer("ties").default(0).notNull(),
+  conferenceWins: integer("conference_wins").default(0).notNull(),
+  conferenceLosses: integer("conference_losses").default(0).notNull(),
+  conferenceTies: integer("conference_ties").default(0).notNull(),
+  pointsFor: integer("points_for").default(0).notNull(),
+  pointsAgainst: integer("points_against").default(0).notNull(),
   season: text("season").notNull(), // "2024-2025"
+  lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
 export const news = pgTable("news", {
@@ -144,6 +160,19 @@ export const insertNewsUpdatedSchema = createInsertSchema(newsUpdated).omit({ id
 export const insertGameResultSubmissionSchema = createInsertSchema(gameResultSubmissions).omit({ id: true, submissionDate: true });
 export const insertConferenceOfficialSchema = createInsertSchema(conferenceOfficials).omit({ id: true });
 
+// Enhanced game result schema for Athletic Directors
+export const gameResultSchema = z.object({
+  gameId: z.number(),
+  homeScore: z.number().min(0),
+  awayScore: z.number().min(0),
+  gameSummary: z.string().optional(),
+  keyPlayers: z.string().optional(),
+  gameHighlights: z.string().optional(),
+  nextGameInfo: z.string().optional(),
+  recordAfterGame: z.string().optional(),
+  conferenceRecord: z.string().optional(),
+});
+
 export type School = typeof schools.$inferSelect;
 export type Sport = typeof sports.$inferSelect;
 export type Game = typeof games.$inferSelect;
@@ -165,3 +194,4 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertNewsUpdated = z.infer<typeof insertNewsUpdatedSchema>;
 export type InsertGameResultSubmission = z.infer<typeof insertGameResultSubmissionSchema>;
 export type InsertConferenceOfficial = z.infer<typeof insertConferenceOfficialSchema>;
+export type GameResult = z.infer<typeof gameResultSchema>;

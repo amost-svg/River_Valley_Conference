@@ -5,7 +5,7 @@ import {
   type User, type NewsUpdated, type GameResultSubmission, type ConferenceOfficial,
   type InsertSchool, type InsertSport, type InsertGame, type InsertStanding, 
   type InsertNews, type InsertContact, type InsertUser, type InsertNewsUpdated,
-  type InsertGameResultSubmission, type InsertConferenceOfficial
+  type InsertGameResultSubmission, type InsertConferenceOfficial, type GameResult
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -26,14 +26,18 @@ export interface IStorage {
   // Games
   getGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
   getGamesBySport(sportId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
+  getGamesBySchool(schoolId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
+  getUpcomingGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
   createGame(game: InsertGame): Promise<Game>;
   updateGame(id: number, game: Partial<InsertGame>): Promise<Game | undefined>;
+  updateGameResult(gameResult: GameResult, userId: number): Promise<Game | undefined>;
 
   // Standings
   getStandings(): Promise<(Standing & { school: School; sport: Sport })[]>;
   getStandingsBySport(sportId: number): Promise<(Standing & { school: School; sport: Sport })[]>;
   createStanding(standing: InsertStanding): Promise<Standing>;
   updateStanding(id: number, standing: Partial<InsertStanding>): Promise<Standing | undefined>;
+  updateStandingsFromGame(game: Game): Promise<void>;
 
   // News
   getNews(): Promise<News[]>;
@@ -361,6 +365,28 @@ export class MemStorage implements IStorage {
     const updated = { ...existing, ...game };
     this.games.set(id, updated);
     return updated;
+  }
+
+  async updateGameResult(gameResult: any, userId: number): Promise<Game | undefined> {
+    const game = this.games.get(gameResult.gameId);
+    if (!game) return undefined;
+
+    // Update the game with scores and additional details
+    const updatedGame: Game = {
+      ...game,
+      homeScore: gameResult.homeScore,
+      awayScore: gameResult.awayScore,
+      isCompleted: true,
+      gameSummary: gameResult.gameSummary || null,
+      keyPlayers: gameResult.keyPlayers || null,
+      gameHighlights: gameResult.gameHighlights || null,
+      nextGameInfo: gameResult.nextGameInfo || null,
+      recordAfterGame: gameResult.recordAfterGame || null,
+      conferenceRecord: gameResult.conferenceRecord || null,
+    };
+
+    this.games.set(gameResult.gameId, updatedGame);
+    return updatedGame;
   }
 
   // Standings

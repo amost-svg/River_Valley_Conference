@@ -454,6 +454,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Game result submission for Athletic Directors
+  app.post("/api/admin/game-results", async (req, res) => {
+    try {
+      const gameResult = req.body;
+      const userId = 1; // Should come from authentication in production
+      
+      const updatedGame = await storage.updateGameResult(gameResult, userId);
+      if (!updatedGame) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      res.json(updatedGame);
+    } catch (error) {
+      console.error("Game result submission error:", error);
+      res.status(500).json({ message: "Failed to submit game result" });
+    }
+  });
+
   // Conference Officials
   app.get("/api/officials", async (req, res) => {
     try {
