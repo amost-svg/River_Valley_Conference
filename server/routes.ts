@@ -402,6 +402,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // School editing for authenticated users
+  app.put("/api/admin/schools/:id", async (req, res) => {
+    try {
+      const schoolId = parseInt(req.params.id);
+      const updatedSchool = await storage.updateSchool(schoolId, req.body);
+      res.json(updatedSchool);
+    } catch (error) {
+      console.error("Error updating school:", error);
+      res.status(500).json({ message: "Failed to update school" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

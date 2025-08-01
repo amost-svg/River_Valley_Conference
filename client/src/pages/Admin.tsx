@@ -31,6 +31,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { School, Sport, Game, News, GameResultSubmission, User } from "@shared/schema";
 import { insertGameSchema, insertNewsSchema } from "@shared/schema";
+import GlobalCalendar from "@/components/GlobalCalendar";
+import SchoolEditor from "@/components/SchoolEditor";
 
 // Form schemas
 const gameSchema = insertGameSchema.extend({
@@ -173,16 +175,18 @@ export default function Admin() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="school">My School</TabsTrigger>
             <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="calendar">Calendars</TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
+          {/* Dashboard Tab - Global Calendar */}
           <TabsContent value="dashboard" className="space-y-6">
+            {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardContent className="p-6">
@@ -233,33 +237,22 @@ export default function Admin() {
               </Card>
             </div>
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Game Result Submissions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {submissions && submissions.length > 0 ? (
-                  <div className="space-y-4">
-                    {submissions.slice(0, 5).map((submission) => (
-                      <div key={submission.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">Game Result Submission</p>
-                          <p className="text-sm text-gray-600">
-                            By {submission.submitterName} • {submission.submissionDate ? formatDate(submission.submissionDate) : 'Unknown'}
-                          </p>
-                        </div>
-                        <Badge variant={submission.isModerated ? "default" : "secondary"}>
-                          {submission.isModerated ? "Reviewed" : "Pending"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No recent submissions</p>
-                )}
-              </CardContent>
-            </Card>
+            {/* Global RVC Calendar */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Conference-wide Events</h2>
+              <GlobalCalendar />
+            </div>
+          </TabsContent>
+
+          {/* School Editor Tab */}
+          <TabsContent value="school" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">My School Information</h2>
+              <Badge variant="outline" className="text-conference-navy">
+                Athletic Director Access
+              </Badge>
+            </div>
+            <SchoolEditor />
           </TabsContent>
 
           {/* Games Tab */}
