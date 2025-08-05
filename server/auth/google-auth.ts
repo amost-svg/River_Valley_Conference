@@ -31,7 +31,7 @@ export function setupGoogleAuth(app: Express) {
 
   // Serialize/deserialize user for session
   passport.serializeUser((user: any, done) => {
-    done(null, user.id);
+    done(null, user.id.toString());
   });
 
   passport.deserializeUser(async (id: string, done) => {
