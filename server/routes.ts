@@ -858,19 +858,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Explicitly handle Google OAuth routes to prevent 404s
-  app.get("/api/auth/google", (req, res) => {
-    res.status(404).json({ 
-      message: "Google OAuth is not configured", 
-      error: "Authentication method not available" 
-    });
-  });
+  // Password reset functionality
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
 
-  app.get("/api/auth/google/callback", (req, res) => {
-    res.status(404).json({ 
-      message: "Google OAuth is not configured", 
-      error: "Authentication method not available" 
-    });
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({ message: "If an account with that email exists, password reset instructions have been sent." });
+      }
+
+      // For now, just return a message directing them to contact admin
+      // In a production system, you'd send an actual email
+      res.json({ 
+        message: "Password reset requested. Please contact Aaron Most (amost@gracecrusaders.org) for password assistance.",
+        contactEmail: "amost@gracecrusaders.org"
+      });
+
+    } catch (error) {
+      res.status(500).json({ message: "Failed to process password reset request" });
+    }
   });
 
   const httpServer = createServer(app);

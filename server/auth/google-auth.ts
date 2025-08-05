@@ -37,9 +37,9 @@ export function setupGoogleAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id.toString());
-      done(null, user);
+      done(null, user || false);
     } catch (error) {
-      done(error, null);
+      done(error, false);
     }
   });
 
@@ -54,7 +54,7 @@ export function setupGoogleAuth(app: Express) {
       try {
         const email = profile.emails?.[0]?.value;
         if (!email) {
-          return done(new Error("No email found in Google profile"), null);
+          return done(new Error("No email found in Google profile"), false);
         }
 
         // Check if user exists in our system
@@ -63,11 +63,11 @@ export function setupGoogleAuth(app: Express) {
         if (!user) {
           // For security, we only allow existing users to login via Google
           // They must be pre-created by the super admin
-          return done(new Error("User not found in system. Please contact administrator."), null);
+          return done(new Error("User not found in system. Please contact administrator."), false);
         }
 
         if (!user.isActive) {
-          return done(new Error("Account is deactivated"), null);
+          return done(new Error("Account is deactivated"), false);
         }
 
         // Update user's Google info if changed
@@ -85,23 +85,23 @@ export function setupGoogleAuth(app: Express) {
 
         return done(null, user);
       } catch (error) {
-        return done(error, null);
+        return done(error, false);
       }
     }));
   }
 
-  // Google OAuth routes disabled - not configured
-  // app.get("/api/auth/google",
-  //   passport.authenticate("google", { scope: ["profile", "email"] })
-  // );
+  // Google OAuth routes
+  app.get("/api/auth/google",
+    passport.authenticate("google", { scope: ["profile", "email"] })
+  );
 
-  // app.get("/api/auth/google/callback",
-  //   passport.authenticate("google", { failureRedirect: "/admin?error=auth_failed" }),
-  //   (req, res) => {
-  //     // Successful authentication, redirect to admin dashboard
-  //     res.redirect("/admin");
-  //   }
-  // );
+  app.get("/api/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/login?error=auth_failed" }),
+    (req, res) => {
+      // Successful authentication, redirect to admin dashboard
+      res.redirect("/admin");
+    }
+  );
 
   // Regular login route (existing email/password)
   app.post("/api/auth/login", async (req, res) => {
