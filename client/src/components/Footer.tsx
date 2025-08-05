@@ -53,7 +53,7 @@ export default function Footer() {
                 alt="RVC Logo" 
                 className="h-8 w-8 mr-3 object-contain" 
               />
-              <span className="font-bold text-xl">River Valley Conference</span>
+              <span className="font-bold text-xl">RVC</span>
             </div>
             <p className="text-gray-300 mb-4">
               The official IHSA athletic conference serving 10 member schools in northeastern Illinois, promoting excellence in high school athletics and academics.
