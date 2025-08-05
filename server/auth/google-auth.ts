@@ -90,18 +90,18 @@ export function setupGoogleAuth(app: Express) {
     }));
   }
 
-  // Google OAuth routes
-  app.get("/api/auth/google",
-    passport.authenticate("google", { scope: ["profile", "email"] })
-  );
+  // Google OAuth routes disabled - not configured
+  // app.get("/api/auth/google",
+  //   passport.authenticate("google", { scope: ["profile", "email"] })
+  // );
 
-  app.get("/api/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "/admin?error=auth_failed" }),
-    (req, res) => {
-      // Successful authentication, redirect to admin dashboard
-      res.redirect("/admin");
-    }
-  );
+  // app.get("/api/auth/google/callback",
+  //   passport.authenticate("google", { failureRedirect: "/admin?error=auth_failed" }),
+  //   (req, res) => {
+  //     // Successful authentication, redirect to admin dashboard
+  //     res.redirect("/admin");
+  //   }
+  // );
 
   // Regular login route (existing email/password)
   app.post("/api/auth/login", async (req, res) => {
