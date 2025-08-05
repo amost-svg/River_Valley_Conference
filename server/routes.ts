@@ -296,42 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authentication Routes
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-      }
-
-      const user = await storage.getUserByEmail(email);
-      if (!user || user.password !== password) { // In production, use proper password hashing
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      if (!user.isActive) {
-        return res.status(401).json({ message: "Account is deactivated" });
-      }
-
-      // Update last login
-      await storage.updateLastLogin(user.id);
-
-      // In production, create JWT token here
-      res.json({ 
-        user: { 
-          id: user.id, 
-          email: user.email, 
-          name: user.name, 
-          role: user.role, 
-          schoolId: user.schoolId,
-          isSuperAdmin: user.isSuperAdmin 
-        },
-        message: "Login successful" 
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Login failed" });
-    }
-  });
+  // Google authentication is handled in google-auth.ts
 
   // Super Admin Routes - User Management
   app.get("/api/super-admin/users", async (req, res) => {

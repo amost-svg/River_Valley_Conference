@@ -101,12 +101,14 @@ export const contacts = pgTable("contacts", {
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Make password optional for Google OAuth users
   name: text("name").notNull(),
   role: text("role").notNull(), // "AD" (Athletic Director), "Principal", or "SuperAdmin"
   schoolId: integer("school_id").references(() => schools.id),
   isActive: boolean("is_active").default(true),
   isSuperAdmin: boolean("is_super_admin").default(false),
+  googleId: text("google_id"),
+  profileImageUrl: text("profile_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
   lastLogin: timestamp("last_login"),
   createdBy: integer("created_by"),
