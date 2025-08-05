@@ -13,7 +13,6 @@ interface User {
 export function useAuth() {
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/me"],
-    queryFn: () => apiRequest("/api/auth/me"),
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
