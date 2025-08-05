@@ -51,10 +51,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Only setup Google auth if credentials are available
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    setupGoogleAuth(app);
-  }
+  // Disable Google auth for now - causes 404 errors
+  // if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  //   setupGoogleAuth(app);
+  // }
   
   const server = await registerRoutes(app);
 
