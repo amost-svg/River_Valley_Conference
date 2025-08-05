@@ -51,8 +51,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Setup Google authentication before registering routes
-  setupGoogleAuth(app);
+  // Only setup Google auth if credentials are available
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    setupGoogleAuth(app);
+  }
   
   const server = await registerRoutes(app);
 

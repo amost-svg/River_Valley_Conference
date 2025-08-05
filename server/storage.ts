@@ -50,6 +50,7 @@ export interface IStorage {
   createContact(contact: InsertContact): Promise<Contact>;
 
   // Users (Authentication)
+  getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
@@ -530,6 +531,7 @@ export class MemStorage implements IStorage {
   }
 
   // Stub implementations for new features (use DatabaseStorage for production)
+  async getUser(id: number): Promise<User | undefined> { return undefined; }
   async getUserByEmail(email: string): Promise<User | undefined> { return undefined; }
   async createUser(user: InsertUser): Promise<User> { return { ...user, id: 1, createdAt: new Date(), isActive: true }; }
   async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> { return undefined; }
@@ -823,6 +825,10 @@ export class DatabaseStorage implements IStorage {
   async getUserById(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    return this.getUserById(id);
   }
 
   async updateLastLogin(id: number): Promise<void> {

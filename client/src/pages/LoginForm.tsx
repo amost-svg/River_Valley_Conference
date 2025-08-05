@@ -134,8 +134,7 @@ export default function LoginForm() {
             </Form>
 
             <div className="text-center text-sm text-gray-600">
-              <p>Default password for all accounts: "password"</p>
-              <p className="mt-2">
+              <p>
                 Contact{" "}
                 <a 
                   href="mailto:amost@gracecrusaders.org" 
@@ -143,7 +142,7 @@ export default function LoginForm() {
                 >
                   Aaron Most
                 </a>{" "}
-                for account access or password reset
+                for account access or password information
               </p>
             </div>
           </CardContent>
