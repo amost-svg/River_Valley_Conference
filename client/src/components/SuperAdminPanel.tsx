@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Trash2, Shield, User, School, Calendar, Crown } from "lucide-react";
+import { UserPlus, Trash2, Shield, User, School, Calendar, Crown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 const userSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -43,6 +43,9 @@ interface User {
   creator: { id: number; name: string; email: string } | null;
 }
 
+type SortField = 'name' | 'role' | 'school' | 'status' | 'lastLogin';
+type SortDirection = 'asc' | 'desc' | null;
+
 interface School {
   id: number;
   name: string;
@@ -52,6 +55,8 @@ interface School {
 export default function SuperAdminPanel() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -199,6 +204,73 @@ export default function SuperAdminPanel() {
         return "outline";
     }
   };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') {
+        setSortField('name'); // Reset to default when clearing sort
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="h-4 w-4 text-primary" />;
+    }
+    if (sortDirection === 'desc') {
+      return <ArrowDown className="h-4 w-4 text-primary" />;
+    }
+    return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
+  };
+
+  const sortedUsers = useMemo(() => {
+    if (!users || !sortDirection) return users;
+
+    return [...users].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'role':
+          aValue = a.role.toLowerCase();
+          bValue = b.role.toLowerCase();
+          break;
+        case 'school':
+          aValue = a.school?.name?.toLowerCase() || 'zzz';
+          bValue = b.school?.name?.toLowerCase() || 'zzz';
+          break;
+        case 'status':
+          aValue = a.isActive ? 'active' : 'inactive';
+          bValue = b.isActive ? 'active' : 'inactive';
+          break;
+        case 'lastLogin':
+          aValue = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+          bValue = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [users, sortField, sortDirection]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Never";
@@ -362,6 +434,11 @@ export default function SuperAdminPanel() {
           <CardTitle>All Users</CardTitle>
           <CardDescription>
             Total: {users.length} users
+            {sortField && sortDirection && (
+              <span className="ml-2 text-sm text-muted-foreground">
+                • Sorted by {sortField} ({sortDirection === 'asc' ? 'ascending' : 'descending'})
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -369,16 +446,61 @@ export default function SuperAdminPanel() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>School</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('name')}
+                    >
+                      User
+                      {getSortIcon('name')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('role')}
+                    >
+                      Role
+                      {getSortIcon('role')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('school')}
+                    >
+                      School
+                      {getSortIcon('school')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('status')}
+                    >
+                      Status
+                      {getSortIcon('status')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('lastLogin')}
+                    >
+                      Last Login
+                      {getSortIcon('lastLogin')}
+                    </Button>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user: User) => (
+                {sortedUsers.map((user: User) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
