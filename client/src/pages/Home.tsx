@@ -6,7 +6,6 @@ import SchedulesResults from "@/components/SchedulesResults";
 import ConferenceStandings from "@/components/ConferenceStandings";
 import NewsAnnouncements from "@/components/NewsAnnouncements";
 import ContactSection from "@/components/ContactSection";
-import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
@@ -33,7 +32,6 @@ export default function Home() {
       <section id="contact">
         <ContactSection />
       </section>
-      <Footer />
     </div>
   );
 }
