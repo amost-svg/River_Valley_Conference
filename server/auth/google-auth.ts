@@ -34,9 +34,9 @@ export function setupGoogleAuth(app: Express) {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
-      const user = await storage.getUser(id.toString());
+      const user = await storage.getUser(id);
       done(null, user || false);
     } catch (error) {
       done(error, false);
@@ -48,7 +48,7 @@ export function setupGoogleAuth(app: Express) {
     passport.use(new GoogleStrategy({
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: "/api/auth/google/callback"
+      callbackURL: `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/google/callback`
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
