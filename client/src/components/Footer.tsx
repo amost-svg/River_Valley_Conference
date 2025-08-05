@@ -113,10 +113,6 @@ export default function Footer() {
                 <Mail className="h-5 w-5 mr-2 flex-shrink-0" />
                 Contact form available above
               </p>
-              <p className="text-sm">
-                For official business:<br />
-                principals@rvc-il.com
-              </p>
             </div>
           </div>
         </div>
