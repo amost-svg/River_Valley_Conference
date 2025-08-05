@@ -154,11 +154,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Contact
+  // Contact - sends messages to principals@rvc-il.com (email integration to be added)
   app.post("/api/contact", async (req, res) => {
     try {
       const validatedData = insertContactSchema.parse(req.body);
       const contact = await storage.createContact(validatedData);
+      
+      // TODO: Add email service integration to send to principals@rvc-il.com
+      // This could use services like SendGrid, Nodemailer, or AWS SES
+      
       res.status(201).json({ message: "Message sent successfully", contact });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -501,6 +505,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(officials);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch officials" });
+    }
+  });
+
+  app.get("/api/conference-officials", async (req, res) => {
+    try {
+      const officials = await storage.getActiveConferenceOfficials();
+      res.json(officials);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch conference officials" });
     }
   });
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Mail, User } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { User, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertContactSchema } from "@shared/schema";
@@ -32,6 +33,11 @@ export default function ContactSection() {
       subject: "",
       message: "",
     },
+  });
+
+  // Fetch conference officials from database
+  const { data: conferenceOfficials, isLoading: officialsLoading } = useQuery({
+    queryKey: ['/api/conference-officials'],
   });
 
   const contactMutation = useMutation({
@@ -60,18 +66,17 @@ export default function ContactSection() {
 
   const contactInfo = [
     {
-      icon: Mail,
-      title: "General Inquiries",
-      content: "principals@rvc-il.com",
+      icon: Phone,
+      title: "General Conference Information",
+      content: "Contact your school's Athletic Director or Principal for conference-related inquiries",
       bgColor: "bg-conference-navy"
+    },
+    {
+      icon: MapPin,
+      title: "River Valley Conference",
+      content: "Serving schools throughout central Illinois with excellence in high school athletics",
+      bgColor: "bg-conference-green"
     }
-  ];
-
-  const personnel = [
-    { title: "President", name: "Aaron Most", school: "TBD" },
-    { title: "Vice-President", name: "Mike Meyer", school: "TBD" },
-    { title: "Treasurer", name: "Ben O'Brien", school: "TBD" },
-    { title: "AD Liaison", name: "Nathan Hinz", school: "Illinois Lutheran" },
   ];
 
   return (
@@ -108,18 +113,30 @@ export default function ContactSection() {
             <div className="mt-8">
               <h4 className="text-lg font-semibold mb-4 text-gray-900">Conference Officials</h4>
               <div className="space-y-3">
-                {personnel.map((person, index) => (
-                  <div key={index} className="flex items-center">
-                    <div className="bg-conference-green text-white p-2 rounded-lg mr-3 flex-shrink-0">
-                      <User className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{person.title}</p>
-                      <p className="text-gray-600">{person.name}</p>
-                      {person.school && <p className="text-sm text-gray-500">{person.school}</p>}
-                    </div>
-                  </div>
-                ))}
+                {officialsLoading
+                  ? Array.from({ length: 4 }).map((_, index) => (
+                      <div key={index} className="flex items-center">
+                        <Skeleton className="h-8 w-8 rounded-lg mr-3" />
+                        <div className="space-y-1">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-32" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
+                      </div>
+                    ))
+                  : (conferenceOfficials as any[])?.map((official: any, index: number) => (
+                      <div key={index} className="flex items-center">
+                        <div className="bg-conference-green text-white p-2 rounded-lg mr-3 flex-shrink-0">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{official.position}</p>
+                          <p className="text-gray-600">{official.name}</p>
+                          {official.school?.name && <p className="text-sm text-gray-500">{official.school.name}</p>}
+                        </div>
+                      </div>
+                    ))
+                }
               </div>
             </div>
           </div>
