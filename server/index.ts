@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupGoogleAuth } from "./auth/google-auth";
+// import { setupGoogleAuth } from "./auth/google-auth"; // Disabled for now
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();

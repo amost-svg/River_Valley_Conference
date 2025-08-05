@@ -858,6 +858,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Explicitly handle Google OAuth routes to prevent 404s
+  app.get("/api/auth/google", (req, res) => {
+    res.status(404).json({ 
+      message: "Google OAuth is not configured", 
+      error: "Authentication method not available" 
+    });
+  });
+
+  app.get("/api/auth/google/callback", (req, res) => {
+    res.status(404).json({ 
+      message: "Google OAuth is not configured", 
+      error: "Authentication method not available" 
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
