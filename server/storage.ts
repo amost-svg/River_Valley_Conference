@@ -53,6 +53,10 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  getAllUsers(): Promise<(User & { school: School | null; creator: User | null })[]>;
+  getUserById(id: number): Promise<User | undefined>;
+  updateLastLogin(id: number): Promise<void>;
 
   // News Updated (with author support)
   getNewsUpdated(): Promise<(NewsUpdated & { author: User })[]>;
@@ -787,6 +791,45 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return updatedUser || undefined;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getAllUsers(): Promise<(User & { school: School | null; creator: User | null })[]> {
+    const allUsers = await db.select().from(users);
+    const allSchools = await db.select().from(schools);
+    
+    const result = [];
+    for (const user of allUsers) {
+      const school = user.schoolId ? allSchools.find(s => s.id === user.schoolId) || null : null;
+      const creator = user.createdBy ? allUsers.find(u => u.id === user.createdBy) || null : null;
+      
+      result.push({
+        ...user,
+        school,
+        creator,
+      });
+    }
+    
+    return result;
+  }
+
+  async getUserById(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async updateLastLogin(id: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastLogin: new Date() })
+      .where(eq(users.id, id));
   }
 
   // News Updated (with author support)

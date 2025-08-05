@@ -38,6 +38,7 @@ import { insertGameSchema, insertNewsSchema, insertNewsUpdatedSchema } from "@sh
 import GlobalCalendar from "@/components/GlobalCalendar";
 import SchoolEditor from "@/components/SchoolEditor";
 import ScheduleUploader from "@/components/ScheduleUploader";
+import SuperAdminPanel from "@/components/SuperAdminPanel";
 import rvcLogoPath from "@assets/RVC logo (3)_1754075250117.png";
 
 // Form schemas
@@ -84,7 +85,18 @@ type EnhancedNewsFormData = z.infer<typeof enhancedNewsSchema>;
 type GameResultFormData = z.infer<typeof gameResultSchema>;
 type PdfArticleFormData = z.infer<typeof pdfArticleSchema>;
 
-export default function Admin() {
+interface AdminProps {
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    isSuperAdmin?: boolean;
+    schoolId?: number;
+  };
+}
+
+export default function Admin({ user }: AdminProps) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isGameDialogOpen, setIsGameDialogOpen] = useState(false);
   const [isNewsDialogOpen, setIsNewsDialogOpen] = useState(false);
@@ -470,7 +482,7 @@ export default function Admin() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-8' : 'grid-cols-7'}`}>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
             <TabsTrigger value="upload">Calendar Instructions</TabsTrigger>
@@ -478,6 +490,9 @@ export default function Admin() {
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="calendar">Calendars</TabsTrigger>
+            {user?.isSuperAdmin && (
+              <TabsTrigger value="users">User Management</TabsTrigger>
+            )}
           </TabsList>
 
           {/* Dashboard Tab - Global Calendar */}
@@ -1474,6 +1489,14 @@ export default function Admin() {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Super Admin User Management Tab */}
+          {user?.isSuperAdmin && (
+            <TabsContent value="users" className="space-y-6">
+              <SuperAdminPanel />
+            </TabsContent>
+          )}
+
         </Tabs>
         </div>
       </div>

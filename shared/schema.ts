@@ -103,10 +103,13 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  role: text("role").notNull(), // "AD" (Athletic Director) or "Principal"
-  schoolId: integer("school_id").references(() => schools.id).notNull(),
+  role: text("role").notNull(), // "AD" (Athletic Director), "Principal", or "SuperAdmin"
+  schoolId: integer("school_id").references(() => schools.id),
   isActive: boolean("is_active").default(true),
+  isSuperAdmin: boolean("is_super_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  lastLogin: timestamp("last_login"),
+  createdBy: integer("created_by"),
 });
 
 // Updated news table with author and PDF support

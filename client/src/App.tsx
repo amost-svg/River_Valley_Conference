@@ -15,7 +15,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/admin" component={Admin} />
+      <Route path="/admin" component={() => <Admin user={{ id: 1, name: "Aaron Most", email: "amost@gracecrusaders.org", role: "SuperAdmin", isSuperAdmin: true, schoolId: 5 }} />} />
       <Route path="/schools/:id" component={School} />
       <Route path="/sports/:sportId/calendar" component={SportCalendar} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
