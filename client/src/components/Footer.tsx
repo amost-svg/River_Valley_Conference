@@ -1,4 +1,5 @@
 import { Trophy, Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Footer() {
   const scrollToSection = (sectionId: string) => {
@@ -14,28 +15,29 @@ export default function Footer() {
 
   const quickLinks = [
     { id: "home", label: "Home" },
-    { id: "schools", label: "Member Schools" },
     { id: "schedules", label: "Schedules & Results" },
-    { id: "standings", label: "Standings" },
-    { id: "news", label: "News" },
+    { id: "schools", label: "Member Schools" },
+    { id: "about", label: "About RVC" },
+    { id: "news", label: "News & Updates" },
+    { id: "contact", label: "Contact" },
   ];
 
   const sports = [
-    "Football",
-    "Basketball (M/W)",
-    "Soccer (M/W)",
-    "Baseball / Softball",
-    "Track & Field",
     "Volleyball",
-    "Cross Country",
-    "Wrestling",
+    "Soccer", 
+    "Girls Basketball",
+    "Boys Basketball",
+    "Baseball",
+    "Softball",
+    "Track & Field",
+    "Scholastic Bowl",
   ];
 
   const socialLinks = [
-    { icon: Facebook, href: "#" },
-    { icon: Twitter, href: "#" },
-    { icon: Instagram, href: "#" },
-    { icon: Youtube, href: "#" },
+    { icon: Facebook, href: "https://facebook.com/rivervalleyconference" },
+    { icon: Twitter, href: "https://twitter.com/rvcathletics" },
+    { icon: Instagram, href: "https://instagram.com/rivervalleyconference" },
+    { icon: Youtube, href: "https://youtube.com/@rivervalleyconference" },
   ];
 
   return (
@@ -49,7 +51,7 @@ export default function Footer() {
               <span className="font-bold text-xl">River Valley Conference</span>
             </div>
             <p className="text-gray-300 mb-4">
-              Promoting excellence in high school athletics across the River Valley region.
+              The official IHSA athletic conference serving 10 member schools in northeastern Illinois, promoting excellence in high school athletics and academics.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((social, index) => {
@@ -100,15 +102,15 @@ export default function Footer() {
             <div className="space-y-2 text-gray-300">
               <p className="flex items-start">
                 <MapPin className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-                <span>123 Conference Drive<br />River Valley, IL 62025</span>
-              </p>
-              <p className="flex items-center">
-                <Phone className="h-5 w-5 mr-2 flex-shrink-0" />
-                (618) 555-0123
+                <span>Serving northeastern Illinois<br />IHSA Conference Region</span>
               </p>
               <p className="flex items-center">
                 <Mail className="h-5 w-5 mr-2 flex-shrink-0" />
-                info@rivervalleyconference.org
+                Contact form available above
+              </p>
+              <p className="text-sm">
+                For official business:<br />
+                principals@rvc-il.com
               </p>
             </div>
           </div>
@@ -116,9 +118,9 @@ export default function Footer() {
 
         <div className="border-t border-blue-800 mt-8 pt-8 text-center">
           <p className="text-gray-300">
-            &copy; 2024 River Valley Conference. All rights reserved. | 
-            <a href="#" className="hover:text-white transition-colors ml-1">Privacy Policy</a> | 
-            <a href="#" className="hover:text-white transition-colors ml-1">Terms of Use</a>
+            &copy; 2025 River Valley Conference. All rights reserved. | 
+            <Link href="/privacy-policy" className="hover:text-white transition-colors ml-1">Privacy Policy</Link> | 
+            <Link href="/terms-of-use" className="hover:text-white transition-colors ml-1">Terms of Use</Link>
           </p>
         </div>
       </div>

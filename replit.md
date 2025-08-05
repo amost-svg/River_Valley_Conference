@@ -134,6 +134,14 @@ Default login credentials (password: "password" - should be changed):
 
 ## Recent Features
 
+### Footer and Legal Documentation (Enhanced January 2025)
+- **Updated Footer Content**: Modernized footer with accurate conference information, sport listings, and updated quick links matching homepage sections
+- **Privacy-Compliant Contact Information**: Removed public email display, updated contact section with conference officials and general contact guidance
+- **Comprehensive Privacy Policy**: Full legal privacy policy covering data collection, usage, sharing, security, user rights, and COPPA compliance
+- **Complete Terms of Use**: Detailed terms covering permitted/prohibited uses, Athletic Director responsibilities, intellectual property, and legal disclaimers
+- **Legal Page Routing**: Added /privacy-policy and /terms-of-use routes with professional page designs
+- **Contact Form Privacy**: Updated backend to route messages to principals@rvc-il.com for improved privacy
+
 ### News Management System (Enhanced August 2025)
 - **PDF Upload Functionality**: Dedicated "Upload PDF" button for principal-created letterhead documents
 - **Enhanced Add Article**: Native article creation with image upload and drag-and-drop interface
