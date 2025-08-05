@@ -29,10 +29,14 @@ import {
   Eye,
   ImageIcon,
   FileIcon,
-  X
+  X,
+  LogOut,
+  User as UserIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import type { School, Sport, Game, News, GameResultSubmission, User, NewsUpdated } from "@shared/schema";
 import { insertGameSchema, insertNewsSchema, insertNewsUpdatedSchema } from "@shared/schema";
 import GlobalCalendar from "@/components/GlobalCalendar";
@@ -85,18 +89,9 @@ type EnhancedNewsFormData = z.infer<typeof enhancedNewsSchema>;
 type GameResultFormData = z.infer<typeof gameResultSchema>;
 type PdfArticleFormData = z.infer<typeof pdfArticleSchema>;
 
-interface AdminProps {
-  user?: {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-    isSuperAdmin?: boolean;
-    schoolId?: number;
-  };
-}
-
-export default function Admin({ user }: AdminProps) {
+export default function Admin() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isGameDialogOpen, setIsGameDialogOpen] = useState(false);
   const [isNewsDialogOpen, setIsNewsDialogOpen] = useState(false);
@@ -244,6 +239,34 @@ export default function Admin({ user }: AdminProps) {
     pdfForm.reset();
     clearPdf();
     setIsPdfDialogOpen(false);
+  };
+
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/auth/logout", {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      setLocation("/login");
+    },
+    onError: () => {
+      toast({
+        title: "Logout Error",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   // Mutations
@@ -472,10 +495,32 @@ export default function Admin({ user }: AdminProps) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <h1 className="text-2xl font-bold text-white">RVC Admin Dashboard</h1>
-              <Button variant="outline" className="text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+              <div className="flex items-center space-x-4">
+                <div className="text-white text-sm">
+                  <div className="flex items-center">
+                    <UserIcon className="h-4 w-4 mr-2" />
+                    <span>{user?.name}</span>
+                    {user?.isSuperAdmin && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        Super Admin
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-conference-gold">
+                    {user?.role} • {user?.school?.name || 'Conference Staff'}
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={logoutMutation.isPending}
+                  className="text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  {logoutMutation.isPending ? "Signing Out..." : "Sign Out"}
+                </Button>
+              </div>
             </div>
           </div>
         </header>

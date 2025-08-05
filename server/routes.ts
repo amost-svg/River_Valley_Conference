@@ -296,10 +296,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Google authentication is handled in google-auth.ts
+  // Authentication Routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user || user.password !== password) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({ message: "Account is deactivated" });
+      }
+
+      // Update last login
+      await storage.updateLastLogin(user.id);
+
+      // Set session
+      (req as any).session.userId = user.id;
+
+      res.json({ 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          name: user.name, 
+          role: user.role, 
+          schoolId: user.schoolId,
+          isSuperAdmin: user.isSuperAdmin 
+        },
+        message: "Login successful" 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const userId = (req as any).session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.isActive) {
+        return res.status(401).json({ message: "User not found or inactive" });
+      }
+
+      res.json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        schoolId: user.schoolId,
+        isSuperAdmin: user.isSuperAdmin
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Authentication check failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    (req as any).session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Authentication middleware
+  const requireAuth = async (req: any, res: any, next: any) => {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const user = await storage.getUser(userId);
+    if (!user || !user.isActive) {
+      return res.status(401).json({ message: "User not found or inactive" });
+    }
+    
+    req.user = user;
+    next();
+  };
+
+  const requireSuperAdmin = async (req: any, res: any, next: any) => {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const user = await storage.getUser(userId);
+    if (!user || !user.isActive || !user.isSuperAdmin) {
+      return res.status(403).json({ message: "Super Admin access required" });
+    }
+    
+    req.user = user;
+    next();
+  };
 
   // Super Admin Routes - User Management
-  app.get("/api/super-admin/users", async (req, res) => {
+  app.get("/api/super-admin/users", requireSuperAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -309,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/super-admin/users", async (req, res) => {
+  app.post("/api/super-admin/users", requireSuperAdmin, async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
       const user = await storage.createUser(validatedData);
@@ -326,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/super-admin/users/:id", async (req, res) => {
+  app.put("/api/super-admin/users/:id", requireSuperAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updateData = req.body;
@@ -342,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/super-admin/users/:id", async (req, res) => {
+  app.delete("/api/super-admin/users/:id", requireSuperAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteUser(id);

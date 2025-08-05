@@ -1,12 +1,10 @@
-import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GoogleLoginButton from "@/components/GoogleLoginButton";
+import LoginForm from "@/pages/LoginForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 export default function Login() {
-  const [location] = useLocation();
-  
   // Check for error messages in URL params
   const urlParams = new URLSearchParams(window.location.search);
   const error = urlParams.get('error');
@@ -26,16 +24,26 @@ export default function Login() {
           </Alert>
         )}
         
-        <GoogleLoginButton />
-        
-        <div className="text-center">
-          <a 
-            href="/" 
-            className="text-white hover:text-conference-gold transition-colors"
-          >
-            ← Back to Conference Website
-          </a>
-        </div>
+        <Tabs defaultValue="password" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="password">Password Login</TabsTrigger>
+            <TabsTrigger value="google">Google Login</TabsTrigger>
+          </TabsList>
+          <TabsContent value="password" className="mt-4">
+            <LoginForm />
+          </TabsContent>
+          <TabsContent value="google" className="mt-4">
+            <GoogleLoginButton />
+            <div className="text-center mt-4">
+              <a 
+                href="/" 
+                className="text-white hover:text-conference-gold transition-colors"
+              >
+                ← Back to Conference Website
+              </a>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

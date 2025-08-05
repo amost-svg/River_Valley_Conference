@@ -5,17 +5,24 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import Admin from "@/pages/Admin";
+import Login from "@/pages/Login";
 import School from "@/pages/School";
 import SportCalendar from "@/pages/SportCalendar";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfUse from "@/pages/TermsOfUse";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/admin" component={() => <Admin user={{ id: 1, name: "Aaron Most", email: "amost@gracecrusaders.org", role: "SuperAdmin", isSuperAdmin: true, schoolId: 5 }} />} />
+      <Route path="/login" component={Login} />
+      <Route path="/admin" component={() => (
+        <ProtectedRoute>
+          <Admin />
+        </ProtectedRoute>
+      )} />
       <Route path="/schools/:id" component={School} />
       <Route path="/sports/:sportId/calendar" component={SportCalendar} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />

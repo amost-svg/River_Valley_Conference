@@ -52,7 +52,9 @@ interface School {
   mascot: string;
 }
 
-export default function SuperAdminPanel() {
+import ProtectedRoute from "@/components/ProtectedRoute";
+
+function SuperAdminPanelContent() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
@@ -746,5 +748,13 @@ export default function SuperAdminPanel() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function SuperAdminPanel() {
+  return (
+    <ProtectedRoute requireSuperAdmin={true}>
+      <SuperAdminPanelContent />
+    </ProtectedRoute>
   );
 }
