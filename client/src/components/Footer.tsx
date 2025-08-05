@@ -1,5 +1,6 @@
-import { Trophy, Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail } from "lucide-react";
+import { Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail } from "lucide-react";
 import { Link } from "wouter";
+import rvcLogoPath from "@assets/RVC logo (3)_1754081720129.png";
 
 export default function Footer() {
   const scrollToSection = (sectionId: string) => {
@@ -47,7 +48,11 @@ export default function Footer() {
           {/* Conference Info */}
           <div>
             <div className="flex items-center mb-4">
-              <Trophy className="text-conference-gold h-8 w-8 mr-3" />
+              <img 
+                src={rvcLogoPath} 
+                alt="RVC Logo" 
+                className="h-8 w-8 mr-3 object-contain" 
+              />
               <span className="font-bold text-xl">River Valley Conference</span>
             </div>
             <p className="text-gray-300 mb-4">
