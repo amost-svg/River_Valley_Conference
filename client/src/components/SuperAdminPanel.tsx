@@ -25,6 +25,7 @@ const userSchema = z.object({
   schoolId: z.number().nullable(),
   isActive: z.boolean().default(true),
   isSuperAdmin: z.boolean().default(false),
+  newPassword: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -57,28 +58,26 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 function SuperAdminPanelContent() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [resetPasswordMode, setResetPasswordMode] = useState(false);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch users
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/super-admin/users"],
   });
 
   // Fetch schools for dropdown
-  const { data: schools = [] } = useQuery({
+  const { data: schools = [] } = useQuery<School[]>({
     queryKey: ["/api/schools"],
   });
 
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserFormData) => {
-      return apiRequest("/api/super-admin/users", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      });
+      return apiRequest("POST", "/api/super-admin/users", userData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
@@ -100,10 +99,7 @@ function SuperAdminPanelContent() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, userData }: { id: number; userData: Partial<UserFormData> }) => {
-      return apiRequest(`/api/super-admin/users/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(userData),
-      });
+      return apiRequest("PUT", `/api/super-admin/users/${id}`, userData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
@@ -125,9 +121,7 @@ function SuperAdminPanelContent() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/super-admin/users/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest("DELETE", `/api/super-admin/users/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
@@ -162,17 +156,51 @@ function SuperAdminPanelContent() {
     resolver: zodResolver(userSchema.omit({ password: true })),
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ id, newPassword }: { id: number; newPassword: string }) => {
+      return apiRequest("POST", `/api/super-admin/users/${id}/reset-password`, { newPassword });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      setResetPasswordMode(false);
+      toast({
+        title: "Password Reset",
+        description: "Password has been reset successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset password",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onCreateSubmit = (data: UserFormData) => {
     createUserMutation.mutate(data);
   };
 
-  const onEditSubmit = (data: Partial<UserFormData>) => {
+  const onEditSubmit = (data: any) => {
     if (!editingUser) return;
-    updateUserMutation.mutate({ id: editingUser.id, userData: data });
+    
+    // Handle password reset separately if provided
+    if (resetPasswordMode && data.newPassword && data.newPassword.trim()) {
+      resetPasswordMutation.mutate({ 
+        id: editingUser.id, 
+        newPassword: data.newPassword.trim() 
+      });
+      return;
+    }
+    
+    // Remove newPassword from userData to avoid sending it in regular update
+    const { newPassword, ...userData } = data;
+    updateUserMutation.mutate({ id: editingUser.id, userData });
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
+    setResetPasswordMode(false);
     editForm.reset({
       name: user.name,
       email: user.email,
@@ -180,6 +208,7 @@ function SuperAdminPanelContent() {
       schoolId: user.schoolId,
       isActive: user.isActive,
       isSuperAdmin: user.isSuperAdmin,
+      newPassword: "",
     });
   };
 
@@ -376,8 +405,8 @@ function SuperAdminPanelContent() {
                     <FormItem>
                       <FormLabel>School</FormLabel>
                       <Select 
-                        onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
-                        value={field.value?.toString() || ""}
+                        onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))} 
+                        value={field.value?.toString() || "none"}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -385,7 +414,7 @@ function SuperAdminPanelContent() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No School (Super Admin)</SelectItem>
+                          <SelectItem value="none">No School (Super Admin)</SelectItem>
                           {schools.map((school: School) => (
                             <SelectItem key={school.id} value={school.id.toString()}>
                               {school.name}
@@ -607,8 +636,11 @@ function SuperAdminPanelContent() {
       </Card>
 
       {/* Edit User Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="max-w-md">
+      <Dialog open={!!editingUser} onOpenChange={() => {
+        setEditingUser(null);
+        setResetPasswordMode(false);
+      }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
@@ -673,8 +705,8 @@ function SuperAdminPanelContent() {
                     <FormItem>
                       <FormLabel>School</FormLabel>
                       <Select 
-                        onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
-                        value={field.value?.toString() || ""}
+                        onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))} 
+                        value={field.value?.toString() || "none"}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -682,7 +714,7 @@ function SuperAdminPanelContent() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No School (Super Admin)</SelectItem>
+                          <SelectItem value="none">No School (Super Admin)</SelectItem>
                           {schools.map((school: School) => (
                             <SelectItem key={school.id} value={school.id.toString()}>
                               {school.name}
@@ -734,8 +766,43 @@ function SuperAdminPanelContent() {
                     </FormItem>
                   )}
                 />
+                {/* Password Reset Section */}
+                <div className="border-t pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium">Password Management</h4>
+                      <p className="text-xs text-muted-foreground">Reset user password</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setResetPasswordMode(!resetPasswordMode)}
+                    >
+                      {resetPasswordMode ? "Cancel Reset" : "Reset Password"}
+                    </Button>
+                  </div>
+                  
+                  {resetPasswordMode && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">New Password</label>
+                      <Input
+                        type="password"
+                        placeholder="Enter new password (min 6 characters)"
+                        {...editForm.register("newPassword")}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter a new password to reset user's password
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
+                  <Button type="button" variant="outline" onClick={() => {
+                    setEditingUser(null);
+                    setResetPasswordMode(false);
+                  }}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={updateUserMutation.isPending}>

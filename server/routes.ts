@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
+import bcrypt from "bcrypt";
 import { z } from "zod";
 import { storage } from "./storage";
 import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema } from "@shared/schema";
@@ -425,6 +426,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating user:", error);
       res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Reset user password
+  app.post("/api/super-admin/users/:id/reset-password", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { newPassword } = req.body;
+      
+      if (!newPassword || newPassword.trim().length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(newPassword.trim(), 10);
+      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
 
