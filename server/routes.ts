@@ -858,16 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Google OAuth test endpoint
-  app.get("/api/auth/google-test", (req, res) => {
-    res.json({
-      clientId: process.env.GOOGLE_CLIENT_ID?.substring(0, 20) + "...",
-      callbackURL: `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/google/callback`,
-      redirectURL: `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&redirect_uri=${encodeURIComponent(`https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/google/callback`)}&scope=profile%20email&client_id=${process.env.GOOGLE_CLIENT_ID}`,
-      domain: process.env.REPLIT_DOMAINS?.split(',')[0],
-      status: "configured"
-    });
-  });
+
 
   // Password reset functionality
   app.post("/api/auth/forgot-password", async (req, res) => {

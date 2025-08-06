@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupGoogleAuth } from "./auth/google-auth";
+
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -51,13 +51,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Setup Google auth if credentials are available
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    setupGoogleAuth(app);
-    console.log("Google OAuth authentication enabled");
-  } else {
-    console.log("Google OAuth credentials not found - native login only");
-  }
+  console.log("Native login only - simplified authentication");
   
   const server = await registerRoutes(app);
 
