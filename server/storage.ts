@@ -26,11 +26,13 @@ export interface IStorage {
 
   // Games
   getGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
+  getGame(id: number): Promise<Game | null>;
   getGamesBySport(sportId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
   getGamesBySchool(schoolId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
   getUpcomingGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]>;
   createGame(game: InsertGame): Promise<Game>;
   updateGame(id: number, game: Partial<InsertGame>): Promise<Game | undefined>;
+  deleteGame(id: number): Promise<boolean>;
   updateGameResult(gameResult: GameResult, userId: number): Promise<Game | undefined>;
 
   // Standings
@@ -670,6 +672,11 @@ export class DatabaseStorage implements IStorage {
     return newGame;
   }
 
+  async getGame(id: number): Promise<Game | null> {
+    const [game] = await db.select().from(games).where(eq(games.id, id));
+    return game || null;
+  }
+
   async updateGame(id: number, game: Partial<InsertGame>): Promise<Game | undefined> {
     const [updatedGame] = await db
       .update(games)
@@ -677,6 +684,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(games.id, id))
       .returning();
     return updatedGame || undefined;
+  }
+
+  async deleteGame(id: number): Promise<boolean> {
+    const result = await db.delete(games).where(eq(games.id, id));
+    return result.length > 0;
   }
 
   // Standings

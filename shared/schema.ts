@@ -50,6 +50,10 @@ export const games = pgTable("games", {
   externalEventId: text("external_event_id"), // For tracking imported calendar events
   uploadedBy: integer("uploaded_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  // Duplicate management fields
+  isDuplicateResolved: boolean("is_duplicate_resolved").default(false),
+  duplicateOfGameId: integer("duplicate_of_game_id").references(() => games.id),
+  gameOwnerSchoolId: integer("game_owner_school_id").references(() => schools.id), // Usually home team
   // Enhanced game results for newspaper reporting
   gameSummary: text("game_summary"), // Brief game summary for media
   keyPlayers: text("key_players"), // JSON array of player highlights

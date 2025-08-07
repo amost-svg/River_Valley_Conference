@@ -9,6 +9,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema } from "@shared/schema";
 import { ICalParser } from "./ical-parser";
+import DuplicateGameManager from "./duplicate-game-manager";
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -247,8 +248,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/games", async (req, res) => {
     try {
       const validatedData = insertGameSchema.parse(req.body);
-      const game = await storage.createGame(validatedData);
-      res.status(201).json(game);
+      
+      // Process game with duplicate detection
+      const result = await DuplicateGameManager.processNewGame(validatedData);
+      
+      res.status(201).json({
+        ...result,
+        game: result.game
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -256,6 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: error.errors 
         });
       }
+      console.error("Failed to create game:", error);
       res.status(500).json({ message: "Failed to create game" });
     }
   });
@@ -534,6 +542,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get duplicate games for admin review
+  app.get("/api/admin/duplicate-games", requireAuth, async (req, res) => {
+    try {
+      const games = await storage.getGames();
+      const duplicateGames = games.filter(game => 
+        !game.isDuplicateResolved && game.duplicateOfGameId
+      );
+      
+      // Get the potential duplicates with their referenced games
+      const duplicatesWithDetails = await Promise.all(
+        duplicateGames.map(async (game) => {
+          const originalGame = games.find(g => g.id === game.duplicateOfGameId);
+          return {
+            ...game,
+            originalGame
+          };
+        })
+      );
+      
+      res.json(duplicatesWithDetails);
+    } catch (error) {
+      console.error("Error fetching duplicate games:", error);
+      res.status(500).json({ message: "Failed to fetch duplicate games" });
+    }
+  });
+  
+  // Resolve duplicate games
+  app.post("/api/admin/duplicate-games/:id/resolve", requireAuth, async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const { action, mergeWith } = req.body; // action: 'merge', 'keep_separate', 'delete'
+      
+      if (action === 'merge' && mergeWith) {
+        // Merge the games
+        const game1 = await storage.getGame(gameId);
+        const game2 = await storage.getGame(mergeWith);
+        
+        if (!game1 || !game2) {
+          return res.status(404).json({ message: "Game not found" });
+        }
+        
+        const result = await DuplicateGameManager.autoMergeDuplicates(game1, game2);
+        
+        // Update the primary game and delete the duplicate
+        await storage.updateGame(mergeWith, result.mergedGame);
+        await storage.deleteGame(gameId);
+        
+        res.json({ 
+          message: "Games merged successfully",
+          conflicts: result.conflicts 
+        });
+      } else if (action === 'keep_separate') {
+        // Mark as resolved but keep separate
+        await storage.updateGame(gameId, { 
+          isDuplicateResolved: true
+        });
+        res.json({ message: "Games marked as separate" });
+      } else if (action === 'delete') {
+        // Delete the duplicate
+        await storage.deleteGame(gameId);
+        res.json({ message: "Duplicate game deleted" });
+      } else {
+        res.status(400).json({ message: "Invalid action specified" });
+      }
+    } catch (error) {
+      console.error("Error resolving duplicate:", error);
+      res.status(500).json({ message: "Failed to resolve duplicate" });
+    }
+  });
+
   // News Updated (with author support)
   app.get("/api/news-updated", async (req, res) => {
     try {
@@ -802,6 +880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let imported = 0;
       let skipped = 0;
+      let merged = 0;
 
       // Process each event
       for (const event of parsedEvents) {
@@ -857,8 +936,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          await storage.createGame(gameData);
-          imported++;
+          // Use duplicate detection for imported games too
+          const result = await DuplicateGameManager.processNewGame(gameData);
+          if (result.merged) {
+            merged++; // Track merged games
+          } else {
+            imported++;
+          }
 
         } catch (gameError) {
           console.error('Error creating game:', gameError);

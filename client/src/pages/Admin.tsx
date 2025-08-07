@@ -43,6 +43,7 @@ import GlobalCalendar from "@/components/GlobalCalendar";
 import SchoolEditor from "@/components/SchoolEditor";
 import ScheduleUploader from "@/components/ScheduleUploader";
 import SuperAdminPanel from "@/components/SuperAdminPanel";
+import DuplicateGameManager from "@/components/DuplicateGameManager";
 import rvcLogoPath from "@assets/RVC logo (3)_1754075250117.png";
 
 // Form schemas
@@ -526,13 +527,14 @@ export default function Admin() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-8' : 'grid-cols-7'}`}>
+          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-9' : 'grid-cols-8'}`}>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
             <TabsTrigger value="upload">Calendar Instructions</TabsTrigger>
             <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="duplicates">Duplicates</TabsTrigger>
             <TabsTrigger value="calendar">Calendars</TabsTrigger>
             {user?.isSuperAdmin && (
               <TabsTrigger value="users">User Management</TabsTrigger>
@@ -1532,6 +1534,11 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Duplicate Game Management Tab */}
+          <TabsContent value="duplicates" className="space-y-6">
+            <DuplicateGameManager />
           </TabsContent>
 
           {/* Super Admin User Management Tab */}
