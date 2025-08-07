@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DayPicker } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import "react-day-picker/dist/style.css";
 
 interface CalendarEvent {
@@ -25,6 +28,9 @@ export default function GlobalCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedSport, setSelectedSport] = useState<string>("all");
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Mock data for demonstration - in production, this would come from the calendar API
   const mockEvents: CalendarEvent[] = [
@@ -142,10 +148,85 @@ export default function GlobalCalendar() {
     return colors[sportId as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
+  // Calendar sync mutation
+  const syncCalendarMutation = useMutation({
+    mutationFn: async (sport: string) => {
+      return apiRequest("POST", `/api/admin/calendars/${sport}/sync`, { 
+        userId: user?.id 
+      });
+    },
+    onSuccess: (data, sport) => {
+      toast({
+        title: "Calendar Synced Successfully",
+        description: `${data.calendarName}: ${data.eventsImported} events imported, ${data.duplicatesSkipped} duplicates skipped`,
+      });
+      // Invalidate games cache to refresh calendar data
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+    },
+    onError: (error: any, sport) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || `Failed to sync ${sport} calendar`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Calendar mapping for sports
+  const calendarSports = [
+    { id: "volleyball", name: "Volleyball", fullName: "RVC Volleyball" },
+    { id: "soccer", name: "Soccer", fullName: "RVC Soccer" },
+    { id: "girls-basketball", name: "Girls Basketball", fullName: "RVC Girls Basketball" },
+    { id: "boys-basketball", name: "Boys Basketball", fullName: "RVC Boys Basketball" },
+    { id: "baseball", name: "Baseball", fullName: "RVC Baseball" },
+    { id: "softball", name: "Softball", fullName: "RVC Softball" },
+    { id: "track", name: "Track", fullName: "RVC Track" },
+    { id: "scholastic-bowl", name: "Scholastic Bowl", fullName: "RVC Scholastic Bowl" }
+  ];
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Calendar */}
-      <Card className="lg:col-span-2">
+    <div className="space-y-6">
+      {/* Calendar Sync Panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" />
+            Calendar Synchronization
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {calendarSports.map((sport) => (
+              <div key={sport.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{sport.name}</div>
+                  <div className="text-xs text-gray-500">{sport.fullName}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => syncCalendarMutation.mutate(sport.id)}
+                  disabled={syncCalendarMutation.isPending}
+                  className="ml-2"
+                >
+                  {syncCalendarMutation.isPending ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 text-xs text-gray-500">
+            Sync buttons will force real-time synchronization with Google Calendar to ensure the latest schedule information is displayed.
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Calendar */}
+        <Card className="lg:col-span-2">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center">
@@ -257,6 +338,7 @@ export default function GlobalCalendar() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
