@@ -31,7 +31,8 @@ import {
   FileIcon,
   X,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -530,7 +531,7 @@ export default function Admin() {
           <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-9' : 'grid-cols-8'}`}>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
-            <TabsTrigger value="upload">Calendar Instructions</TabsTrigger>
+            <TabsTrigger value="upload">Calendar Management</TabsTrigger>
             <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
@@ -612,15 +613,87 @@ export default function Admin() {
             <SchoolEditor />
           </TabsContent>
 
-          {/* Schedule Upload Tab */}
+          {/* Calendar Management Tab */}
           <TabsContent value="upload" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Upload Athletic Schedule</h2>
-              <Badge variant="outline" className="text-blue-600">
-                Conference & Non-Conference Games
-              </Badge>
-            </div>
-            <ScheduleUploader />
+            {/* Calendar Synchronization Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5" />
+                  Calendar Synchronization
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { id: "volleyball", name: "Volleyball", fullName: "RVC Volleyball" },
+                    { id: "soccer", name: "Soccer", fullName: "RVC Soccer" },
+                    { id: "girls-basketball", name: "Girls Basketball", fullName: "RVC Girls Basketball" },
+                    { id: "boys-basketball", name: "Boys Basketball", fullName: "RVC Boys Basketball" },
+                    { id: "baseball", name: "Baseball", fullName: "RVC Baseball" },
+                    { id: "softball", name: "Softball", fullName: "RVC Softball" },
+                    { id: "track", name: "Track", fullName: "RVC Track" },
+                    { id: "scholastic-bowl", name: "Scholastic Bowl", fullName: "RVC Scholastic Bowl" }
+                  ].map((sport) => (
+                    <div key={sport.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{sport.name}</div>
+                        <div className="text-xs text-gray-500">{sport.fullName}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const response = await apiRequest("POST", `/api/admin/calendars/${sport.id}/sync`, { 
+                              userId: user?.id 
+                            });
+                            toast({
+                              title: "Calendar Synced Successfully",
+                              description: `${response.calendarName}: ${response.eventsImported} events imported, ${response.duplicatesSkipped} duplicates skipped`,
+                            });
+                            queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+                          } catch (error: any) {
+                            toast({
+                              title: "Sync Failed",
+                              description: error.message || `Failed to sync ${sport.name} calendar`,
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        className="ml-2"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">How Calendar Sync Works:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Click sync buttons to import games directly from Google Calendar</li>
+                    <li>• Games are automatically parsed and added to the conference schedule</li>
+                    <li>• Duplicate games are detected and skipped during import</li>
+                    <li>• Synced games appear in the Global Conference Calendar immediately</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Schedule Upload Instructions */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-xl font-bold text-gray-900">Upload Athletic Schedule</CardTitle>
+                  <Badge variant="outline" className="text-blue-600">
+                    Conference & Non-Conference Games
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScheduleUploader />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Games Tab */}
