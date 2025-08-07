@@ -30,7 +30,7 @@ export default function MemberSchools() {
           <p className="text-lg text-gray-600">Our conference is proud to represent these outstanding high schools</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
           {isLoading
             ? Array.from({ length: 10 }).map((_, index) => (
                 <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
