@@ -186,43 +186,7 @@ export default function GlobalCalendar() {
 
   return (
     <div className="space-y-6">
-      {/* Calendar Sync Panel */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5" />
-            Calendar Synchronization
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {calendarSports.map((sport) => (
-              <div key={sport.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{sport.name}</div>
-                  <div className="text-xs text-gray-500">{sport.fullName}</div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => syncCalendarMutation.mutate(sport.id)}
-                  disabled={syncCalendarMutation.isPending}
-                  className="ml-2"
-                >
-                  {syncCalendarMutation.isPending ? (
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 text-xs text-gray-500">
-            Sync buttons will force real-time synchronization with Google Calendar to ensure the latest schedule information is displayed.
-          </div>
-        </CardContent>
-      </Card>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}

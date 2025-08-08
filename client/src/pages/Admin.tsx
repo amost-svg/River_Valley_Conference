@@ -528,15 +528,14 @@ export default function Admin() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-9' : 'grid-cols-8'}`}>
+          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-8' : 'grid-cols-7'}`}>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
-            <TabsTrigger value="upload">Calendar Management</TabsTrigger>
+            <TabsTrigger value="calendar">Calendars</TabsTrigger>
             <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="duplicates">Duplicates</TabsTrigger>
-            <TabsTrigger value="calendar">Calendars</TabsTrigger>
             {user?.isSuperAdmin && (
               <TabsTrigger value="users">User Management</TabsTrigger>
             )}
@@ -613,8 +612,8 @@ export default function Admin() {
             <SchoolEditor />
           </TabsContent>
 
-          {/* Calendar Management Tab */}
-          <TabsContent value="upload" className="space-y-6">
+          {/* Combined Calendars Tab */}
+          <TabsContent value="calendar" className="space-y-6">
             {/* Calendar Synchronization Section */}
             <Card>
               <CardHeader>
@@ -694,6 +693,9 @@ export default function Admin() {
                 <ScheduleUploader />
               </CardContent>
             </Card>
+
+            {/* Global Conference Calendar */}
+            <GlobalCalendar />
           </TabsContent>
 
           {/* Games Tab */}
@@ -1537,76 +1539,6 @@ export default function Admin() {
               </DialogContent>
             </Dialog>
 
-          </TabsContent>
-
-          {/* Calendar Tab */}
-          <TabsContent value="calendar" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Calendar Integration</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Connected Calendars</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      'RVC Volleyball',
-                      'RVC Soccer', 
-                      'RVC Girls Basketball',
-                      'RVC Boys Basketball',
-                      'RVC Baseball',
-                      'RVC Softball',
-                      'RVC Track',
-                      'RVC Scholastic Bowl'
-                    ].map((calendar) => (
-                      <div key={calendar} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center">
-                          <Calendar className="h-5 w-5 text-conference-navy mr-3" />
-                          <span className="font-medium">{calendar}</span>
-                        </div>
-                        <Badge variant="outline" className="text-green-600">
-                          Connected
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sync Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Last Sync</span>
-                      <span className="font-medium">Just now</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Events Synced</span>
-                      <span className="font-medium">156 events</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Status</span>
-                      <Badge variant="outline" className="text-green-600">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Active
-                      </Badge>
-                    </div>
-                    <Separator />
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Upcoming Events</h4>
-                      <p className="text-sm text-gray-600">Next 7 days: 12 games</p>
-                      <p className="text-sm text-gray-600">Next 30 days: 45 games</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
 
           {/* Duplicate Game Management Tab */}
