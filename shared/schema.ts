@@ -30,7 +30,7 @@ export const sports = pgTable("sports", {
   season: text("season").notNull(), // "fall", "winter", "spring"
 });
 
-export const games = pgTable("games", {
+export const games: any = pgTable("games", {
   id: serial("id").primaryKey(),
   homeTeamId: integer("home_team_id").references(() => schools.id),
   awayTeamId: integer("away_team_id").references(() => schools.id),
@@ -48,11 +48,11 @@ export const games = pgTable("games", {
   level: text("level"), // "JV", "Varsity", "Both"
   notes: text("notes"),
   externalEventId: text("external_event_id"), // For tracking imported calendar events
-  uploadedBy: integer("uploaded_by").references(() => users.id),
+  uploadedBy: integer("uploaded_by"),
   createdAt: timestamp("created_at").defaultNow(),
   // Duplicate management fields
   isDuplicateResolved: boolean("is_duplicate_resolved").default(false),
-  duplicateOfGameId: integer("duplicate_of_game_id").references(() => games.id),
+  duplicateOfGameId: integer("duplicate_of_game_id"),
   gameOwnerSchoolId: integer("game_owner_school_id").references(() => schools.id), // Usually home team
   // Enhanced game results for newspaper reporting
   gameSummary: text("game_summary"), // Brief game summary for media
@@ -61,7 +61,7 @@ export const games = pgTable("games", {
   nextGameInfo: text("next_game_info"), // Information about upcoming games
   recordAfterGame: text("record_after_game"), // Team record after this game
   conferenceRecord: text("conference_record"), // Conference record after this game
-  resultEnteredBy: integer("result_entered_by").references(() => users.id),
+  resultEnteredBy: integer("result_entered_by"),
   resultEnteredAt: timestamp("result_entered_at"),
 });
 

@@ -731,18 +731,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Create new game from calendar event
             if (homeTeam && awayTeam) {
-              await storage.createGame([
-                homeTeam.id,
-                awayTeam.id,
-                calendarInfo.sportId,
-                new Date(event.start),
-                new Date(event.start).toTimeString().slice(0, 5),
-                event.location?.toString() || "",
-                "Varsity",
-                "scheduled",
-                userId,
-                "original"
-              ]);
+              await storage.createGame({
+                homeTeamId: homeTeam.id,
+                awayTeamId: awayTeam.id,
+                sportId: calendarInfo.sportId,
+                gameDate: new Date(event.start),
+                gameTime: new Date(event.start).toTimeString().slice(0, 5),
+                location: event.location?.toString() || "",
+                level: "Varsity",
+                notes: "scheduled",
+                uploadedBy: userId,
+                externalEventId: "original",
+                isConferenceGame: true,
+                isCompleted: false,
+              });
               eventsImported++;
             }
           }

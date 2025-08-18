@@ -194,7 +194,14 @@ export class MemStorage implements IStorage {
         ...standing, 
         id,
         wins: standing.wins || 0,
-        losses: standing.losses || 0
+        losses: standing.losses || 0,
+        ties: 0,
+        conferenceWins: 0,
+        conferenceLosses: 0,
+        conferenceTies: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        lastUpdated: new Date(),
       });
     });
 
@@ -314,6 +321,10 @@ export class MemStorage implements IStorage {
     return this.sports.get(id);
   }
 
+  async getSportById(id: number): Promise<Sport | undefined> {
+    return this.sports.get(id);
+  }
+
   async createSport(sport: InsertSport): Promise<Sport> {
     const id = this.currentSportId++;
     const newSport: Sport = { ...sport, id };
@@ -366,6 +377,32 @@ export class MemStorage implements IStorage {
     return newGame;
   }
 
+  async getGame(id: number): Promise<Game | null> {
+    return this.games.get(id) || null;
+  }
+
+  async getGamesBySchool(schoolId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]> {
+    const games = Array.from(this.games.values()).filter(game => 
+      game.homeTeamId === schoolId || game.awayTeamId === schoolId
+    );
+    return games.map(game => ({
+      ...game,
+      homeTeam: game.homeTeamId ? this.schools.get(game.homeTeamId) || null : null,
+      awayTeam: game.awayTeamId ? this.schools.get(game.awayTeamId) || null : null,
+      sport: this.sports.get(game.sportId)!,
+    }));
+  }
+
+  async getUpcomingGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]> {
+    const games = Array.from(this.games.values()).filter(game => !game.isCompleted);
+    return games.map(game => ({
+      ...game,
+      homeTeam: game.homeTeamId ? this.schools.get(game.homeTeamId) || null : null,
+      awayTeam: game.awayTeamId ? this.schools.get(game.awayTeamId) || null : null,
+      sport: this.sports.get(game.sportId)!,
+    }));
+  }
+
   async updateGame(id: number, game: Partial<InsertGame>): Promise<Game | undefined> {
     const existing = this.games.get(id);
     if (!existing) return undefined;
@@ -375,7 +412,11 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async updateGameResult(gameResult: any, userId: number): Promise<Game | undefined> {
+  async deleteGame(id: number): Promise<boolean> {
+    return this.games.delete(id);
+  }
+
+  async updateGameResult(gameResult: GameResult, userId: number): Promise<Game | undefined> {
     const game = this.games.get(gameResult.gameId);
     if (!game) return undefined;
 
@@ -402,7 +443,7 @@ export class MemStorage implements IStorage {
   }
 
   // Helper method to update standings when a game is completed
-  private async updateStandingsFromGame(game: Game): Promise<void> {
+  async updateStandingsFromGame(game: Game): Promise<void> {
     if (!game.isCompleted || game.homeScore === null || game.awayScore === null) {
       return;
     }
@@ -435,7 +476,13 @@ export class MemStorage implements IStorage {
         sportId,
         wins: 0,
         losses: 0,
-        ties: 0
+        ties: 0,
+        conferenceWins: 0,
+        conferenceLosses: 0,
+        conferenceTies: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        season: "2024-2025",
       });
     }
 
@@ -687,8 +734,84 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteGame(id: number): Promise<boolean> {
-    const result = await db.delete(games).where(eq(games.id, id));
+    const result = await db.delete(games).where(eq(games.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getGamesBySchool(schoolId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]> {
+    const result = await db
+      .select({
+        game: games,
+        homeTeam: schools,
+        sport: sports,
+      })
+      .from(games)
+      .leftJoin(schools, eq(games.homeTeamId, schools.id))
+      .leftJoin(sports, eq(games.sportId, sports.id))
+      .where(eq(games.homeTeamId, schoolId));
+
+    const gamesWithDetails = [];
+    for (const row of result) {
+      const [awayTeam] = row.game.awayTeamId ? 
+        await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId)) : [null];
+      gamesWithDetails.push({
+        ...row.game,
+        homeTeam: row.homeTeam,
+        awayTeam: awayTeam,
+        sport: row.sport!,
+      });
+    }
+
+    return gamesWithDetails;
+  }
+
+  async getUpcomingGames(): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]> {
+    const today = new Date();
+    const result = await db
+      .select({
+        game: games,
+        homeTeam: schools,
+        sport: sports,
+      })
+      .from(games)
+      .leftJoin(schools, eq(games.homeTeamId, schools.id))
+      .leftJoin(sports, eq(games.sportId, sports.id))
+      .where(eq(games.isCompleted, false));
+
+    const gamesWithDetails = [];
+    for (const row of result) {
+      const [awayTeam] = row.game.awayTeamId ? 
+        await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId)) : [null];
+      gamesWithDetails.push({
+        ...row.game,
+        homeTeam: row.homeTeam,
+        awayTeam: awayTeam,
+        sport: row.sport!,
+      });
+    }
+
+    return gamesWithDetails;
+  }
+
+  async updateGameResult(gameResult: GameResult, userId: number): Promise<Game | undefined> {
+    const [updatedGame] = await db
+      .update(games)
+      .set({
+        homeScore: gameResult.homeScore,
+        awayScore: gameResult.awayScore,
+        isCompleted: true,
+        gameSummary: gameResult.gameSummary,
+        keyPlayers: gameResult.keyPlayers,
+        gameHighlights: gameResult.gameHighlights,
+        nextGameInfo: gameResult.nextGameInfo,
+        recordAfterGame: gameResult.recordAfterGame,
+        conferenceRecord: gameResult.conferenceRecord,
+        resultEnteredBy: userId,
+        resultEnteredAt: new Date(),
+      })
+      .where(eq(games.id, gameResult.gameId))
+      .returning();
+    return updatedGame || undefined;
   }
 
   // Standings
@@ -751,6 +874,52 @@ export class DatabaseStorage implements IStorage {
       .where(eq(standings.id, id))
       .returning();
     return updatedStanding || undefined;
+  }
+
+  async updateStandingsFromGame(game: Game): Promise<void> {
+    if (!game.isCompleted || game.homeScore === null || game.awayScore === null) {
+      return;
+    }
+
+    // Update home team standings
+    if (game.homeTeamId) {
+      await this.updateTeamStandings(game.homeTeamId, game.sportId, game.homeScore > game.awayScore, "2024-2025");
+    }
+
+    // Update away team standings
+    if (game.awayTeamId) {
+      await this.updateTeamStandings(game.awayTeamId, game.sportId, game.awayScore > game.homeScore, "2024-2025");
+    }
+  }
+
+  private async updateTeamStandings(schoolId: number, sportId: number, won: boolean, season: string): Promise<void> {
+    const [existingStanding] = await db
+      .select()
+      .from(standings)
+      .where(and(eq(standings.schoolId, schoolId), eq(standings.sportId, sportId), eq(standings.season, season)));
+
+    if (existingStanding) {
+      const updates = won ? { wins: existingStanding.wins + 1 } : { losses: existingStanding.losses + 1 };
+      await db
+        .update(standings)
+        .set(updates)
+        .where(eq(standings.id, existingStanding.id));
+    } else {
+      const newStanding = {
+        schoolId,
+        sportId,
+        wins: won ? 1 : 0,
+        losses: won ? 0 : 1,
+        ties: 0,
+        conferenceWins: 0,
+        conferenceLosses: 0,
+        conferenceTies: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        season,
+      };
+      await db.insert(standings).values(newStanding);
+    }
   }
 
   // News
