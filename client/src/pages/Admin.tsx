@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,11 +40,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import type { School, Sport, Game, News, GameResultSubmission, User, NewsUpdated } from "@shared/schema";
 import { insertGameSchema, insertNewsSchema, insertNewsUpdatedSchema } from "@shared/schema";
-import GlobalCalendar from "@/components/GlobalCalendar";
 import SchoolEditor from "@/components/SchoolEditor";
 import ScheduleUploader from "@/components/ScheduleUploader";
 import SuperAdminPanel from "@/components/SuperAdminPanel";
-import DuplicateGameManager from "@/components/DuplicateGameManager";
 import rvcLogoPath from "@assets/RVC logo (3)_1754075250117.png";
 
 // Form schemas
@@ -132,8 +130,8 @@ export default function Admin() {
       sportId: 0,
       gameDate: new Date(),
       gameTime: "",
-      homeScore: null,
-      awayScore: null,
+      homeScore: 0,
+      awayScore: 0,
       isCompleted: false,
     },
   });
@@ -528,77 +526,161 @@ export default function Admin() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-8' : 'grid-cols-7'}`}>
+          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="upload">Upload Schedule</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
-            <TabsTrigger value="calendar">Calendars</TabsTrigger>
-            <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
-            <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            <TabsTrigger value="duplicates">Duplicates</TabsTrigger>
             {user?.isSuperAdmin && (
               <TabsTrigger value="users">User Management</TabsTrigger>
             )}
           </TabsList>
 
-          {/* Dashboard Tab - Global Calendar */}
+          {/* Dashboard Tab - Game Management */}
           <TabsContent value="dashboard" className="space-y-6">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <Users className="h-8 w-8 text-conference-navy" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Schools</p>
-                      <p className="text-2xl font-bold text-gray-900">{schools?.length || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <Trophy className="h-8 w-8 text-conference-gold" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Sports</p>
-                      <p className="text-2xl font-bold text-gray-900">{sports?.length || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <Calendar className="h-8 w-8 text-conference-green" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Games</p>
-                      <p className="text-2xl font-bold text-gray-900">{games?.length || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <FileText className="h-8 w-8 text-blue-600" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">News Articles</p>
-                      <p className="text-2xl font-bold text-gray-900">{news?.length || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Games Dashboard</h2>
+              <Badge variant="outline" className="text-conference-navy">
+                {games?.length || 0} Total Games
+              </Badge>
             </div>
 
-            {/* Global RVC Calendar */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900">Conference-wide Events</h2>
-              <GlobalCalendar />
+            {/* Upcoming Games Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Today's Games</CardTitle>
+                <CardDescription>Click on any game to record results</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {games?.filter(game => {
+                    const today = new Date().toDateString();
+                    const gameDate = new Date(game.gameDate).toDateString();
+                    return gameDate === today;
+                  }).length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No games scheduled for today</p>
+                  ) : (
+                    games?.filter(game => {
+                      const today = new Date().toDateString();
+                      const gameDate = new Date(game.gameDate).toDateString();
+                      return gameDate === today;
+                    }).map((game) => {
+                      const homeSchool = schools?.find(s => s.id === game.homeTeamId);
+                      const awaySchool = schools?.find(s => s.id === game.awayTeamId);
+                      const sport = sports?.find(s => s.id === game.sportId);
+                      
+                      return (
+                        <Card key={game.id} className="cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => {
+                                setSelectedGame(game);
+                                setIsGameResultDialogOpen(true);
+                                gameResultForm.setValue("gameId", game.id);
+                              }}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex flex-col items-center min-w-24">
+                                  <span className="text-xs text-gray-500">AWAY</span>
+                                  <span className="font-medium text-sm text-center">{awaySchool?.name}</span>
+                                </div>
+                                <div className="text-xl font-bold text-gray-400">@</div>
+                                <div className="flex flex-col items-center min-w-24">
+                                  <span className="text-xs text-gray-500">HOME</span>
+                                  <span className="font-medium text-sm text-center">{homeSchool?.name}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-4">
+                                <div className="text-right">
+                                  <div className="font-medium">{sport?.name}</div>
+                                  <div className="text-sm text-gray-600">
+                                    {game.gameTime} • {new Date(game.gameDate).toLocaleDateString()}
+                                  </div>
+                                </div>
+                                {game.isCompleted ? (
+                                  <div className="flex items-center space-x-2">
+                                    <Badge variant="default" className="bg-green-100 text-green-800">
+                                      {game.homeScore} - {game.awayScore}
+                                    </Badge>
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center space-x-2">
+                                    <Badge variant="outline">Click to Record</Badge>
+                                    <Clock className="h-5 w-5 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upcoming Week Games */}
+            <Card>
+              <CardHeader>
+                <CardTitle>This Week's Games</CardTitle>
+                <CardDescription>All scheduled games for the next 7 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {games?.filter(game => {
+                    const now = new Date();
+                    const gameDate = new Date(game.gameDate);
+                    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                    return gameDate >= now && gameDate <= weekFromNow;
+                  }).slice(0, 10).map((game) => {
+                    const homeSchool = schools?.find(s => s.id === game.homeTeamId);
+                    const awaySchool = schools?.find(s => s.id === game.awayTeamId);
+                    const sport = sports?.find(s => s.id === game.sportId);
+                    
+                    return (
+                      <div key={game.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                           onClick={() => {
+                             setSelectedGame(game);
+                             setIsGameResultDialogOpen(true);
+                             gameResultForm.setValue("gameId", game.id);
+                           }}>
+                        <div className="flex items-center space-x-4">
+                          <div className="w-16 text-center">
+                            <div className="text-xs text-gray-500">{new Date(game.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                            <div className="text-xs text-gray-600">{game.gameTime}</div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium text-sm">{awaySchool?.name}</span>
+                            <span className="text-gray-400">@</span>
+                            <span className="font-medium text-sm">{homeSchool?.name}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="text-xs">{sport?.name}</Badge>
+                          {game.isCompleted && (
+                            <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                              Final: {game.homeScore}-{game.awayScore}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* CSV Upload Tab */}
+          <TabsContent value="upload" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Schedule Upload</h2>
+              <Badge variant="outline" className="text-blue-600">
+                CSV Import System
+              </Badge>
             </div>
+            <ScheduleUploader />
           </TabsContent>
 
           {/* School Editor Tab */}
@@ -612,938 +694,50 @@ export default function Admin() {
             <SchoolEditor />
           </TabsContent>
 
-          {/* Combined Calendars Tab */}
-          <TabsContent value="calendar" className="space-y-6">
-            {/* Calendar Synchronization Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5" />
-                  Calendar Synchronization
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { id: "volleyball", name: "Volleyball", fullName: "RVC Volleyball" },
-                    { id: "soccer", name: "Soccer", fullName: "RVC Soccer" },
-                    { id: "girls-basketball", name: "Girls Basketball", fullName: "RVC Girls Basketball" },
-                    { id: "boys-basketball", name: "Boys Basketball", fullName: "RVC Boys Basketball" },
-                    { id: "baseball", name: "Baseball", fullName: "RVC Baseball" },
-                    { id: "softball", name: "Softball", fullName: "RVC Softball" },
-                    { id: "track", name: "Track", fullName: "RVC Track" },
-                    { id: "scholastic-bowl", name: "Scholastic Bowl", fullName: "RVC Scholastic Bowl" }
-                  ].map((sport) => (
-                    <div key={sport.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{sport.name}</div>
-                        <div className="text-xs text-gray-500">{sport.fullName}</div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={async () => {
-                          try {
-                            const response = await apiRequest("POST", `/api/admin/calendars/${sport.id}/sync`, { 
-                              userId: user?.id 
-                            });
-                            toast({
-                              title: "Calendar Synced Successfully",
-                              description: `${response.calendarName}: ${response.eventsImported} events imported, ${response.duplicatesSkipped} duplicates skipped`,
-                            });
-                            queryClient.invalidateQueries({ queryKey: ["/api/games"] });
-                          } catch (error: any) {
-                            toast({
-                              title: "Sync Failed",
-                              description: error.message || `Failed to sync ${sport.name} calendar`,
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                        className="ml-2"
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">How Calendar Sync Works:</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Click sync buttons to import games directly from Google Calendar</li>
-                    <li>• Games are automatically parsed and added to the conference schedule</li>
-                    <li>• Duplicate games are detected and skipped during import</li>
-                    <li>• Synced games appear in the Global Conference Calendar immediately</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Schedule Upload Instructions */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-xl font-bold text-gray-900">Upload Athletic Schedule</CardTitle>
-                  <Badge variant="outline" className="text-blue-600">
-                    Conference & Non-Conference Games
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScheduleUploader />
-              </CardContent>
-            </Card>
-
-            {/* Global Conference Calendar */}
-            <GlobalCalendar />
-          </TabsContent>
-
-          {/* Games Tab */}
-          <TabsContent value="games" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Games Management</h2>
-              <Dialog open={isGameDialogOpen} onOpenChange={setIsGameDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-conference-navy hover:bg-blue-800">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Game
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Create New Game</DialogTitle>
-                  </DialogHeader>
-                  
-                  <Form {...gameForm}>
-                    <form onSubmit={gameForm.handleSubmit(onSubmitGame)} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={gameForm.control}
-                          name="homeTeamId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Home Team</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(parseInt(value))}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select home team" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {schools?.map((school) => (
-                                    <SelectItem key={school.id} value={school.id.toString()}>
-                                      {school.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={gameForm.control}
-                          name="awayTeamId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Away Team</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(parseInt(value))}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select away team" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {schools?.map((school) => (
-                                    <SelectItem key={school.id} value={school.id.toString()}>
-                                      {school.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={gameForm.control}
-                        name="sportId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sport</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select sport" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {sports?.map((sport) => (
-                                  <SelectItem key={sport.id} value={sport.id.toString()}>
-                                    {sport.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={gameForm.control}
-                          name="gameDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Game Date</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="date" 
-                                  {...field} 
-                                  value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
-                                  onChange={(e) => field.onChange(new Date(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={gameForm.control}
-                          name="gameTime"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Game Time</FormLabel>
-                              <FormControl>
-                                <Input placeholder="7:00 PM" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-
-
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-conference-navy hover:bg-blue-800"
-                        disabled={createGameMutation.isPending}
-                      >
-                        {createGameMutation.isPending ? "Creating..." : "Create Game"}
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <Card>
-              <CardContent>
-                <div className="space-y-4">
-                  {games && games.length > 0 ? (
-                    games.map((game) => (
-                      <div key={game.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">Game #{game.id}</p>
-                          <p className="text-sm text-gray-600">
-                            {formatDate(game.gameDate)} • {game.gameTime}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={game.isCompleted ? "default" : "secondary"}>
-                            {game.isCompleted ? "Complete" : "Scheduled"}
-                          </Badge>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No games scheduled</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* News Tab */}
           <TabsContent value="news" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-900">News Management</h2>
-              <div className="flex space-x-2">
-                <Dialog open={isNewsDialogOpen} onOpenChange={setIsNewsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-conference-navy hover:bg-blue-800">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Article
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Create News Article with Media</DialogTitle>
-                    </DialogHeader>
-                    
-                    <Form {...enhancedNewsForm}>
-                      <form onSubmit={enhancedNewsForm.handleSubmit(onSubmitEnhancedNews)} className="space-y-4">
-                        <FormField
-                          control={enhancedNewsForm.control}
-                          name="title"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Title</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Article title" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={enhancedNewsForm.control}
-                          name="category"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Category</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="General">General</SelectItem>
-                                  <SelectItem value="Sports">Sports</SelectItem>
-                                  <SelectItem value="Announcement">Announcement</SelectItem>
-                                  <SelectItem value="Event">Event</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={enhancedNewsForm.control}
-                          name="excerpt"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Excerpt</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="Brief summary..." {...field} value={field.value || ""} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {/* Image Upload Section */}
-                        <div className="space-y-2">
-                          <Label>Article Image</Label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                            {imagePreview ? (
-                              <div className="relative">
-                                <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded" />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  className="absolute top-2 right-2"
-                                  onClick={clearImage}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="text-center">
-                                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                                <div className="mt-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => imageInputRef.current?.click()}
-                                  >
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload Image
-                                  </Button>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
-                              </div>
-                            )}
-                            <input
-                              ref={imageInputRef}
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageSelect}
-                              className="hidden"
-                            />
-                          </div>
-                        </div>
-
-                        <FormField
-                          control={enhancedNewsForm.control}
-                          name="content"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Content</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="Full article content..." {...field} rows={8} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-conference-navy hover:bg-blue-800"
-                          disabled={createEnhancedNewsMutation.isPending}
-                        >
-                          {createEnhancedNewsMutation.isPending ? "Publishing..." : "Publish Article"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="border-conference-navy text-conference-navy hover:bg-conference-navy hover:text-white">
-                      <FileIcon className="h-4 w-4 mr-2" />
-                      Upload PDF
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle>Upload PDF Article</DialogTitle>
-                    </DialogHeader>
-                    
-                    <Form {...pdfForm}>
-                      <form onSubmit={pdfForm.handleSubmit(onSubmitPdfArticle)} className="space-y-4">
-                        <FormField
-                          control={pdfForm.control}
-                          name="title"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Title</FormLabel>
-                              <FormControl>
-                                <Input placeholder="PDF article title" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={pdfForm.control}
-                          name="category"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Category</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="General">General</SelectItem>
-                                  <SelectItem value="Sports">Sports</SelectItem>
-                                  <SelectItem value="Announcement">Announcement</SelectItem>
-                                  <SelectItem value="Document">Document</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={pdfForm.control}
-                          name="excerpt"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="Brief description of the PDF content..." {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {/* PDF Upload Section */}
-                        <div className="space-y-2">
-                          <Label>PDF File</Label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                            {selectedPdf ? (
-                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                <div className="flex items-center">
-                                  <FileIcon className="h-6 w-6 text-red-500 mr-2" />
-                                  <span className="text-sm font-medium">{selectedPdf.name}</span>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={clearPdf}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="text-center">
-                                <FileIcon className="mx-auto h-12 w-12 text-gray-400" />
-                                <div className="mt-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => pdfInputRef.current?.click()}
-                                  >
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload PDF
-                                  </Button>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">PDF files up to 10MB</p>
-                              </div>
-                            )}
-                            <input
-                              ref={pdfInputRef}
-                              type="file"
-                              accept=".pdf"
-                              onChange={handlePdfSelect}
-                              className="hidden"
-                            />
-                          </div>
-                        </div>
-
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-conference-navy hover:bg-blue-800"
-                          disabled={createPdfArticleMutation.isPending || !selectedPdf}
-                        >
-                          {createPdfArticleMutation.isPending ? "Uploading..." : "Upload PDF Article"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
+              <div className="flex gap-2">
+                <Button onClick={() => setIsNewsDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Article
+                </Button>
+                <Button onClick={() => setIsPdfDialogOpen(true)} variant="outline">
+                  <FileIcon className="h-4 w-4 mr-2" />
+                  Upload PDF
+                </Button>
               </div>
             </div>
 
-            {/* News Articles Display */}
             <Card>
               <CardHeader>
                 <CardTitle>Published Articles</CardTitle>
+                <CardDescription>Manage conference news and announcements</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {enhancedNews && enhancedNews.length > 0 ? (
-                    enhancedNews.map((article) => (
-                      <div key={article.id} className="flex items-start justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h3 className="font-medium">{article.title}</h3>
-                            {article.pdfUrl && (
-                              <Badge variant="secondary" className="text-xs">
-                                <FileIcon className="h-3 w-3 mr-1" />
-                                PDF
-                              </Badge>
-                            )}
-                            {article.imageUrl && (
-                              <Badge variant="secondary" className="text-xs">
-                                <ImageIcon className="h-3 w-3 mr-1" />
-                                Image
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">{article.excerpt}</p>
-                          <div className="flex items-center mt-2 space-x-4">
-                            <Badge variant="outline">{article.category}</Badge>
-                            <span className="text-xs text-gray-500">
-                              {formatDate(article.publishDate)}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              by {article.author.name}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {article.pdfUrl && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => window.open(article.pdfUrl || '', '_blank')}
-                            >
-                              <FileIcon className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                  {news?.slice(0, 10).map((article) => (
+                    <div key={article.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{article.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{article.excerpt}</p>
+                        <div className="flex items-center space-x-4 mt-2">
+                          <Badge variant="outline">{article.category}</Badge>
+                          <span className="text-xs text-gray-500">
+                            {new Date(article.publishDate).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No enhanced articles published yet</p>
-                  )}
+                      <div className="flex items-center space-x-2">
+                        {article.imageUrl && <ImageIcon className="h-4 w-4 text-blue-600" />}
+                        {article.pdfUrl && <FileIcon className="h-4 w-4 text-red-600" />}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
-
-            {/* Legacy News Articles */}
-            {news && news.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Legacy Articles</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {news.map((article) => (
-                      <div key={article.id} className="flex items-start justify-between p-4 border rounded-lg bg-gray-50">
-                        <div className="flex-1">
-                          <h3 className="font-medium">{article.title}</h3>
-                          <p className="text-sm text-gray-600 mt-1">{article.excerpt}</p>
-                          <div className="flex items-center mt-2 space-x-4">
-                            <Badge variant="outline">{article.category}</Badge>
-                            <span className="text-xs text-gray-500">
-                              {formatDate(article.publishDate)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* Results Tab */}
-          <TabsContent value="submissions" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Game Results Management</h2>
-              <div className="flex items-center space-x-4">
-                <Select value={selectedSchoolFilter} onValueChange={setSelectedSchoolFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by school" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Schools</SelectItem>
-                    {schools?.map((school) => (
-                      <SelectItem key={school.id} value={school.id.toString()}>
-                        {school.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedSportFilter} onValueChange={setSelectedSportFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by sport" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sports</SelectItem>
-                    {sports?.map((sport) => (
-                      <SelectItem key={sport.id} value={sport.id.toString()}>
-                        {sport.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Game Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredGames && filteredGames.length > 0 ? (
-                filteredGames.map((game) => {
-                  const homeTeamName = game.homeTeam?.name || game.homeTeamName || "TBD";
-                  const awayTeamName = game.awayTeam?.name || game.awayTeamName || "TBD";
-                  const isCompleted = game.isCompleted;
-                  
-                  return (
-                    <Card 
-                      key={game.id} 
-                      className={`cursor-pointer transition-all hover:shadow-lg ${
-                        isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-200 hover:border-conference-navy'
-                      }`}
-                      onClick={() => openGameResultDialog(game)}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <Badge variant={isCompleted ? "default" : "secondary"}>
-                            {isCompleted ? "Final" : "Scheduled"}
-                          </Badge>
-                          <span className="text-xs text-gray-500">{game.sport?.name}</span>
-                        </div>
-                        <CardTitle className="text-lg">{homeTeamName} vs {awayTeamName}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">
-                              {formatDate(game.gameDate)} • {game.gameTime}
-                            </span>
-                            {game.level && (
-                              <Badge variant="outline" className="text-xs">
-                                {game.level}
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          {isCompleted && game.homeScore !== null && game.awayScore !== null ? (
-                            <div className="bg-gray-100 rounded-lg p-3">
-                              <div className="flex items-center justify-between text-lg font-semibold">
-                                <span className={game.homeScore > game.awayScore ? "text-green-600" : ""}>
-                                  {homeTeamName}: {game.homeScore}
-                                </span>
-                                <span className={game.awayScore > game.homeScore ? "text-green-600" : ""}>
-                                  {awayTeamName}: {game.awayScore}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-2">
-                              <Button variant="outline" size="sm">
-                                <Plus className="h-4 w-4 mr-1" />
-                                Enter Result
-                              </Button>
-                            </div>
-                          )}
-                          
-                          {game.location && (
-                            <p className="text-xs text-gray-500">@ {game.location}</p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <p className="text-gray-500">No games found for the selected filters</p>
-                </div>
-              )}
-            </div>
-
-            {/* Game Result Entry Dialog */}
-            <Dialog open={isGameResultDialogOpen} onOpenChange={setIsGameResultDialogOpen}>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Enter Game Result</DialogTitle>
-                  {selectedGame && (
-                    <p className="text-sm text-gray-600">
-                      {selectedGame.homeTeam?.name || selectedGame.homeTeamName} vs {selectedGame.awayTeam?.name || selectedGame.awayTeamName} • {formatDate(selectedGame.gameDate)}
-                    </p>
-                  )}
-                </DialogHeader>
-                
-                {selectedGame && (
-                  <Form {...gameResultForm}>
-                    <form onSubmit={gameResultForm.handleSubmit(onSubmitGameResult)} className="space-y-4">
-                      {/* Score Entry */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={gameResultForm.control}
-                          name="homeScore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{selectedGame.homeTeam?.name || selectedGame.homeTeamName} Score</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min="0" 
-                                  placeholder="0" 
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={gameResultForm.control}
-                          name="awayScore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{selectedGame.awayTeam?.name || selectedGame.awayTeamName} Score</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min="0" 
-                                  placeholder="0" 
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* Game Summary */}
-                      <FormField
-                        control={gameResultForm.control}
-                        name="gameSummary"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Game Summary</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Brief summary of the game..."
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Key Players */}
-                      <FormField
-                        control={gameResultForm.control}
-                        name="keyPlayers"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Key Players</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Notable performances and key contributors..."
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Game Highlights */}
-                      <FormField
-                        control={gameResultForm.control}
-                        name="gameHighlights"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Game Highlights</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Key moments and highlights from the game..."
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Records */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={gameResultForm.control}
-                          name="recordAfterGame"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Team Record After Game</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="e.g., 5-2"
-                                  {...field}
-                                  value={field.value || ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={gameResultForm.control}
-                          name="conferenceRecord"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Conference Record</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="e.g., 3-1"
-                                  {...field}
-                                  value={field.value || ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* Next Game Info */}
-                      <FormField
-                        control={gameResultForm.control}
-                        name="nextGameInfo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Next Game Information</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Information about the next scheduled game..."
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex justify-end space-x-2 pt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setIsGameResultDialogOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          className="bg-conference-navy hover:bg-blue-800"
-                          disabled={submitGameResultMutation.isPending}
-                        >
-                          {submitGameResultMutation.isPending ? "Saving..." : "Save Result"}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                )}
-              </DialogContent>
-            </Dialog>
-
-          </TabsContent>
-
-          {/* Duplicate Game Management Tab */}
-          <TabsContent value="duplicates" className="space-y-6">
-            <DuplicateGameManager />
           </TabsContent>
 
           {/* Super Admin User Management Tab */}
@@ -1555,6 +749,170 @@ export default function Admin() {
 
         </Tabs>
         </div>
+
+        {/* Game Result Recording Dialog */}
+        <Dialog open={isGameResultDialogOpen} onOpenChange={setIsGameResultDialogOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Enter Game Result</DialogTitle>
+              {selectedGame && (
+                <p className="text-sm text-gray-600">
+                  Record the final score and details for this game
+                </p>
+              )}
+            </DialogHeader>
+            
+            {selectedGame && (
+              <Form {...gameResultForm}>
+                <form onSubmit={gameResultForm.handleSubmit(onSubmitGameResult)} className="space-y-4">
+                  {/* Score Entry */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={gameResultForm.control}
+                      name="homeScore"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Home Team Score</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              placeholder="0" 
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={gameResultForm.control}
+                      name="awayScore"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Away Team Score</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              placeholder="0" 
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsGameResultDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-conference-navy hover:bg-blue-800"
+                    >
+                      Save Result
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* News Management Dialogs */}
+        <Dialog open={isNewsDialogOpen} onOpenChange={setIsNewsDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add News Article</DialogTitle>
+            </DialogHeader>
+            <Form {...newsForm}>
+              <form onSubmit={newsForm.handleSubmit(onSubmitNews)} className="space-y-4">
+                <FormField
+                  control={newsForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Article title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={newsForm.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Content</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Article content" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsNewsDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">Create Article</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* PDF Upload Dialog */}
+        <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Upload PDF Article</DialogTitle>
+            </DialogHeader>
+            <Form {...pdfForm}>
+              <form onSubmit={pdfForm.handleSubmit(onSubmitPdfArticle)} className="space-y-4">
+                <FormField
+                  control={pdfForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Article Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="PDF article title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsPdfDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">Upload PDF</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
