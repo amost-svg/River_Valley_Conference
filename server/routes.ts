@@ -7,8 +7,8 @@ import fs from "fs/promises";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { storage } from "./storage";
-import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema } from "@shared/schema";
-import { ICalParser } from "./ical-parser";
+import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema, insertCsvUploadSchema } from "@shared/schema";
+// import { ICalParser } from "./ical-parser"; // Removed - replaced with CSV parser
 import DuplicateGameManager from "./duplicate-game-manager";
 
 // Configure multer for file uploads
@@ -57,6 +57,20 @@ const upload = multer({
   fileFilter: fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
+  }
+});
+
+// Configure separate multer for CSV files
+const csvUpload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || 
+        file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'), false);
+    }
   }
 });
 
@@ -612,177 +626,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Force sync calendar endpoint with real Google Calendar integration
-  app.post("/api/admin/calendars/:sport/sync", requireAuth, async (req, res) => {
+  // CSV upload and processing endpoint
+  app.post("/api/admin/csv/upload", requireAuth, csvUpload.single('csvFile'), async (req, res) => {
     try {
-      const sport = req.params.sport;
-      const userId = req.body.userId;
-      
-      if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file uploaded" });
       }
+
+      const userId = (req as any).user.id;
+      const csvContent = req.file.buffer.toString();
       
-      // Map sport names to their calendar identifiers and iCal URLs
-      const calendarMapping: Record<string, { name: string; icalUrl: string; sportId: number }> = {
-        'volleyball': {
-          name: 'RVC Volleyball',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_40f66f13378e3ec527a356f7c55fdc48a5d4b13d72bd54f04061018229c241b8%40group.calendar.google.com/public/basic.ics',
-          sportId: 3
-        },
-        'soccer': {
-          name: 'RVC Soccer',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_a45049bcece6ca8d0da01a1bd306a475c4815c7a4551be1e3533c2f808449f3b%40group.calendar.google.com/public/basic.ics',
-          sportId: 4
-        },
-        'girls-basketball': {
-          name: 'RVC Girls Basketball',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_7a93f9537a04e44d4dd106a4b22f08c1f0ec015b2240838e216a8903d7a0b78a%40group.calendar.google.com/public/basic.ics',
-          sportId: 2
-        },
-        'boys-basketball': {
-          name: 'RVC Boys Basketball',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_0b58def8fa91acf30a18eabd124f3c27cab0be766f4756be4a0f9ed41a07d549%40group.calendar.google.com/public/basic.ics',
-          sportId: 2
-        },
-        'baseball': {
-          name: 'RVC Baseball',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_57e8bcfd3bd723041a6fcc3c0c9c1128d9b67863ab117e6e394db3836463049e%40group.calendar.google.com/public/basic.ics',
-          sportId: 5
-        },
-        'softball': {
-          name: 'RVC Softball',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_f5f6f28b77a3b6cf89c8ba7f45e4c07b6a7fa6e1f0db8e5a9b3df2c18e2d4a37%40group.calendar.google.com/public/basic.ics',
-          sportId: 6
-        },
-        'track': {
-          name: 'RVC Track',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_e8f4a3c9d8d7b6a5e1f2a7b4c3d6e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6%40group.calendar.google.com/public/basic.ics',
-          sportId: 7
-        },
-        'scholastic-bowl': {
-          name: 'RVC Scholastic Bowl',
-          icalUrl: 'https://calendar.google.com/calendar/ical/c_b2a1c0e9f8e7d6c5b4a3d2e1f0c9b8a7d6e5f4c3b2a1e0f9d8c7b6a5e4f3d2c1%40group.calendar.google.com/public/basic.ics',
-          sportId: 8
-        }
-      };
+      // Parse CSV using our CSV parser
+      const { CSVParser } = await import('./csv-parser');
+      const parseResult = await CSVParser.parseCSV(csvContent, req.file.originalname);
       
-      const calendarInfo = calendarMapping[sport];
-      if (!calendarInfo) {
-        return res.status(400).json({ message: "Invalid sport specified" });
+      if (parseResult.errors.length > 0 && parseResult.games.length === 0) {
+        return res.status(400).json({
+          message: "Failed to parse CSV file",
+          errors: parseResult.errors
+        });
       }
+
       
-      console.log(`Calendar sync requested for ${calendarInfo.name} by user ${userId}`);
+      // Create CSV upload record
+      const csvUpload = await storage.createCsvUpload({
+        filename: req.file.originalname,
+        uploadedBy: userId,
+        status: 'processing',
+        seasonsCovered: JSON.stringify(Array.from(parseResult.seasons)),
+        sportsIncluded: JSON.stringify(Array.from(parseResult.sports)),
+        processingLog: JSON.stringify({ parseErrors: parseResult.errors })
+      });
+
+      let gamesImported = 0;
+      let duplicatesSkipped = 0;
+      let errorsEncountered = 0;
+
+      // Get mapping of school names and sports
+      const schools = await storage.getSchools();
+      const sports = await storage.getSports();
       
+      const schoolMap = new Map<string, number>();
+      schools.forEach(school => schoolMap.set(school.name, school.id));
+      
+      const sportMap = new Map<string, number>();
+      sports.forEach(sport => {
+        sportMap.set(sport.name.toLowerCase().replace(' ', '_'), sport.id);
+      });
+
+      // Convert parsed games to database format
+      const gameInserts = await CSVParser.convertToGameInserts(parseResult.games, schoolMap, sportMap);
+      
+      // Import games in batches
       try {
-        // Fetch and parse iCal data
-        const response = await fetch(calendarInfo.icalUrl);
-        const icalData = await response.text();
+        const importedGames = await storage.createBulkGames(gameInserts, csvUpload.id);
+        gamesImported = importedGames.length;
         
-        // Parse iCal data using node-ical
-        const ical = await import('node-ical');
-        const events = ical.parseICS(icalData);
-        
-        let eventsImported = 0;
-        let duplicatesSkipped = 0;
-        
-        // Process each event
-        for (const event of Object.values(events)) {
-          if (event.type === 'VEVENT' && event.start && event.summary) {
-            // Parse team names from summary (e.g., "Grace vs Central")
-            const summary = event.summary.toString();
-            const vsMatch = summary.match(/(.+?)\s+vs\s+(.+?)(?:\s|$)/i);
-            const atMatch = summary.match(/(.+?)\s+@\s+(.+?)(?:\s|$)/i);
-            
-            let homeTeamName = "";
-            let awayTeamName = "";
-            
-            if (vsMatch) {
-              homeTeamName = vsMatch[1].trim();
-              awayTeamName = vsMatch[2].trim();
-            } else if (atMatch) {
-              awayTeamName = atMatch[1].trim();
-              homeTeamName = atMatch[2].trim();
-            }
-            
-            // Get school IDs from names
-            const schools = await storage.getSchools();
-            const homeTeam = schools.find(s => 
-              s.name.toLowerCase().includes(homeTeamName.toLowerCase()) ||
-              homeTeamName.toLowerCase().includes(s.name.toLowerCase())
-            );
-            const awayTeam = schools.find(s => 
-              s.name.toLowerCase().includes(awayTeamName.toLowerCase()) ||
-              awayTeamName.toLowerCase().includes(s.name.toLowerCase())
-            );
-            
-            // Check if this game already exists
-            const existingGames = await storage.getGames();
-            const gameExists = existingGames.some(g => 
-              g.sportId === calendarInfo.sportId &&
-              g.homeTeamId === homeTeam?.id &&
-              g.awayTeamId === awayTeam?.id &&
-              new Date(g.date).toDateString() === new Date(event.start).toDateString()
-            );
-            
-            if (gameExists) {
-              duplicatesSkipped++;
-              continue;
-            }
-            
-            // Create new game from calendar event
-            if (homeTeam && awayTeam) {
-              await storage.createGame({
-                homeTeamId: homeTeam.id,
-                awayTeamId: awayTeam.id,
-                sportId: calendarInfo.sportId,
-                gameDate: new Date(event.start),
-                gameTime: new Date(event.start).toTimeString().slice(0, 5),
-                location: event.location?.toString() || "",
-                level: "Varsity",
-                notes: "scheduled",
-                uploadedBy: userId,
-                externalEventId: "original",
-                isConferenceGame: true,
-                isCompleted: false,
-              });
-              eventsImported++;
-            }
-          }
+        // Create CSV-game mappings for audit trail
+        for (let i = 0; i < importedGames.length; i++) {
+          const game = importedGames[i];
+          const originalData = parseResult.games[i];
+          
+          await storage.createCsvGameMapping({
+            csvUploadId: csvUpload.id,
+            gameId: game.id,
+            csvRowData: JSON.stringify(originalData),
+            rvcGameId: originalData.rvc_game_id
+          });
         }
         
-        res.json({
-          success: true,
-          message: `Successfully synced ${calendarInfo.name} calendar`,
-          calendarName: calendarInfo.name,
-          sport,
-          lastSync: new Date(),
-          eventsFound: Object.keys(events).length,
-          eventsImported,
-          duplicatesSkipped
+        // Update CSV upload status
+        await storage.updateCsvUpload(csvUpload.id, {
+          status: 'completed',
+          gamesImported,
+          duplicatesSkipped,
+          errorsEncountered
         });
-        
-      } catch (icalError) {
-        console.error("Error parsing iCal data:", icalError);
-        // Fallback to simulated response if iCal parsing fails
-        const syncResult = {
-          calendarName: calendarInfo.name,
-          sport,
-          lastSync: new Date(),
-          eventsFound: Math.floor(Math.random() * 20) + 5,
-          eventsImported: Math.floor(Math.random() * 15) + 2,
-          duplicatesSkipped: Math.floor(Math.random() * 5)
-        };
         
         res.json({
           success: true,
-          message: `Successfully synced ${calendarInfo.name} calendar (simulated)`,
-          ...syncResult
+          message: `Successfully imported ${gamesImported} games from CSV`,
+          uploadId: csvUpload.id,
+          gamesImported,
+          duplicatesSkipped,
+          errorsEncountered,
+          parseErrors: parseResult.errors
         });
+        
+      } catch (error) {
+        errorsEncountered++;
+        await storage.updateCsvUpload(csvUpload.id, {
+          status: 'failed',
+          errorsEncountered,
+          processingLog: JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' })
+        });
+        
+        throw error;
       }
       
     } catch (error) {
-      console.error("Error syncing calendar:", error);
-      res.status(500).json({ message: "Failed to sync calendar" });
+      console.error("Error processing CSV upload:", error);
+      res.status(500).json({ message: "Failed to process CSV upload" });
+    }
+  });
+
+  // CSV Upload history endpoint
+  app.get("/api/admin/csv/uploads", async (req, res) => {
+    try {
+      const uploads = await storage.getCsvUploads();
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching CSV uploads:", error);
+      res.status(500).json({ message: "Failed to fetch CSV uploads" });
     }
   });
 

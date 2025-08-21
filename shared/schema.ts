@@ -158,6 +158,54 @@ export const conferenceOfficials = pgTable("conference_officials", {
   isActive: boolean("is_active").default(true),
 });
 
+// Seasons table to track athletic seasons
+export const seasons = pgTable("seasons", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // "2024-25", "2025-26", etc.
+  code: text("code").notNull().unique(), // "2425", "2526", etc.
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// CSV upload tracking and audit logs
+export const csvUploads = pgTable("csv_uploads", {
+  id: serial("id").primaryKey(),
+  filename: text("filename").notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  uploadDate: timestamp("upload_date").defaultNow(),
+  status: text("status").notNull(), // "processing", "completed", "failed"
+  gamesImported: integer("games_imported").default(0),
+  duplicatesSkipped: integer("duplicates_skipped").default(0),
+  errorsEncountered: integer("errors_encountered").default(0),
+  processingLog: text("processing_log"), // JSON string of detailed logs
+  seasonsCovered: text("seasons_covered"), // JSON array of season codes
+  sportsIncluded: text("sports_included"), // JSON array of sports
+});
+
+// Game edit audit log to track changes made by ADs
+export const gameEditLogs = pgTable("game_edit_logs", {
+  id: serial("id").primaryKey(),
+  gameId: integer("game_id").references(() => games.id).notNull(),
+  editedBy: integer("edited_by").references(() => users.id).notNull(),
+  editDate: timestamp("edit_date").defaultNow(),
+  fieldName: text("field_name").notNull(), // "homeScore", "awayScore", "gameDate", etc.
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  editReason: text("edit_reason"), // Optional reason for the change
+});
+
+// CSV data mapping to maintain relationship between imported CSV records and games
+export const csvGameMappings = pgTable("csv_game_mappings", {
+  id: serial("id").primaryKey(),
+  csvUploadId: integer("csv_upload_id").references(() => csvUploads.id).notNull(),
+  gameId: integer("game_id").references(() => games.id).notNull(),
+  csvRowData: text("csv_row_data"), // JSON string of original CSV row data
+  rvcGameId: text("rvc_game_id"), // Original RVC game ID from CSV if present
+  importedAt: timestamp("imported_at").defaultNow(),
+});
+
 export const insertSchoolSchema = createInsertSchema(schools).omit({ id: true });
 export const insertSportSchema = createInsertSchema(sports).omit({ id: true });
 export const insertGameSchema = createInsertSchema(games).omit({ id: true });
@@ -168,6 +216,10 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export const insertNewsUpdatedSchema = createInsertSchema(newsUpdated).omit({ id: true });
 export const insertGameResultSubmissionSchema = createInsertSchema(gameResultSubmissions).omit({ id: true, submissionDate: true });
 export const insertConferenceOfficialSchema = createInsertSchema(conferenceOfficials).omit({ id: true });
+export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, createdAt: true });
+export const insertCsvUploadSchema = createInsertSchema(csvUploads).omit({ id: true, uploadDate: true });
+export const insertGameEditLogSchema = createInsertSchema(gameEditLogs).omit({ id: true, editDate: true });
+export const insertCsvGameMappingSchema = createInsertSchema(csvGameMappings).omit({ id: true, importedAt: true });
 
 // Enhanced game result schema for Athletic Directors
 export const gameResultSchema = z.object({
@@ -203,4 +255,12 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertNewsUpdated = z.infer<typeof insertNewsUpdatedSchema>;
 export type InsertGameResultSubmission = z.infer<typeof insertGameResultSubmissionSchema>;
 export type InsertConferenceOfficial = z.infer<typeof insertConferenceOfficialSchema>;
+export type Season = typeof seasons.$inferSelect;
+export type CsvUpload = typeof csvUploads.$inferSelect;
+export type GameEditLog = typeof gameEditLogs.$inferSelect;
+export type CsvGameMapping = typeof csvGameMappings.$inferSelect;
+export type InsertSeason = z.infer<typeof insertSeasonSchema>;
+export type InsertCsvUpload = z.infer<typeof insertCsvUploadSchema>;
+export type InsertGameEditLog = z.infer<typeof insertGameEditLogSchema>;
+export type InsertCsvGameMapping = z.infer<typeof insertCsvGameMappingSchema>;
 export type GameResult = z.infer<typeof gameResultSchema>;

@@ -1,11 +1,13 @@
 import { 
   schools, sports, games, standings, news, contacts, users, newsUpdated, 
-  gameResultSubmissions, conferenceOfficials,
+  gameResultSubmissions, conferenceOfficials, seasons, csvUploads, gameEditLogs, csvGameMappings,
   type School, type Sport, type Game, type Standing, type News, type Contact,
   type User, type NewsUpdated, type GameResultSubmission, type ConferenceOfficial,
+  type Season, type CsvUpload, type GameEditLog, type CsvGameMapping,
   type InsertSchool, type InsertSport, type InsertGame, type InsertStanding, 
   type InsertNews, type InsertContact, type InsertUser, type InsertNewsUpdated,
-  type InsertGameResultSubmission, type InsertConferenceOfficial, type GameResult
+  type InsertGameResultSubmission, type InsertConferenceOfficial, type GameResult,
+  type InsertSeason, type InsertCsvUpload, type InsertGameEditLog, type InsertCsvGameMapping
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -77,6 +79,27 @@ export interface IStorage {
   getActiveConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]>;
   createConferenceOfficial(official: InsertConferenceOfficial): Promise<ConferenceOfficial>;
   updateConferenceOfficial(id: number, official: Partial<InsertConferenceOfficial>): Promise<ConferenceOfficial | undefined>;
+
+  // Seasons
+  getSeasons(): Promise<Season[]>;
+  getActiveSeason(): Promise<Season | undefined>;
+  createSeason(season: InsertSeason): Promise<Season>;
+  updateSeason(id: number, season: Partial<InsertSeason>): Promise<Season | undefined>;
+
+  // CSV Management
+  getCsvUploads(): Promise<(CsvUpload & { user: User })[]>;
+  getCsvUpload(id: number): Promise<CsvUpload | undefined>;
+  createCsvUpload(csvUpload: InsertCsvUpload): Promise<CsvUpload>;
+  updateCsvUpload(id: number, csvUpload: Partial<InsertCsvUpload>): Promise<CsvUpload | undefined>;
+  createBulkGames(games: InsertGame[], csvUploadId: number): Promise<Game[]>;
+
+  // Game Edit Logs
+  getGameEditLogs(gameId: number): Promise<(GameEditLog & { user: User })[]>;
+  createGameEditLog(log: InsertGameEditLog): Promise<GameEditLog>;
+
+  // CSV Game Mappings
+  getCsvGameMappings(csvUploadId: number): Promise<CsvGameMapping[]>;
+  createCsvGameMapping(mapping: InsertCsvGameMapping): Promise<CsvGameMapping>;
 }
 
 export class MemStorage implements IStorage {
@@ -86,6 +109,10 @@ export class MemStorage implements IStorage {
   private standings: Map<number, Standing> = new Map();
   private news: Map<number, News> = new Map();
   private contacts: Map<number, Contact> = new Map();
+  private seasons: Map<number, Season> = new Map();
+  private csvUploads: Map<number, CsvUpload> = new Map();
+  private gameEditLogs: Map<number, GameEditLog> = new Map();
+  private csvGameMappings: Map<number, CsvGameMapping> = new Map();
   
   private currentSchoolId = 1;
   private currentSportId = 1;
@@ -93,6 +120,14 @@ export class MemStorage implements IStorage {
   private currentStandingId = 1;
   private currentNewsId = 1;
   private currentContactId = 1;
+  private currentSeasonId = 1;
+  private currentCsvUploadId = 1;
+  private currentGameEditLogId = 1;
+  private currentCsvGameMappingId = 1;
+  private currentSeasonId = 1;
+  private currentCsvUploadId = 1;
+  private currentGameEditLogId = 1;
+  private currentCsvGameMappingId = 1;
 
   constructor() {
     this.initializeData();
@@ -595,6 +630,116 @@ export class MemStorage implements IStorage {
   async getActiveConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]> { return []; }
   async createConferenceOfficial(official: InsertConferenceOfficial): Promise<ConferenceOfficial> { return { ...official, id: 1, isActive: true, endDate: official.endDate || null }; }
   async updateConferenceOfficial(id: number, official: Partial<InsertConferenceOfficial>): Promise<ConferenceOfficial | undefined> { return undefined; }
+
+  // Seasons
+  async getSeasons(): Promise<Season[]> {
+    return Array.from(this.seasons.values());
+  }
+
+  async getActiveSeason(): Promise<Season | undefined> {
+    return Array.from(this.seasons.values()).find(s => s.isActive) || undefined;
+  }
+
+  async createSeason(season: InsertSeason): Promise<Season> {
+    const id = this.currentSeasonId++;
+    const newSeason: Season = { 
+      ...season, 
+      id,
+      isActive: season.isActive || false,
+      createdAt: season.createdAt || new Date()
+    };
+    this.seasons.set(id, newSeason);
+    return newSeason;
+  }
+
+  async updateSeason(id: number, season: Partial<InsertSeason>): Promise<Season | undefined> {
+    const existing = this.seasons.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...season };
+    this.seasons.set(id, updated);
+    return updated;
+  }
+
+  // CSV Management
+  async getCsvUploads(): Promise<(CsvUpload & { user: User })[]> {
+    const uploads = Array.from(this.csvUploads.values());
+    return uploads.map(upload => ({
+      ...upload,
+      user: this.users.get(upload.uploadedBy)!,
+    }));
+  }
+
+  async getCsvUpload(id: number): Promise<CsvUpload | undefined> {
+    return this.csvUploads.get(id) || undefined;
+  }
+
+  async createCsvUpload(csvUpload: InsertCsvUpload): Promise<CsvUpload> {
+    const id = this.currentCsvUploadId++;
+    const newCsvUpload: CsvUpload = { 
+      ...csvUpload, 
+      id,
+      uploadDate: csvUpload.uploadDate || new Date(),
+      gamesImported: csvUpload.gamesImported || null,
+      duplicatesSkipped: csvUpload.duplicatesSkipped || null,
+      errorsEncountered: csvUpload.errorsEncountered || null
+    };
+    this.csvUploads.set(id, newCsvUpload);
+    return newCsvUpload;
+  }
+
+  async updateCsvUpload(id: number, csvUpload: Partial<InsertCsvUpload>): Promise<CsvUpload | undefined> {
+    const existing = this.csvUploads.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...csvUpload };
+    this.csvUploads.set(id, updated);
+    return updated;
+  }
+
+  async createBulkGames(gamesData: InsertGame[], csvUploadId: number): Promise<Game[]> {
+    const createdGames = [];
+    for (const gameData of gamesData) {
+      const game = await this.createGame({ ...gameData, csvUploadId });
+      createdGames.push(game);
+    }
+    return createdGames;
+  }
+
+  // Game Edit Logs
+  async getGameEditLogs(gameId: number): Promise<(GameEditLog & { user: User })[]> {
+    const logs = Array.from(this.gameEditLogs.values()).filter(log => log.gameId === gameId);
+    return logs.map(log => ({
+      ...log,
+      user: this.users.get(log.editedBy)!,
+    }));
+  }
+
+  async createGameEditLog(log: InsertGameEditLog): Promise<GameEditLog> {
+    const id = this.currentGameEditLogId++;
+    const newLog: GameEditLog = { 
+      ...log, 
+      id,
+      editDate: log.editDate || new Date()
+    };
+    this.gameEditLogs.set(id, newLog);
+    return newLog;
+  }
+
+  // CSV Game Mappings
+  async getCsvGameMappings(csvUploadId: number): Promise<CsvGameMapping[]> {
+    return Array.from(this.csvGameMappings.values()).filter(mapping => mapping.csvUploadId === csvUploadId);
+  }
+
+  async createCsvGameMapping(mapping: InsertCsvGameMapping): Promise<CsvGameMapping> {
+    const id = this.currentCsvGameMappingId++;
+    const newMapping: CsvGameMapping = { 
+      ...mapping, 
+      id
+    };
+    this.csvGameMappings.set(id, newMapping);
+    return newMapping;
+  }
 }
 
 // DatabaseStorage implementation
@@ -1190,6 +1335,124 @@ export class DatabaseStorage implements IStorage {
       .where(eq(conferenceOfficials.id, id))
       .returning();
     return updatedOfficial || undefined;
+  }
+
+  // Seasons
+  async getSeasons(): Promise<Season[]> {
+    return await db.select().from(seasons);
+  }
+
+  async getActiveSeason(): Promise<Season | undefined> {
+    const [season] = await db.select().from(seasons).where(eq(seasons.isActive, true));
+    return season || undefined;
+  }
+
+  async createSeason(season: InsertSeason): Promise<Season> {
+    const [newSeason] = await db
+      .insert(seasons)
+      .values(season)
+      .returning();
+    return newSeason;
+  }
+
+  async updateSeason(id: number, season: Partial<InsertSeason>): Promise<Season | undefined> {
+    const [updatedSeason] = await db
+      .update(seasons)
+      .set(season)
+      .where(eq(seasons.id, id))
+      .returning();
+    return updatedSeason || undefined;
+  }
+
+  // CSV Management
+  async getCsvUploads(): Promise<(CsvUpload & { user: User })[]> {
+    const result = await db
+      .select({
+        csvUpload: csvUploads,
+        user: users,
+      })
+      .from(csvUploads)
+      .leftJoin(users, eq(csvUploads.uploadedBy, users.id));
+
+    return result.map(row => ({
+      ...row.csvUpload,
+      user: row.user!,
+    }));
+  }
+
+  async getCsvUpload(id: number): Promise<CsvUpload | undefined> {
+    const [csvUpload] = await db.select().from(csvUploads).where(eq(csvUploads.id, id));
+    return csvUpload || undefined;
+  }
+
+  async createCsvUpload(csvUpload: InsertCsvUpload): Promise<CsvUpload> {
+    const [newCsvUpload] = await db
+      .insert(csvUploads)
+      .values(csvUpload)
+      .returning();
+    return newCsvUpload;
+  }
+
+  async updateCsvUpload(id: number, csvUpload: Partial<InsertCsvUpload>): Promise<CsvUpload | undefined> {
+    const [updatedCsvUpload] = await db
+      .update(csvUploads)
+      .set(csvUpload)
+      .where(eq(csvUploads.id, id))
+      .returning();
+    return updatedCsvUpload || undefined;
+  }
+
+  async createBulkGames(gamesData: InsertGame[], csvUploadId: number): Promise<Game[]> {
+    const createdGames = [];
+    for (const gameData of gamesData) {
+      const [newGame] = await db
+        .insert(games)
+        .values({
+          ...gameData,
+          csvUploadId: csvUploadId
+        })
+        .returning();
+      createdGames.push(newGame);
+    }
+    return createdGames;
+  }
+
+  // Game Edit Logs
+  async getGameEditLogs(gameId: number): Promise<(GameEditLog & { user: User })[]> {
+    const result = await db
+      .select({
+        log: gameEditLogs,
+        user: users,
+      })
+      .from(gameEditLogs)
+      .leftJoin(users, eq(gameEditLogs.editedBy, users.id))
+      .where(eq(gameEditLogs.gameId, gameId));
+
+    return result.map(row => ({
+      ...row.log,
+      user: row.user!,
+    }));
+  }
+
+  async createGameEditLog(log: InsertGameEditLog): Promise<GameEditLog> {
+    const [newLog] = await db
+      .insert(gameEditLogs)
+      .values(log)
+      .returning();
+    return newLog;
+  }
+
+  // CSV Game Mappings
+  async getCsvGameMappings(csvUploadId: number): Promise<CsvGameMapping[]> {
+    return await db.select().from(csvGameMappings).where(eq(csvGameMappings.csvUploadId, csvUploadId));
+  }
+
+  async createCsvGameMapping(mapping: InsertCsvGameMapping): Promise<CsvGameMapping> {
+    const [newMapping] = await db
+      .insert(csvGameMappings)
+      .values(mapping)
+      .returning();
+    return newMapping;
   }
 }
 
