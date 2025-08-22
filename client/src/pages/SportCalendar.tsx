@@ -1,19 +1,33 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Calendar, MapPin, Users, Filter, X } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Calendar, MapPin, Users, Filter, X, Send, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Sport, Game, School } from "@shared/schema";
+import { insertGameResultSubmissionSchema } from "@shared/schema";
 
 type GameWithDetails = Game & {
   homeTeam: School;
   awayTeam: School;
   sport: Sport;
 };
+
+const gameResultSchema = insertGameResultSubmissionSchema.extend({
+  gameId: z.number().min(1, "Please select a game"),
+});
+
+type GameResultFormData = z.infer<typeof gameResultSchema>;
 
 export default function SportCalendar() {
   const { sportId } = useParams();
@@ -23,6 +37,11 @@ export default function SportCalendar() {
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  
+  // Report score state
+  const [isSubmissionDialogOpen, setIsSubmissionDialogOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<GameWithDetails | null>(null);
+  const { toast } = useToast();
 
   const { data: sport, isLoading: sportLoading } = useQuery<Sport>({
     queryKey: ["/api/sports", sportIdNum],
@@ -48,6 +67,46 @@ export default function SportCalendar() {
     },
     enabled: !!sportIdNum,
   });
+
+  // Form setup for game result submission
+  const form = useForm<GameResultFormData>({
+    resolver: zodResolver(gameResultSchema),
+    defaultValues: {
+      gameId: 0,
+      submitterName: "",
+      submitterEmail: "",
+      homeScore: 0,
+      awayScore: 0,
+    },
+  });
+
+  // Mutation for submitting game results
+  const gameResultMutation = useMutation({
+    mutationFn: async (data: GameResultFormData) => {
+      return apiRequest("POST", "/api/game-results", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Result Submitted",
+        description: "Thank you! Your game result submission will be reviewed before publishing.",
+      });
+      form.reset();
+      setSelectedGame(null);
+      setIsSubmissionDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to submit game result. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmitResult = (data: GameResultFormData) => {
+    gameResultMutation.mutate(data);
+  };
 
   const formatDate = (date: string | Date) => {
     const d = new Date(date);
@@ -236,6 +295,107 @@ export default function SportCalendar() {
           </CardContent>
         </Card>
 
+        {/* Report Score Dialog */}
+        <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedGame 
+                  ? `Report Result: ${selectedGame.awayTeam?.name || 'Away'} @ ${selectedGame.homeTeam?.name || 'Home'}`
+                  : 'Submit Game Result'
+                }
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> All game results will be reviewed and approved before being published on the website.
+              </p>
+            </div>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmitResult)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="homeScore"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Home Score</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="awayScore"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Away Score</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="submitterName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Your Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="submitterEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Your Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="Enter your email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-conference-navy hover:bg-blue-800"
+                  disabled={gameResultMutation.isPending}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {gameResultMutation.isPending ? "Submitting..." : "Submit Result"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid gap-6">
           {filteredGames && filteredGames.length > 0 ? (
             filteredGames.map((game) => (
@@ -246,8 +406,6 @@ export default function SportCalendar() {
                       <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                         <Calendar className="h-4 w-4" />
                         <span>{formatDate(game.gameDate)}</span>
-                        <span>•</span>
-                        <span>{formatTime(game.gameDate)}</span>
                       </div>
                       
                       <div className="flex items-center justify-between mb-3">
@@ -260,9 +418,27 @@ export default function SportCalendar() {
                       </div>
                       
                       {game.location && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                           <MapPin className="h-4 w-4" />
                           <span>{game.location}</span>
+                        </div>
+                      )}
+                      
+                      {!game.isCompleted && (
+                        <div className="flex justify-end">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedGame(game);
+                              form.setValue('gameId', game.id);
+                              setIsSubmissionDialogOpen(true);
+                            }}
+                            className="border-conference-navy text-conference-navy hover:bg-conference-navy hover:text-white"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Report Score
+                          </Button>
                         </div>
                       )}
                     </div>
