@@ -408,6 +408,27 @@ export default function Admin() {
     },
   });
 
+  // Standings recalculation mutation
+  const recalculateStandingsMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/admin/recalculate-standings", {});
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Standings Updated", 
+        description: `${data.message}. Created ${data.standingsCreated} standings entries.`
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/standings"] });
+    },
+    onError: () => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to recalculate standings. Please try again.", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const onSubmitGame = (data: GameFormData) => {
     createGameMutation.mutate(data);
   };
@@ -544,6 +565,42 @@ export default function Admin() {
                 {games?.length || 0} Total Games
               </Badge>
             </div>
+
+            {/* Standings Management Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Conference Standings</CardTitle>
+                    <CardDescription>Update standings from completed games</CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => recalculateStandingsMutation.mutate()}
+                    disabled={recalculateStandingsMutation.isPending}
+                    className="bg-conference-navy hover:bg-conference-gold text-white"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${recalculateStandingsMutation.isPending ? 'animate-spin' : ''}`} />
+                    {recalculateStandingsMutation.isPending ? 'Recalculating...' : 'Recalculate Standings'}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Recalculate conference standings based on all completed games. This will update wins, losses, 
+                  and percentages for all teams across all sports.
+                </p>
+                <div className="flex items-center space-x-4 text-sm">
+                  <Badge variant="outline" className="text-gray-600">
+                    <Trophy className="h-3 w-3 mr-1" />
+                    Auto-updates after each game result
+                  </Badge>
+                  <Badge variant="outline" className="text-gray-600">
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Manual recalculation available
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Upcoming Games Section */}
             <Card>

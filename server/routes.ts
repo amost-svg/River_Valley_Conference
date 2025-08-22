@@ -147,6 +147,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to recalculate all standings
+  app.post("/api/admin/recalculate-standings", async (req, res) => {
+    try {
+      const result = await storage.recalculateAllStandings();
+      res.json(result);
+    } catch (error) {
+      console.error("Error recalculating standings:", error);
+      res.status(500).json({ message: "Failed to recalculate standings" });
+    }
+  });
+
   // News
   app.get("/api/news", async (req, res) => {
     try {

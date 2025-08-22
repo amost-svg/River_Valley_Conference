@@ -43,6 +43,7 @@ export interface IStorage {
   createStanding(standing: InsertStanding): Promise<Standing>;
   updateStanding(id: number, standing: Partial<InsertStanding>): Promise<Standing | undefined>;
   updateStandingsFromGame(game: Game): Promise<void>;
+  recalculateAllStandings(): Promise<{ message: string; standingsCreated: number }>;
 
   // News
   getNews(): Promise<News[]>;
@@ -1034,6 +1035,40 @@ export class DatabaseStorage implements IStorage {
     // Update away team standings
     if (game.awayTeamId) {
       await this.updateTeamStandings(game.awayTeamId, game.sportId, game.awayScore > game.homeScore, "2024-2025");
+    }
+  }
+
+  // Recalculate all standings from completed games
+  async recalculateAllStandings(): Promise<{ message: string; standingsCreated: number }> {
+    try {
+      // Clear existing standings
+      await db.delete(standings);
+
+      // Get all completed games
+      const completedGames = await db
+        .select()
+        .from(games)
+        .where(eq(games.isCompleted, true));
+
+      console.log(`Found ${completedGames.length} completed games to process`);
+
+      // Process each completed game to update standings
+      for (const game of completedGames) {
+        if (game.homeScore !== null && game.awayScore !== null) {
+          await this.updateStandingsFromGame(game);
+        }
+      }
+
+      // Count final standings
+      const finalStandings = await db.select().from(standings);
+      
+      return {
+        message: `Successfully recalculated standings from ${completedGames.length} completed games`,
+        standingsCreated: finalStandings.length
+      };
+    } catch (error) {
+      console.error("Error recalculating standings:", error);
+      throw error;
     }
   }
 
