@@ -20,7 +20,7 @@ export default function SportCalendar() {
   const sportIdNum = sportId ? parseInt(sportId) : null;
   
   // Filter state
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string>("");
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -82,7 +82,7 @@ export default function SportCalendar() {
     let filtered = [...games];
     
     // Filter by school (home or away)
-    if (selectedSchoolId) {
+    if (selectedSchoolId && selectedSchoolId !== "all") {
       const schoolId = parseInt(selectedSchoolId);
       filtered = filtered.filter(game => 
         game.homeTeamId === schoolId || game.awayTeamId === schoolId
@@ -107,13 +107,13 @@ export default function SportCalendar() {
 
   // Clear all filters
   const clearFilters = () => {
-    setSelectedSchoolId("");
+    setSelectedSchoolId("all");
     setStartDate("");
     setEndDate("");
   };
 
   // Check if any filters are active
-  const hasActiveFilters = selectedSchoolId || startDate || endDate;
+  const hasActiveFilters = (selectedSchoolId && selectedSchoolId !== "all") || startDate || endDate;
 
   const filteredGames = getFilteredGames(games);
 
@@ -193,7 +193,7 @@ export default function SportCalendar() {
                     <SelectValue placeholder="All schools" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All schools</SelectItem>
+                    <SelectItem value="all">All schools</SelectItem>
                     {schools?.map((school) => (
                       <SelectItem key={school.id} value={school.id.toString()}>
                         {school.name}
