@@ -115,7 +115,7 @@ export default function SchedulesResults() {
 
   const formatResult = (game: GameWithDetails) => {
     if (!game.isCompleted || game.homeScore === null || game.awayScore === null) {
-      return "TBD";
+      return "";
     }
     return `${game.homeScore}-${game.awayScore}`;
   };
