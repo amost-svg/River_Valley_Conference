@@ -324,8 +324,6 @@ export default function SchedulesResults() {
                           <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
                             <Calendar className="h-4 w-4" />
                             <span>{formatDate(game.gameDate)}</span>
-                            <Clock className="h-4 w-4 ml-2" />
-                            <span>{formatTime(game.gameDate)}</span>
                           </div>
                           
                           <div className="mb-3">
