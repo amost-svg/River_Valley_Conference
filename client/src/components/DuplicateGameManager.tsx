@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CheckCircle, Merge, Trash2, Eye, Calendar, MapPin, Users } from "lucide-react";
+import { AlertTriangle, CheckCircle, Merge, Trash2, Eye, Calendar, MapPin, Users, Trophy } from "lucide-react";
 
 interface DuplicateGame {
   id: number;
@@ -32,8 +37,26 @@ interface DuplicateGame {
   uploadedBy: { name: string; email: string };
 }
 
+// Game result schema for score recording
+const gameResultSchema = z.object({
+  gameId: z.number(),
+  homeScore: z.coerce.number().min(0, "Score must be 0 or greater"),
+  awayScore: z.coerce.number().min(0, "Score must be 0 or greater"),
+  gameSummary: z.string().optional(),
+  keyPlayers: z.string().optional(),
+  gameHighlights: z.string().optional(),
+  nextGameInfo: z.string().optional(),
+  recordAfterGame: z.string().optional(),
+  conferenceRecord: z.string().optional(),
+});
+
+type GameResultFormData = z.infer<typeof gameResultSchema>;
+
 export default function DuplicateGameManager() {
   const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateGame | null>(null);
+  const [isGameResultDialogOpen, setIsGameResultDialogOpen] = useState(false);
+  const [selectedGameForScore, setSelectedGameForScore] = useState<DuplicateGame | null>(null);
+  const [scoreRecordingTarget, setScoreRecordingTarget] = useState<'duplicate' | 'original'>('duplicate');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -42,12 +65,28 @@ export default function DuplicateGameManager() {
     queryKey: ["/api/admin/duplicate-games"],
   });
 
+  // Game result form
+  const gameResultForm = useForm<GameResultFormData>({
+    resolver: zodResolver(gameResultSchema),
+    defaultValues: {
+      gameId: 0,
+      homeScore: 0,
+      awayScore: 0,
+      gameSummary: "",
+      keyPlayers: "",
+      gameHighlights: "",
+      nextGameInfo: "",
+      recordAfterGame: "",
+      conferenceRecord: "",
+    },
+  });
+
   // Resolve duplicate mutation
   const resolveDuplicateMutation = useMutation({
     mutationFn: async ({ id, action, mergeWith }: { id: number; action: string; mergeWith?: number }) => {
       return apiRequest("POST", `/api/admin/duplicate-games/${id}/resolve`, { action, mergeWith });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/duplicate-games"] });
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       toast({
@@ -64,6 +103,48 @@ export default function DuplicateGameManager() {
       });
     },
   });
+
+  // Game result submission mutation  
+  const submitGameResultMutation = useMutation({
+    mutationFn: async (data: GameResultFormData) => {
+      return apiRequest("POST", "/api/admin/game-results", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Game result saved successfully" });
+      setIsGameResultDialogOpen(false);
+      gameResultForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/duplicate-games"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/standings"] });
+    },
+    onError: (error) => {
+      console.error("Game result submission error:", error);
+      toast({ title: "Error", description: "Failed to save game result", variant: "destructive" });
+    },
+  });
+
+  const onSubmitGameResult = (data: GameResultFormData) => {
+    submitGameResultMutation.mutate(data);
+  };
+
+  // Helper function to open score recording dialog
+  const openGameResultDialog = (game: DuplicateGame, target: 'duplicate' | 'original') => {
+    setSelectedGameForScore(game);
+    setScoreRecordingTarget(target);
+    const targetGameId = target === 'duplicate' ? game.id : game.originalGame.id;
+    gameResultForm.reset({
+      gameId: targetGameId,
+      homeScore: 0,
+      awayScore: 0,
+      gameSummary: "",
+      keyPlayers: "",
+      gameHighlights: "",
+      nextGameInfo: "",
+      recordAfterGame: "",
+      conferenceRecord: "",
+    });
+    setIsGameResultDialogOpen(true);
+  };
 
   const handleResolve = (action: string, mergeWith?: number) => {
     if (!selectedDuplicate) return;
@@ -182,14 +263,36 @@ export default function DuplicateGameManager() {
                       {getConfidenceBadge(confidence)}
                       <Badge variant="outline">{confidence}% Match</Badge>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedDuplicate(duplicate)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Review
-                    </Button>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedDuplicate(duplicate)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Review
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openGameResultDialog(duplicate, 'duplicate')}
+                        className="text-blue-700 border-blue-200 hover:bg-blue-50"
+                        data-testid={`record-score-duplicate-${duplicate.id}`}
+                      >
+                        <Trophy className="h-4 w-4 mr-2" />
+                        Score New Game
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openGameResultDialog(duplicate, 'original')}
+                        className="text-green-700 border-green-200 hover:bg-green-50"
+                        data-testid={`record-score-original-${duplicate.id}`}
+                      >
+                        <Trophy className="h-4 w-4 mr-2" />
+                        Score Existing Game
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -359,6 +462,104 @@ export default function DuplicateGameManager() {
                 <strong>Delete:</strong> Removes the new game entry completely.
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Game Result Recording Dialog */}
+      <Dialog open={isGameResultDialogOpen} onOpenChange={setIsGameResultDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Record Score - {scoreRecordingTarget === 'duplicate' ? 'New Game Entry' : 'Existing Game'}
+            </DialogTitle>
+            {selectedGameForScore && (
+              <DialogDescription>
+                Recording final score for the <strong>{scoreRecordingTarget === 'duplicate' ? 'new game entry' : 'existing game'}</strong>: {' '}
+                {scoreRecordingTarget === 'duplicate' 
+                  ? `${selectedGameForScore.homeTeamName} vs ${selectedGameForScore.awayTeamName}`
+                  : `${selectedGameForScore.originalGame.homeTeamName} vs ${selectedGameForScore.originalGame.awayTeamName}`
+                } on {formatDate(scoreRecordingTarget === 'duplicate' ? selectedGameForScore.gameDate : selectedGameForScore.originalGame.gameDate)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          
+          {selectedGameForScore && (
+            <Form {...gameResultForm}>
+              <form onSubmit={gameResultForm.handleSubmit(onSubmitGameResult)} className="space-y-4">
+                {/* Score Entry */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={gameResultForm.control}
+                    name="homeScore"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Home Team Score ({
+                            scoreRecordingTarget === 'duplicate' 
+                              ? selectedGameForScore.homeTeamName 
+                              : selectedGameForScore.originalGame.homeTeamName
+                          })
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            placeholder="0" 
+                            {...field}
+                            data-testid="input-home-score"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={gameResultForm.control}
+                    name="awayScore"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Away Team Score ({
+                            scoreRecordingTarget === 'duplicate' 
+                              ? selectedGameForScore.awayTeamName 
+                              : selectedGameForScore.originalGame.awayTeamName
+                          })
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            placeholder="0" 
+                            {...field}
+                            data-testid="input-away-score"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsGameResultDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-conference-navy hover:bg-blue-800"
+                    disabled={submitGameResultMutation.isPending}
+                  >
+                    {submitGameResultMutation.isPending ? "Saving..." : "Save Result"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           )}
         </DialogContent>
       </Dialog>

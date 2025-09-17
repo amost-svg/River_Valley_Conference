@@ -68,8 +68,8 @@ const enhancedNewsSchema = insertNewsUpdatedSchema.extend({
 // Game result schema for Athletic Directors
 const gameResultSchema = z.object({
   gameId: z.number(),
-  homeScore: z.number().min(0, "Score must be 0 or greater"),
-  awayScore: z.number().min(0, "Score must be 0 or greater"),
+  homeScore: z.coerce.number().min(0, "Score must be 0 or greater"),
+  awayScore: z.coerce.number().min(0, "Score must be 0 or greater"),
   gameSummary: z.string().optional(),
   keyPlayers: z.string().optional(),
   gameHighlights: z.string().optional(),
@@ -417,7 +417,7 @@ export default function Admin() {
     mutationFn: async () => {
       return apiRequest("POST", "/api/admin/recalculate-standings", {});
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({ 
         title: "Standings Updated", 
         description: `${data.message}. Created ${data.standingsCreated} standings entries.`
@@ -561,7 +561,7 @@ export default function Admin() {
                     )}
                   </div>
                   <div className="text-xs text-conference-gold">
-                    {user?.role} • {user?.school?.name || 'Conference Staff'}
+                    {user?.role} • {user?.schoolId ? schools?.find(s => s.id === user.schoolId)?.name : 'Conference Staff'}
                   </div>
                 </div>
                 <Button 
@@ -836,7 +836,6 @@ export default function Admin() {
                       </div>
                       <div className="flex items-center space-x-2">
                         {article.imageUrl && <ImageIcon className="h-4 w-4 text-blue-600" />}
-                        {article.pdfUrl && <FileIcon className="h-4 w-4 text-red-600" />}
                       </div>
                     </div>
                   ))}
@@ -884,7 +883,7 @@ export default function Admin() {
                               min="0" 
                               placeholder="0" 
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              data-testid="input-home-score"
                             />
                           </FormControl>
                           <FormMessage />
@@ -904,7 +903,7 @@ export default function Admin() {
                               min="0" 
                               placeholder="0" 
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              data-testid="input-away-score"
                             />
                           </FormControl>
                           <FormMessage />
