@@ -107,6 +107,8 @@ export default function Admin() {
   const [selectedSportFilter, setSelectedSportFilter] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [approvalDialogDate, setApprovalDialogDate] = useState<Date | null>(null);
   const { toast } = useToast();
   
   // File input refs
@@ -123,6 +125,23 @@ export default function Admin() {
   });
   const { data: submissions } = useQuery<GameResultSubmission[]>({ 
     queryKey: ["/api/admin/game-result-submissions"] 
+  });
+  const { data: pendingSubmissionsByDate } = useQuery<{ [date: string]: number }>({ 
+    queryKey: ["/api/admin/pending-submissions-by-date"] 
+  });
+  
+  // Helper function to format date consistently without timezone conversion
+  const formatDateForAPI = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Query for submissions on a specific date for approval dialog
+  const { data: dateSubmissions } = useQuery<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]>({
+    queryKey: ["/api/admin/game-result-submissions/date", approvalDialogDate ? formatDateForAPI(approvalDialogDate) : null],
+    enabled: !!approvalDialogDate,
   });
 
   // Forms
@@ -397,18 +416,78 @@ export default function Admin() {
   });
 
   const moderateSubmissionMutation = useMutation({
-    mutationFn: async ({ id, notes }: { id: number; notes?: string }) => {
+    mutationFn: async ({ id, action, notes }: { id: number; action: 'approve' | 'reject'; notes?: string }) => {
       return apiRequest("POST", `/api/admin/game-result-submissions/${id}/moderate`, {
-        moderatedBy: 1, // In production, use actual admin user ID
+        action,
         notes,
       });
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Submission moderated successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/game-result-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-submissions-by-date"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-result-submissions/date", approvalDialogDate ? formatDateForAPI(approvalDialogDate) : null] });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to moderate submission", variant: "destructive" });
+    },
+  });
+
+  // Approve submission mutation
+  const approveSubmissionMutation = useMutation({
+    mutationFn: async ({ id, rejectOthers = false }: { id: number; rejectOthers?: boolean }) => {
+      const submission = dateSubmissions?.find(s => s.id === id);
+      if (!submission) throw new Error("Submission not found");
+      
+      // Approve this submission
+      await apiRequest("POST", `/api/admin/game-result-submissions/${id}/moderate`, {
+        action: "approve",
+        notes: "Approved",
+      });
+      
+      // If rejectOthers is true, reject other submissions for the same game
+      if (rejectOthers) {
+        const otherSubmissions = dateSubmissions?.filter(s => 
+          s.gameId === submission.gameId && s.id !== id && !s.isModerated
+        ) || [];
+        
+        for (const otherSub of otherSubmissions) {
+          await apiRequest("POST", `/api/admin/game-result-submissions/${otherSub.id}/moderate`, {
+            action: "reject",
+            notes: "Rejected - Another submission approved for this game",
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Submission approved successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-result-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-submissions-by-date"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-result-submissions/date", approvalDialogDate ? formatDateForAPI(approvalDialogDate) : null] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/standings"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to approve submission", variant: "destructive" });
+    },
+  });
+
+  // Reject submission mutation
+  const rejectSubmissionMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason?: string }) => {
+      return apiRequest("POST", `/api/admin/game-result-submissions/${id}/moderate`, {
+        action: "reject",
+        notes: reason || "Rejected",
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Submission rejected" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-result-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-submissions-by-date"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-result-submissions/date", approvalDialogDate ? formatDateForAPI(approvalDialogDate) : null] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to reject submission", variant: "destructive" });
     },
   });
 
@@ -498,6 +577,30 @@ export default function Admin() {
   const getGameDates = () => {
     if (!games) return [];
     return games.map(game => new Date(game.gameDate));
+  };
+
+  // Get dates that have pending submissions for badge highlighting
+  const getPendingSubmissionDates = () => {
+    if (!pendingSubmissionsByDate) return [];
+    return Object.keys(pendingSubmissionsByDate).map(dateString => new Date(dateString));
+  };
+
+  // Get count of pending submissions for a specific date
+  const getPendingSubmissionCount = (date: Date) => {
+    if (!pendingSubmissionsByDate) return 0;
+    const dateString = formatDateForAPI(date); // YYYY-MM-DD format
+    return pendingSubmissionsByDate[dateString] || 0;
+  };
+
+  // Handle clicking on calendar dates with pending submissions
+  const handleCalendarDateClick = (date: Date) => {
+    const pendingCount = getPendingSubmissionCount(date);
+    if (pendingCount > 0) {
+      setApprovalDialogDate(date);
+      setIsApprovalDialogOpen(true);
+    } else {
+      setSelectedDate(date);
+    }
   };
 
   // Filtered games for Results tab (keeping original logic)
@@ -648,12 +751,13 @@ export default function Admin() {
                     <CalendarComponent
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
+                      onSelect={(date) => date && handleCalendarDateClick(date)}
                       month={calendarMonth}
                       onMonthChange={setCalendarMonth}
                       className="rounded-md border"
                       modifiers={{
                         hasGame: getGameDates(),
+                        hasPendingSubmissions: getPendingSubmissionDates(),
                         today: new Date()
                       }}
                       modifiersStyles={{
@@ -662,9 +766,38 @@ export default function Admin() {
                           color: 'white',
                           borderRadius: '50%'
                         },
+                        hasPendingSubmissions: {
+                          position: 'relative'
+                        },
                         today: {
                           fontWeight: 'bold',
                           textDecoration: 'underline'
+                        }
+                      }}
+                      components={{
+                        DayContent: ({ date, ...props }) => {
+                          const pendingCount = getPendingSubmissionCount(date);
+                          return (
+                            <div 
+                              className={`relative w-full h-full flex items-center justify-center ${
+                                pendingCount > 0 ? 'cursor-pointer hover:bg-orange-100' : ''
+                              }`} 
+                              data-testid={`calendar-day-${formatDateForAPI(date)}`}
+                              title={pendingCount > 0 ? `Click to review ${pendingCount} pending submission${pendingCount > 1 ? 's' : ''}` : ''}
+                            >
+                              <span>{date.getDate()}</span>
+                              {pendingCount > 0 && (
+                                <span 
+                                  className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg hover:bg-red-600 transition-colors"
+                                  style={{ fontSize: '10px', minWidth: '18px', minHeight: '18px' }}
+                                  data-testid={`calendar-badge-${formatDateForAPI(date)}`}
+                                  title={`${pendingCount} pending submission${pendingCount > 1 ? 's' : ''}`}
+                                >
+                                  {pendingCount}
+                                </span>
+                              )}
+                            </div>
+                          );
                         }
                       }}
                     />
@@ -1015,6 +1148,260 @@ export default function Admin() {
                 </div>
               </form>
             </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Approval Dialog for Pending Submissions */}
+        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">
+                Review Pending Submissions - {approvalDialogDate && format(approvalDialogDate, 'MMMM dd, yyyy')}
+              </DialogTitle>
+              <p className="text-sm text-gray-600">
+                Review and approve or reject game result submissions for this date
+              </p>
+            </DialogHeader>
+            
+            {dateSubmissions?.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No pending submissions for this date</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Group submissions by game */}
+                {Object.entries(
+                  dateSubmissions?.reduce((groups, submission) => {
+                    const gameKey = submission.gameId;
+                    if (!groups[gameKey]) {
+                      groups[gameKey] = [];
+                    }
+                    groups[gameKey].push(submission);
+                    return groups;
+                  }, {} as Record<number, typeof dateSubmissions>) || {}
+                ).map(([gameId, gameSubmissions]) => {
+                  const game = gameSubmissions[0]?.game;
+                  if (!game) return null;
+                  
+                  const hasConflicts = gameSubmissions.length > 1;
+                  const scoreConflicts = hasConflicts && 
+                    gameSubmissions.some(s => 
+                      s.homeScore !== gameSubmissions[0].homeScore || 
+                      s.awayScore !== gameSubmissions[0].awayScore
+                    );
+
+                  return (
+                    <Card key={gameId} className={`${hasConflicts ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg">
+                              {game.awayTeam?.name || game.awayTeamName} @ {game.homeTeam?.name || game.homeTeamName}
+                            </CardTitle>
+                            <CardDescription>
+                              {game.sport?.name} • {game.gameTime} • {formatDate(game.gameDate)}
+                            </CardDescription>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {hasConflicts && (
+                              <Badge variant="destructive" className="text-xs">
+                                {gameSubmissions.length} Submissions
+                              </Badge>
+                            )}
+                            {scoreConflicts && (
+                              <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                                Score Conflicts
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {hasConflicts && (
+                          <div className="bg-orange-100 border border-orange-200 rounded-lg p-3 mt-2">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <XCircle className="h-4 w-4 text-orange-600" />
+                              <span className="text-sm font-medium text-orange-800">
+                                Multiple submissions detected
+                              </span>
+                            </div>
+                            <p className="text-xs text-orange-700">
+                              Review each submission carefully. You can approve one and automatically reject the others.
+                            </p>
+                          </div>
+                        )}
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-4">
+                        {gameSubmissions
+                          .filter(submission => !submission.isModerated)
+                          .sort((a, b) => new Date(a.submissionDate).getTime() - new Date(b.submissionDate).getTime())
+                          .map((submission, index) => (
+                          <div 
+                            key={submission.id} 
+                            className="border border-gray-200 rounded-lg p-4 bg-white"
+                            data-testid={`submission-${submission.id}`}
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center space-x-4">
+                                  <Badge variant="outline" className="text-xs">
+                                    Submission #{index + 1}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(submission.submissionDate).toLocaleString()}
+                                  </span>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-xs text-gray-600">Submitted Score</Label>
+                                    <div className="font-medium text-lg">
+                                      <span className="text-blue-600">{game.homeTeam?.name || game.homeTeamName}: {submission.homeScore}</span>
+                                      <span className="mx-2">-</span>
+                                      <span className="text-red-600">{game.awayTeam?.name || game.awayTeamName}: {submission.awayScore}</span>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs text-gray-600">Submitter</Label>
+                                    <div className="text-sm">
+                                      <div className="font-medium">{submission.submitterName}</div>
+                                      <div className="text-gray-500 text-xs">{submission.submitterEmail}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <Separator className="my-3" />
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                {scoreConflicts && gameSubmissions.length > 1 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {gameSubmissions.filter(s => 
+                                      s.homeScore === submission.homeScore && 
+                                      s.awayScore === submission.awayScore && 
+                                      !s.isModerated
+                                    ).length} with this score
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => rejectSubmissionMutation.mutate({ 
+                                    id: submission.id, 
+                                    reason: "Rejected by Athletic Director" 
+                                  })}
+                                  disabled={rejectSubmissionMutation.isPending}
+                                  data-testid={`button-reject-${submission.id}`}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                                
+                                {hasConflicts ? (
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                      onClick={() => approveSubmissionMutation.mutate({ 
+                                        id: submission.id, 
+                                        rejectOthers: false 
+                                      })}
+                                      disabled={approveSubmissionMutation.isPending}
+                                      data-testid={`button-approve-${submission.id}`}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Approve Only
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                      onClick={() => approveSubmissionMutation.mutate({ 
+                                        id: submission.id, 
+                                        rejectOthers: true 
+                                      })}
+                                      disabled={approveSubmissionMutation.isPending}
+                                      data-testid={`button-approve-reject-others-${submission.id}`}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Approve & Reject Others
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => approveSubmissionMutation.mutate({ 
+                                      id: submission.id, 
+                                      rejectOthers: false 
+                                    })}
+                                    disabled={approveSubmissionMutation.isPending}
+                                    data-testid={`button-approve-${submission.id}`}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Approve
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {/* Batch actions for conflicts */}
+                        {hasConflicts && gameSubmissions.filter(s => !s.isModerated).length > 1 && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label className="text-sm font-medium">Batch Actions</Label>
+                                <p className="text-xs text-gray-600">
+                                  Quick actions for all submissions for this game
+                                </p>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => {
+                                    const unmoderatedSubmissions = gameSubmissions.filter(s => !s.isModerated);
+                                    unmoderatedSubmissions.forEach(submission => {
+                                      rejectSubmissionMutation.mutate({ 
+                                        id: submission.id, 
+                                        reason: "Rejected - No suitable submission found" 
+                                      });
+                                    });
+                                  }}
+                                  disabled={rejectSubmissionMutation.isPending}
+                                  data-testid={`button-reject-all-${gameId}`}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject All
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+            
+            <div className="flex justify-end pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsApprovalDialogOpen(false)}
+                data-testid="button-close-approval-dialog"
+              >
+                Close
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

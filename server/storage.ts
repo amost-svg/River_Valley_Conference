@@ -74,8 +74,10 @@ export interface IStorage {
 
   // Game Result Submissions
   getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport } })[]>;
+  getPendingSubmissionsByDate(): Promise<{ [date: string]: number }>;
+  getGameResultSubmissionsByDate(date: string): Promise<(GameResultSubmission & { game: Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport } })[]>;
   createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission>;
-  moderateGameResultSubmission(id: number, moderatedBy: number, notes?: string): Promise<GameResultSubmission | undefined>;
+  moderateGameResultSubmission(id: number, moderatedBy: number, action: 'approve' | 'reject', notes?: string): Promise<GameResultSubmission | undefined>;
 
   // Conference Officials
   getConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]>;
@@ -120,6 +122,7 @@ export class MemStorage implements IStorage {
   private news: Map<number, News> = new Map();
   private contacts: Map<number, Contact> = new Map();
   private users: Map<number, User> = new Map();
+  private gameResultSubmissions: Map<number, GameResultSubmission> = new Map();
   private seasons: Map<number, Season> = new Map();
   private csvUploads: Map<number, CsvUpload> = new Map();
   private gameEditLogs: Map<number, GameEditLog> = new Map();
@@ -137,6 +140,7 @@ export class MemStorage implements IStorage {
   private currentGameEditLogId = 1;
   private currentCsvGameMappingId = 1;
   private currentGameResultId = 1;
+  private currentGameResultSubmissionId = 1;
   private currentUserId = 1;
 
   constructor() {
@@ -713,9 +717,117 @@ export class MemStorage implements IStorage {
   async getNewsUpdatedById(id: number): Promise<(NewsUpdated & { author: User }) | undefined> { return undefined; }
   async createNewsUpdated(news: InsertNewsUpdated): Promise<NewsUpdated> { return { ...news, id: 1, isPublished: true, excerpt: news.excerpt || null, imageUrl: news.imageUrl || null, pdfUrl: news.pdfUrl || null }; }
   async updateNewsUpdated(id: number, news: Partial<InsertNewsUpdated>): Promise<NewsUpdated | undefined> { return undefined; }
-  async getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]> { return []; }
-  async createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission> { return { ...submission, id: 1, submissionDate: new Date(), isModerated: false, moderatedBy: null, moderationNotes: null }; }
-  async moderateGameResultSubmission(id: number, moderatedBy: number, notes?: string): Promise<GameResultSubmission | undefined> { return undefined; }
+  async getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]> { 
+    // Return submissions with enriched game data
+    return Array.from(this.gameResultSubmissions.values()).map(submission => {
+      const game = this.games.get(submission.gameId);
+      const homeTeam = game?.homeTeamId ? this.schools.get(game.homeTeamId) : null;
+      const awayTeam = game?.awayTeamId ? this.schools.get(game.awayTeamId) : null;
+      const sport = game?.sportId ? this.sports.get(game.sportId) : null;
+      
+      return {
+        ...submission,
+        game: {
+          ...game!,
+          homeTeam: homeTeam!,
+          awayTeam: awayTeam!,
+          sport: sport!,
+        }
+      };
+    });
+  }
+  
+  async getPendingSubmissionsByDate(): Promise<{ [date: string]: number }> { 
+    const submissionsByDate: { [date: string]: number } = {};
+    
+    Array.from(this.gameResultSubmissions.values())
+      .filter(submission => !submission.isModerated)
+      .forEach(submission => {
+        const dateKey = submission.submissionDate.toISOString().split('T')[0];
+        submissionsByDate[dateKey] = (submissionsByDate[dateKey] || 0) + 1;
+      });
+      
+    return submissionsByDate;
+  }
+  
+  async getGameResultSubmissionsByDate(date: string): Promise<(GameResultSubmission & { game: Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport } })[]> {
+    // Filter submissions by date and return with enriched game data
+    const targetDate = new Date(date);
+    const submissions = Array.from(this.gameResultSubmissions.values())
+      .filter(submission => {
+        const submissionDate = new Date(submission.submissionDate);
+        return submissionDate.toISOString().split('T')[0] === date && !submission.isModerated;
+      });
+    
+    return submissions.map(submission => {
+      const game = this.games.get(submission.gameId);
+      const homeTeam = game?.homeTeamId ? this.schools.get(game.homeTeamId) : null;
+      const awayTeam = game?.awayTeamId ? this.schools.get(game.awayTeamId) : null;
+      const sport = game?.sportId ? this.sports.get(game.sportId) : null;
+      
+      return {
+        ...submission,
+        game: {
+          ...game!,
+          homeTeam,
+          awayTeam,
+          sport: sport!,
+        }
+      };
+    });
+  }
+  
+  async createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission> { 
+    const id = this.currentGameResultSubmissionId++;
+    const newSubmission: GameResultSubmission = {
+      ...submission,
+      id,
+      submissionDate: new Date(),
+      isModerated: false,
+      moderatedBy: null,
+      moderationNotes: null
+    };
+    this.gameResultSubmissions.set(id, newSubmission);
+    return newSubmission;
+  }
+  
+  async moderateGameResultSubmission(id: number, moderatedBy: number, action: 'approve' | 'reject', notes?: string): Promise<GameResultSubmission | undefined> {
+    const submission = this.gameResultSubmissions.get(id);
+    if (!submission) return undefined;
+    
+    // Update submission as moderated
+    const updatedSubmission = {
+      ...submission,
+      isModerated: true,
+      moderatedBy,
+      moderationNotes: notes || null
+    };
+    this.gameResultSubmissions.set(id, updatedSubmission);
+    
+    // If this is an approval, update the game
+    const isApproved = action === 'approve';
+    if (isApproved) {
+      const game = this.games.get(submission.gameId);
+      if (game) {
+        const updatedGame = {
+          ...game,
+          homeScore: submission.homeScore,
+          awayScore: submission.awayScore,
+          isCompleted: true,
+          resultEnteredBy: moderatedBy,
+          resultEnteredAt: new Date()
+        };
+        this.games.set(submission.gameId, updatedGame);
+        
+        // Update standings if it's a conference game
+        if (game.isConferenceGame) {
+          await this.updateStandingsFromGame(updatedGame);
+        }
+      }
+    }
+    
+    return updatedSubmission;
+  }
   async getConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]> { return []; }
   async getActiveConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]> { return []; }
   async createConferenceOfficial(official: InsertConferenceOfficial): Promise<ConferenceOfficial> { return { ...official, id: 1, isActive: true, endDate: official.endDate || null }; }
@@ -1415,6 +1527,28 @@ export class DatabaseStorage implements IStorage {
     }
 
     return submissionsWithDetails;
+  }
+
+  async getPendingSubmissionsByDate(): Promise<{ [date: string]: number }> {
+    // Get all unmoderated submissions and group by submission date
+    const result = await db
+      .select({
+        submissionDate: gameResultSubmissions.submissionDate,
+      })
+      .from(gameResultSubmissions)
+      .where(eq(gameResultSubmissions.isModerated, false));
+
+    // Group submissions by date and count them
+    const submissionsByDate: { [date: string]: number } = {};
+    
+    for (const row of result) {
+      if (row.submissionDate) {
+        const dateString = row.submissionDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        submissionsByDate[dateString] = (submissionsByDate[dateString] || 0) + 1;
+      }
+    }
+
+    return submissionsByDate;
   }
 
   async createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission> {

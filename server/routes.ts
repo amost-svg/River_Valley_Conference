@@ -700,7 +700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get game result submissions (Admin)
-  app.get("/api/admin/game-result-submissions", async (req, res) => {
+  app.get("/api/admin/game-result-submissions", requireAuth, async (req, res) => {
     try {
       const submissions = await storage.getGameResultSubmissions();
       res.json(submissions);
@@ -710,23 +710,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Moderate game result submission (Admin)
-  app.post("/api/admin/game-result-submissions/:id/moderate", async (req, res) => {
+  app.post("/api/admin/game-result-submissions/:id/moderate", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { moderatedBy, notes } = req.body;
-      const submission = await storage.moderateGameResultSubmission(id, moderatedBy, notes);
+      const { action, notes } = req.body;
+      
+      // Validate action parameter
+      if (!action || !['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ 
+          message: "Invalid action. Must be 'approve' or 'reject'." 
+        });
+      }
+      
+      // Get moderator ID from authenticated session (SECURITY FIX)
+      const moderatedBy = (req as any).user.id;
+      
+      const submission = await storage.moderateGameResultSubmission(id, moderatedBy, action, notes);
       if (!submission) {
         return res.status(404).json({ message: "Submission not found" });
       }
       
-      const isApproved = !notes || !notes.toLowerCase().includes('reject');
+      const isApproved = action === 'approve';
       const message = isApproved 
         ? "Submission approved successfully. Game result and standings have been updated."
         : "Submission reviewed and rejected.";
       
       res.json({ message, submission, approved: isApproved });
     } catch (error) {
+      console.error("Error moderating submission:", error);
       res.status(500).json({ message: "Failed to moderate submission" });
+    }
+  });
+
+  // Get pending submissions by date for calendar badges (Admin)
+  app.get("/api/admin/pending-submissions-by-date", requireAuth, async (req, res) => {
+    try {
+      const submissionsByDate = await storage.getPendingSubmissionsByDate();
+      res.json(submissionsByDate);
+    } catch (error) {
+      console.error("Error fetching pending submissions by date:", error);
+      res.status(500).json({ message: "Failed to fetch pending submissions by date" });
+    }
+  });
+
+  // Get submissions for a specific date with game details (Admin)
+  app.get("/api/admin/game-result-submissions/date/:date", requireAuth, async (req, res) => {
+    try {
+      const date = req.params.date; // Expected format: YYYY-MM-DD
+      const submissions = await storage.getGameResultSubmissionsByDate(date);
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching submissions by date:", error);
+      res.status(500).json({ message: "Failed to fetch submissions for date" });
     }
   });
 
