@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Menu, X, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -6,6 +6,48 @@ import rvcLogo from "@assets/RVC logo (3)_1754081720129.png";
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isMenuOpen &&
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target as Node) &&
+        !menuButtonRef.current?.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  // Focus management for mobile menu
+  useEffect(() => {
+    if (isMenuOpen) {
+      // Focus first menu item when menu opens
+      const firstMenuItem = mobileMenuRef.current?.querySelector('button');
+      firstMenuItem?.focus();
+    }
+  }, [isMenuOpen]);
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -17,6 +59,10 @@ export default function Navigation() {
       });
     }
     setIsMenuOpen(false);
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
 
   const navItems = [
@@ -68,12 +114,22 @@ export default function Navigation() {
           {/* Mobile menu button */}
           <div className="md:hidden">
             <Button
+              ref={menuButtonRef}
+              id="mobile-menu-button"
               variant="ghost"
               size="sm"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={toggleMenu}
               className="text-gray-300 hover:text-white"
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-menu"
+              aria-label="Toggle navigation menu"
+              data-testid="button-mobile-menu-toggle"
             >
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMenuOpen ? (
+                <X className="h-6 w-6" aria-hidden="true" />
+              ) : (
+                <Menu className="h-6 w-6" aria-hidden="true" />
+              )}
             </Button>
           </div>
         </div>
@@ -81,19 +137,47 @@ export default function Navigation() {
 
       {/* Mobile Navigation Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-conference-navy border-t border-blue-800">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => scrollToSection(item.id)}
-                className="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium w-full text-left"
-              >
-                {item.label}
-              </button>
+        <nav
+          ref={mobileMenuRef}
+          id="mobile-menu"
+          className="md:hidden bg-conference-navy border-t border-blue-800"
+          aria-label="Mobile navigation"
+        >
+          <ul className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            {navItems.map((item, index) => (
+              <li key={item.id}>
+                <button
+                  onClick={() => scrollToSection(item.id)}
+                  className="text-gray-300 hover:text-white hover:bg-blue-800 focus:bg-blue-800 focus:text-white focus:outline-none focus:ring-2 focus:ring-conference-gold block px-3 py-2 rounded-md text-base font-medium w-full text-left min-h-[44px] transition-colors"
+                  tabIndex={0}
+                  data-testid={`button-nav-${item.id}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      scrollToSection(item.id);
+                    }
+                  }}
+                >
+                  {item.label}
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
+            <li className="border-t border-blue-800 mt-2 pt-2">
+              <Link href="/admin">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy focus:bg-conference-gold focus:text-conference-navy focus:outline-none focus:ring-2 focus:ring-conference-gold min-h-[44px]"
+                  onClick={() => setIsMenuOpen(false)}
+                  data-testid="button-nav-admin"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin
+                </Button>
+              </Link>
+            </li>
+          </ul>
+        </nav>
       )}
     </nav>
   );

@@ -7,10 +7,16 @@ import ConferenceStandings from "@/components/ConferenceStandings";
 import NewsAnnouncements from "@/components/NewsAnnouncements";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
+import Seo from "@/components/Seo";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
+      <Seo 
+        title="River Valley Conference - Illinois High School Athletics"
+        description="Official website of the River Valley Conference featuring 10 IHSA member schools, game schedules, conference standings, athletics news, and contact information."
+        type="website"
+      />
       <Navigation />
       <section id="home">
         <Hero />

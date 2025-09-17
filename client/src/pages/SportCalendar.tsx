@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Sport, Game, School } from "@shared/schema";
 import { insertGameResultSubmissionSchema } from "@shared/schema";
+import Seo from "@/components/Seo";
 
 type GameWithDetails = Game & {
   homeTeam: School;
@@ -206,8 +207,51 @@ export default function SportCalendar() {
     );
   }
 
+  // Create structured data for sports events
+  const sportsEventsData = games?.map(game => ({
+    "@type": "SportsEvent",
+    "name": `${game.awayTeam.name} @ ${game.homeTeam.name}`,
+    "sport": sport.name,
+    "startDate": game.gameDate,
+    "location": {
+      "@type": "Place",
+      "name": game.homeTeam.name,
+      "address": game.homeTeam.city + ", " + game.homeTeam.state
+    },
+    "competitor": [
+      {
+        "@type": "SportsTeam",
+        "name": game.homeTeam.name,
+        "sport": sport.name
+      },
+      {
+        "@type": "SportsTeam", 
+        "name": game.awayTeam.name,
+        "sport": sport.name
+      }
+    ]
+  }));
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    "name": `${sport.name} Schedule - River Valley Conference`,
+    "sport": sport.name,
+    "organizer": {
+      "@type": "SportsOrganization",
+      "name": "River Valley Conference"
+    },
+    "subEvent": sportsEventsData
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Seo 
+        title={`${sport.name} Schedule - River Valley Conference`}
+        description={`View the complete ${sport.name} schedule for the River Valley Conference ${sport.season} season. Game schedules, results, and standings for all member schools.`}
+        type="website"
+        structuredData={structuredData}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <Link href="/">

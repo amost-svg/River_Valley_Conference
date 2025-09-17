@@ -83,6 +83,10 @@ export default function NewsAnnouncements() {
                     src={article.imageUrl || "https://images.unsplash.com/photo-1546519638-68e109498ffc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400"} 
                     alt={article.title}
                     className="w-full h-48 object-cover"
+                    loading="lazy"
+                    width="400"
+                    height="192"
+                    decoding="async"
                   />
                   <CardContent className="p-6">
                     <div className="flex items-center mb-2">

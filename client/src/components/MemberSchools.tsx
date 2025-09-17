@@ -51,6 +51,10 @@ export default function MemberSchools() {
                             src={school.imageUrl} 
                             alt={`${school.name} logo`}
                             className="w-full h-full object-contain rounded-lg"
+                            loading="lazy"
+                            width="80"
+                            height="80"
+                            decoding="async"
                           />
                         ) : (
                           <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
