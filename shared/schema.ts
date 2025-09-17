@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, jsonb, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -206,6 +206,26 @@ export const csvGameMappings = pgTable("csv_game_mappings", {
   importedAt: timestamp("imported_at").defaultNow(),
 });
 
+// Sport-specific game results table
+export const gameResults = pgTable("game_results", {
+  id: serial("id").primaryKey(),
+  gameId: integer("game_id").references(() => games.id).notNull(),
+  scoringType: text("scoring_type").notNull(), // "set_match", "aggregate_with_periods", "aggregate_with_tiebreaker", "inning_line", etc.
+  details: jsonb("details").$type<Record<string, any>>().notNull(), // JSON object of sport-specific scoring data
+  homeTotal: integer("home_total").notNull(),
+  awayTotal: integer("away_total").notNull(),
+  winnerTeamId: integer("winner_team_id").references(() => schools.id),
+  decidedBy: text("decided_by"), // "regulation", "overtime", "penalty_kicks", "extra_innings", etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  enteredBy: integer("entered_by").references(() => users.id).notNull(), // FK to users table
+  enteredByName: text("entered_by_name").notNull(), // Display name for the person who entered the result
+}, (table) => ({
+  uniqueGameId: unique("unique_game_id").on(table.gameId),
+  gameIdIdx: index("game_results_game_id_idx").on(table.gameId),
+  winnerTeamIdIdx: index("game_results_winner_team_id_idx").on(table.winnerTeamId),
+  createdAtIdx: index("game_results_created_at_idx").on(table.createdAt),
+}));
+
 export const insertSchoolSchema = createInsertSchema(schools).omit({ id: true });
 export const insertSportSchema = createInsertSchema(sports).omit({ id: true });
 export const insertGameSchema = createInsertSchema(games).omit({ id: true });
@@ -220,6 +240,7 @@ export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, c
 export const insertCsvUploadSchema = createInsertSchema(csvUploads).omit({ id: true, uploadDate: true });
 export const insertGameEditLogSchema = createInsertSchema(gameEditLogs).omit({ id: true, editDate: true });
 export const insertCsvGameMappingSchema = createInsertSchema(csvGameMappings).omit({ id: true, importedAt: true });
+export const insertGameResultSchema = createInsertSchema(gameResults).omit({ id: true, createdAt: true });
 
 // Enhanced game result schema for Athletic Directors
 export const gameResultSchema = z.object({
@@ -233,6 +254,298 @@ export const gameResultSchema = z.object({
   recordAfterGame: z.string().optional(),
   conferenceRecord: z.string().optional(),
 });
+
+// Sport-specific scoring schemas
+
+// Volleyball scoring schema (set match)
+export const volleyballSetSchema = z.object({
+  setNumber: z.number().int().min(1),
+  homeScore: z.number().int().min(0),
+  awayScore: z.number().int().min(0),
+  winnerTeam: z.enum(['home', 'away']),
+});
+
+export const volleyballScoringSchema = z.object({
+  bestOf: z.enum(['3', '5']),
+  sets: z.array(volleyballSetSchema),
+  setsWonHome: z.number().int().min(0),
+  setsWonAway: z.number().int().min(0),
+  matchWinner: z.enum(['home', 'away']),
+});
+
+// Basketball scoring schema (aggregate with periods)
+export const basketballPeriodSchema = z.object({
+  period: z.number().int().min(1),
+  homeScore: z.number().int().min(0),
+  awayScore: z.number().int().min(0),
+});
+
+export const basketballScoringSchema = z.object({
+  quarters: z.array(basketballPeriodSchema).length(4),
+  overtimePeriods: z.array(basketballPeriodSchema).optional(),
+  totalHomeScore: z.number().int().min(0),
+  totalAwayScore: z.number().int().min(0),
+  winner: z.enum(['home', 'away']),
+  decidedBy: z.enum(['regulation', 'overtime']),
+});
+
+// Soccer/Football scoring schema (aggregate with tiebreaker)
+export const soccerScoringSchema = z.object({
+  regulation: z.object({
+    homeScore: z.number().int().min(0),
+    awayScore: z.number().int().min(0),
+  }),
+  extraTime: z.object({
+    homeScore: z.number().int().min(0).optional(),
+    awayScore: z.number().int().min(0).optional(),
+  }).optional(),
+  penaltyKicks: z.object({
+    homeScore: z.number().int().min(0).optional(),
+    awayScore: z.number().int().min(0).optional(),
+    homeMade: z.number().int().min(0).optional(),
+    awayMade: z.number().int().min(0).optional(),
+    homeAttempts: z.number().int().min(0).optional(),
+    awayAttempts: z.number().int().min(0).optional(),
+  }).optional(),
+  totalHomeScore: z.number().int().min(0),
+  totalAwayScore: z.number().int().min(0),
+  winner: z.enum(['home', 'away', 'tie']),
+  decidedBy: z.enum(['regulation', 'extra_time', 'penalty_kicks']),
+});
+
+// Baseball/Softball scoring schema (inning line score)
+export const baseballInningSchema = z.object({
+  inning: z.number().int().min(1),
+  homeScore: z.number().int().min(0),
+  awayScore: z.number().int().min(0),
+});
+
+export const baseballScoringSchema = z.object({
+  innings: z.array(baseballInningSchema).min(7), // Min 7 innings for regulation
+  extraInnings: z.array(baseballInningSchema).optional(),
+  totalHomeScore: z.number().int().min(0),
+  totalAwayScore: z.number().int().min(0),
+  homeHits: z.number().int().min(0).optional(),
+  awayHits: z.number().int().min(0).optional(),
+  homeErrors: z.number().int().min(0).optional(),
+  awayErrors: z.number().int().min(0).optional(),
+  winner: z.enum(['home', 'away']),
+  decidedBy: z.enum(['regulation', 'extra_innings']),
+});
+
+// Wrestling scoring schema (dual meet)
+export const wrestlingMatchSchema = z.object({
+  weightClass: z.string(),
+  homeWrestler: z.string().optional(),
+  awayWrestler: z.string().optional(),
+  winner: z.enum(['home', 'away', 'forfeit_home', 'forfeit_away', 'double_forfeit']),
+  winType: z.enum(['pin', 'tech_fall', 'major_decision', 'decision', 'forfeit', 'disqualification']).optional(),
+  homeScore: z.number().int().min(0).optional(),
+  awayScore: z.number().int().min(0).optional(),
+  teamPoints: z.number().int().min(0), // Points awarded to team (6 for pin, 3 for decision, etc.)
+});
+
+export const wrestlingScoringSchema = z.object({
+  matches: z.array(wrestlingMatchSchema),
+  totalHomeTeamPoints: z.number().int().min(0),
+  totalAwayTeamPoints: z.number().int().min(0),
+  winner: z.enum(['home', 'away', 'tie']),
+});
+
+// Track & Field scoring schema
+export const trackEventResultSchema = z.object({
+  event: z.string(),
+  place: z.number().int().min(1),
+  athlete: z.string(),
+  school: z.enum(['home', 'away']),
+  performance: z.string(), // Time, distance, or height as string
+  points: z.number().int().min(0),
+});
+
+export const trackScoringSchema = z.object({
+  eventResults: z.array(trackEventResultSchema),
+  totalHomePoints: z.number().int().min(0),
+  totalAwayPoints: z.number().int().min(0),
+  winner: z.enum(['home', 'away', 'tie']),
+});
+
+// Cross Country scoring schema
+export const crossCountryRunnerSchema = z.object({
+  place: z.number().int().min(1),
+  name: z.string(),
+  school: z.enum(['home', 'away']),
+  time: z.string(),
+  points: z.number().int().min(0).optional(), // Only for scoring runners
+});
+
+export const crossCountryScoringSchema = z.object({
+  runners: z.array(crossCountryRunnerSchema),
+  homeTeamScore: z.number().int().min(0),
+  awayTeamScore: z.number().int().min(0),
+  winner: z.enum(['home', 'away']),
+  scoringRunners: z.object({
+    home: z.array(z.number().int()).length(5), // Top 5 runners' places
+    away: z.array(z.number().int()).length(5),
+  }),
+});
+
+// Tennis scoring schema
+export const tennisMatchSchema = z.object({
+  position: z.string(), // "1 Singles", "2 Singles", "3 Singles", "1 Doubles", "2 Doubles", "3 Doubles"
+  homePlayers: z.string(),
+  awayPlayers: z.string(),
+  sets: z.array(z.object({
+    setNumber: z.number().int().min(1),
+    homeGames: z.number().int().min(0),
+    awayGames: z.number().int().min(0),
+  })),
+  winner: z.enum(['home', 'away', 'forfeit_home', 'forfeit_away']),
+});
+
+export const tennisScoringSchema = z.object({
+  matches: z.array(tennisMatchSchema),
+  homeMatchesWon: z.number().int().min(0),
+  awayMatchesWon: z.number().int().min(0),
+  winner: z.enum(['home', 'away', 'tie']),
+});
+
+// Golf scoring schema
+export const golfPlayerSchema = z.object({
+  name: z.string(),
+  school: z.enum(['home', 'away']),
+  holes: z.array(z.number().int().min(1)), // Strokes per hole
+  totalStrokes: z.number().int().min(1),
+  scoreToPar: z.number().int(), // Can be negative
+});
+
+export const golfScoringSchema = z.object({
+  players: z.array(golfPlayerSchema),
+  homeTeamTotal: z.number().int().min(0),
+  awayTeamTotal: z.number().int().min(0),
+  winner: z.enum(['home', 'away']),
+  scoringPlayers: z.object({
+    home: z.array(z.number().int()).optional(), // Indices of scoring players
+    away: z.array(z.number().int()).optional(),
+  }),
+});
+
+// Unified sport scoring schema with discriminated union
+export const sportScoringDetailsSchema = z.discriminatedUnion('sport', [
+  z.object({ sport: z.literal('volleyball'), details: volleyballScoringSchema }),
+  z.object({ sport: z.literal('basketball'), details: basketballScoringSchema }),
+  z.object({ sport: z.literal('soccer'), details: soccerScoringSchema }),
+  z.object({ sport: z.literal('football'), details: soccerScoringSchema }), // American football uses similar structure
+  z.object({ sport: z.literal('baseball'), details: baseballScoringSchema }),
+  z.object({ sport: z.literal('softball'), details: baseballScoringSchema }),
+  z.object({ sport: z.literal('wrestling'), details: wrestlingScoringSchema }),
+  z.object({ sport: z.literal('track'), details: trackScoringSchema }),
+  z.object({ sport: z.literal('cross_country'), details: crossCountryScoringSchema }),
+  z.object({ sport: z.literal('tennis'), details: tennisScoringSchema }),
+  z.object({ sport: z.literal('golf'), details: golfScoringSchema }),
+]);
+
+// Game result entry schema for API endpoints - discriminated union for proper validation
+export const gameResultEntrySchema = z.discriminatedUnion('scoringType', [
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('set_match'),
+    details: volleyballScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation', 'overtime']).optional(),
+    enteredBy: z.number().int().positive(), // FK to users.id
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('aggregate_with_periods'),
+    details: basketballScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation', 'overtime']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('aggregate_with_tiebreaker'),
+    details: soccerScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation', 'extra_time', 'penalty_kicks']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('inning_line'),
+    details: baseballScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation', 'extra_innings']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('dual_meet'),
+    details: wrestlingScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('team_points'),
+    details: trackScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('runner_places'),
+    details: crossCountryScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('match_play'),
+    details: tennisScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+  z.object({
+    gameId: z.number().int().positive(),
+    scoringType: z.literal('stroke_play'),
+    details: golfScoringSchema,
+    homeTotal: z.number().int().min(0),
+    awayTotal: z.number().int().min(0),
+    winnerTeamId: z.number().int().positive().optional(),
+    decidedBy: z.enum(['regulation']).optional(),
+    enteredBy: z.number().int().positive(),
+    enteredByName: z.string(),
+  }),
+]);
 
 export type School = typeof schools.$inferSelect;
 export type Sport = typeof sports.$inferSelect;
@@ -259,8 +572,31 @@ export type Season = typeof seasons.$inferSelect;
 export type CsvUpload = typeof csvUploads.$inferSelect;
 export type GameEditLog = typeof gameEditLogs.$inferSelect;
 export type CsvGameMapping = typeof csvGameMappings.$inferSelect;
+export type GameResultDB = typeof gameResults.$inferSelect;
 export type InsertSeason = z.infer<typeof insertSeasonSchema>;
 export type InsertCsvUpload = z.infer<typeof insertCsvUploadSchema>;
 export type InsertGameEditLog = z.infer<typeof insertGameEditLogSchema>;
 export type InsertCsvGameMapping = z.infer<typeof insertCsvGameMappingSchema>;
+export type InsertGameResult = z.infer<typeof insertGameResultSchema>;
 export type GameResult = z.infer<typeof gameResultSchema>;
+export type GameResultEntry = z.infer<typeof gameResultEntrySchema>;
+
+// Sport-specific scoring types
+export type VolleyballSet = z.infer<typeof volleyballSetSchema>;
+export type VolleyballScoring = z.infer<typeof volleyballScoringSchema>;
+export type BasketballPeriod = z.infer<typeof basketballPeriodSchema>;
+export type BasketballScoring = z.infer<typeof basketballScoringSchema>;
+export type SoccerScoring = z.infer<typeof soccerScoringSchema>;
+export type BaseballInning = z.infer<typeof baseballInningSchema>;
+export type BaseballScoring = z.infer<typeof baseballScoringSchema>;
+export type WrestlingMatch = z.infer<typeof wrestlingMatchSchema>;
+export type WrestlingScoring = z.infer<typeof wrestlingScoringSchema>;
+export type TrackEventResult = z.infer<typeof trackEventResultSchema>;
+export type TrackScoring = z.infer<typeof trackScoringSchema>;
+export type CrossCountryRunner = z.infer<typeof crossCountryRunnerSchema>;
+export type CrossCountryScoring = z.infer<typeof crossCountryScoringSchema>;
+export type TennisMatch = z.infer<typeof tennisMatchSchema>;
+export type TennisScoring = z.infer<typeof tennisScoringSchema>;
+export type GolfPlayer = z.infer<typeof golfPlayerSchema>;
+export type GolfScoring = z.infer<typeof golfScoringSchema>;
+export type SportScoringDetails = z.infer<typeof sportScoringDetailsSchema>;

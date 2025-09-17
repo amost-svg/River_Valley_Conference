@@ -1,13 +1,15 @@
 import { 
   schools, sports, games, standings, news, contacts, users, newsUpdated, 
   gameResultSubmissions, conferenceOfficials, seasons, csvUploads, gameEditLogs, csvGameMappings,
+  gameResults,
   type School, type Sport, type Game, type Standing, type News, type Contact,
   type User, type NewsUpdated, type GameResultSubmission, type ConferenceOfficial,
-  type Season, type CsvUpload, type GameEditLog, type CsvGameMapping,
+  type Season, type CsvUpload, type GameEditLog, type CsvGameMapping, type GameResultDB,
   type InsertSchool, type InsertSport, type InsertGame, type InsertStanding, 
   type InsertNews, type InsertContact, type InsertUser, type InsertNewsUpdated,
   type InsertGameResultSubmission, type InsertConferenceOfficial, type GameResult,
-  type InsertSeason, type InsertCsvUpload, type InsertGameEditLog, type InsertCsvGameMapping
+  type InsertSeason, type InsertCsvUpload, type InsertGameEditLog, type InsertCsvGameMapping,
+  type InsertGameResult
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -101,6 +103,13 @@ export interface IStorage {
   // CSV Game Mappings
   getCsvGameMappings(csvUploadId: number): Promise<CsvGameMapping[]>;
   createCsvGameMapping(mapping: InsertCsvGameMapping): Promise<CsvGameMapping>;
+
+  // Sport-specific Game Results
+  getGameResults(): Promise<GameResultDB[]>;
+  getGameResultByGameId(gameId: number): Promise<GameResultDB | undefined>;
+  createGameResult(gameResult: InsertGameResult): Promise<GameResultDB>;
+  updateGameResultById(id: number, gameResult: Partial<InsertGameResult>): Promise<GameResultDB | undefined>;
+  deleteGameResult(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -110,10 +119,12 @@ export class MemStorage implements IStorage {
   private standings: Map<number, Standing> = new Map();
   private news: Map<number, News> = new Map();
   private contacts: Map<number, Contact> = new Map();
+  private users: Map<number, User> = new Map();
   private seasons: Map<number, Season> = new Map();
   private csvUploads: Map<number, CsvUpload> = new Map();
   private gameEditLogs: Map<number, GameEditLog> = new Map();
   private csvGameMappings: Map<number, CsvGameMapping> = new Map();
+  private gameResults: Map<number, GameResultDB> = new Map();
   
   private currentSchoolId = 1;
   private currentSportId = 1;
@@ -125,10 +136,8 @@ export class MemStorage implements IStorage {
   private currentCsvUploadId = 1;
   private currentGameEditLogId = 1;
   private currentCsvGameMappingId = 1;
-  private currentSeasonId = 1;
-  private currentCsvUploadId = 1;
-  private currentGameEditLogId = 1;
-  private currentCsvGameMappingId = 1;
+  private currentGameResultId = 1;
+  private currentUserId = 1;
 
   constructor() {
     this.initializeData();
@@ -563,7 +572,13 @@ export class MemStorage implements IStorage {
       id,
       wins: standing.wins || 0,
       losses: standing.losses || 0,
-      ties: standing.ties || 0
+      ties: standing.ties || 0,
+      conferenceWins: standing.conferenceWins || 0,
+      conferenceLosses: standing.conferenceLosses || 0,
+      conferenceTies: standing.conferenceTies || 0,
+      pointsFor: standing.pointsFor || 0,
+      pointsAgainst: standing.pointsAgainst || 0,
+      lastUpdated: new Date()
     };
     this.standings.set(id, newStanding);
     return newStanding;
@@ -615,11 +630,85 @@ export class MemStorage implements IStorage {
     return newContact;
   }
 
-  // Stub implementations for new features (use DatabaseStorage for production)
-  async getUser(id: number): Promise<User | undefined> { return undefined; }
-  async getUserByEmail(email: string): Promise<User | undefined> { return undefined; }
-  async createUser(user: InsertUser): Promise<User> { return { ...user, id: 1, createdAt: new Date(), isActive: true }; }
-  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> { return undefined; }
+  // Users implementation
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.email === email);
+  }
+  
+  async createUser(user: InsertUser): Promise<User> {
+    const id = this.currentUserId++;
+    const newUser: User = {
+      ...user,
+      id,
+      schoolId: user.schoolId || null,
+      password: user.password || null,
+      isActive: user.isActive !== undefined ? user.isActive : true,
+      isSuperAdmin: user.isSuperAdmin !== undefined ? user.isSuperAdmin : false,
+      googleId: user.googleId || null,
+      profileImageUrl: user.profileImageUrl || null,
+      lastLogin: user.lastLogin || null,
+      createdBy: user.createdBy || null,
+      createdAt: new Date()
+    };
+    this.users.set(id, newUser);
+    return newUser;
+  }
+  
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const existing = this.users.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...user };
+    this.users.set(id, updated);
+    return updated;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
+  }
+  
+  async getAllUsers(): Promise<(User & { school: School | null; creator: User | null })[]> {
+    const users = Array.from(this.users.values());
+    return users.map(user => ({
+      ...user,
+      school: user.schoolId ? this.schools.get(user.schoolId) || null : null,
+      creator: user.createdBy ? this.users.get(user.createdBy) || null : null
+    }));
+  }
+  
+  async getUserById(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+  
+  async updateLastLogin(id: number): Promise<void> {
+    const user = this.users.get(id);
+    if (user) {
+      user.lastLogin = new Date();
+      this.users.set(id, user);
+    }
+  }
+  
+  // Standings recalculation
+  async recalculateAllStandings(): Promise<{ message: string; standingsCreated: number }> {
+    // Clear existing standings
+    this.standings.clear();
+    
+    // Process all completed games to rebuild standings
+    const allGames = Array.from(this.games.values()).filter(game => game.isCompleted);
+    
+    for (const game of allGames) {
+      await this.updateStandingsFromGame(game);
+    }
+    
+    return {
+      message: "All standings recalculated successfully",
+      standingsCreated: this.standings.size
+    };
+  }
   async getNewsUpdated(): Promise<(NewsUpdated & { author: User })[]> { return []; }
   async getNewsUpdatedById(id: number): Promise<(NewsUpdated & { author: User }) | undefined> { return undefined; }
   async createNewsUpdated(news: InsertNewsUpdated): Promise<NewsUpdated> { return { ...news, id: 1, isPublished: true, excerpt: news.excerpt || null, imageUrl: news.imageUrl || null, pdfUrl: news.pdfUrl || null }; }
@@ -646,8 +735,8 @@ export class MemStorage implements IStorage {
     const newSeason: Season = { 
       ...season, 
       id,
-      isActive: season.isActive || false,
-      createdAt: season.createdAt || new Date()
+      isActive: season.isActive !== undefined ? season.isActive : false,
+      createdAt: new Date()
     };
     this.seasons.set(id, newSeason);
     return newSeason;
@@ -680,10 +769,13 @@ export class MemStorage implements IStorage {
     const newCsvUpload: CsvUpload = { 
       ...csvUpload, 
       id,
-      uploadDate: csvUpload.uploadDate || new Date(),
+      uploadDate: new Date(),
       gamesImported: csvUpload.gamesImported || null,
       duplicatesSkipped: csvUpload.duplicatesSkipped || null,
-      errorsEncountered: csvUpload.errorsEncountered || null
+      errorsEncountered: csvUpload.errorsEncountered || null,
+      processingLog: csvUpload.processingLog || null,
+      seasonsCovered: csvUpload.seasonsCovered || null,
+      sportsIncluded: csvUpload.sportsIncluded || null
     };
     this.csvUploads.set(id, newCsvUpload);
     return newCsvUpload;
@@ -701,7 +793,7 @@ export class MemStorage implements IStorage {
   async createBulkGames(gamesData: InsertGame[], csvUploadId: number): Promise<Game[]> {
     const createdGames = [];
     for (const gameData of gamesData) {
-      const game = await this.createGame({ ...gameData, csvUploadId });
+      const game = await this.createGame({ ...gameData });
       createdGames.push(game);
     }
     return createdGames;
@@ -721,7 +813,10 @@ export class MemStorage implements IStorage {
     const newLog: GameEditLog = { 
       ...log, 
       id,
-      editDate: log.editDate || new Date()
+      editDate: new Date(),
+      oldValue: log.oldValue || null,
+      newValue: log.newValue || null,
+      editReason: log.editReason || null
     };
     this.gameEditLogs.set(id, newLog);
     return newLog;
@@ -736,10 +831,49 @@ export class MemStorage implements IStorage {
     const id = this.currentCsvGameMappingId++;
     const newMapping: CsvGameMapping = { 
       ...mapping, 
-      id
+      id,
+      csvRowData: mapping.csvRowData || null,
+      rvcGameId: mapping.rvcGameId || null,
+      importedAt: new Date()
     };
     this.csvGameMappings.set(id, newMapping);
     return newMapping;
+  }
+
+  // Sport-specific Game Results
+  async getGameResults(): Promise<GameResultDB[]> {
+    return Array.from(this.gameResults.values());
+  }
+
+  async getGameResultByGameId(gameId: number): Promise<GameResultDB | undefined> {
+    return Array.from(this.gameResults.values()).find(result => result.gameId === gameId);
+  }
+
+  async createGameResult(gameResult: InsertGameResult): Promise<GameResultDB> {
+    const id = this.currentGameResultId++;
+    const newGameResult: GameResultDB = {
+      ...gameResult,
+      id,
+      createdAt: new Date(),
+      details: gameResult.details || {},
+      winnerTeamId: gameResult.winnerTeamId || null,
+      decidedBy: gameResult.decidedBy || null
+    };
+    this.gameResults.set(id, newGameResult);
+    return newGameResult;
+  }
+
+  async updateGameResultById(id: number, gameResult: Partial<InsertGameResult>): Promise<GameResultDB | undefined> {
+    const existing = this.gameResults.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...gameResult };
+    this.gameResults.set(id, updated);
+    return updated;
+  }
+
+  async deleteGameResult(id: number): Promise<boolean> {
+    return this.gameResults.delete(id);
   }
 }
 
@@ -858,11 +992,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createGame(game: InsertGame): Promise<Game> {
-    const [newGame] = await db
+    const result = await db
       .insert(games)
       .values(game)
       .returning();
-    return newGame;
+    return Array.isArray(result) ? result[0] : result;
   }
 
   async getGame(id: number): Promise<Game | null> {
@@ -881,7 +1015,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGame(id: number): Promise<boolean> {
     const result = await db.delete(games).where(eq(games.id, id)).returning();
-    return result.length > 0;
+    return Array.isArray(result) && result.length > 0;
   }
 
   async getGamesBySchool(schoolId: number): Promise<(Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport })[]> {
@@ -1440,14 +1574,16 @@ export class DatabaseStorage implements IStorage {
   async createBulkGames(gamesData: InsertGame[], csvUploadId: number): Promise<Game[]> {
     const createdGames = [];
     for (const gameData of gamesData) {
-      const [newGame] = await db
+      const result = await db
         .insert(games)
         .values({
           ...gameData,
-          csvUploadId: csvUploadId
+          uploadedBy: csvUploadId
         })
         .returning();
-      createdGames.push(newGame);
+      if (Array.isArray(result) && result.length > 0) {
+        createdGames.push(result[0]);
+      }
     }
     return createdGames;
   }
@@ -1488,6 +1624,38 @@ export class DatabaseStorage implements IStorage {
       .values(mapping)
       .returning();
     return newMapping;
+  }
+
+  // Sport-specific Game Results
+  async getGameResults(): Promise<GameResultDB[]> {
+    return await db.select().from(gameResults);
+  }
+
+  async getGameResultByGameId(gameId: number): Promise<GameResultDB | undefined> {
+    const [result] = await db.select().from(gameResults).where(eq(gameResults.gameId, gameId));
+    return result || undefined;
+  }
+
+  async createGameResult(gameResult: InsertGameResult): Promise<GameResultDB> {
+    const [newGameResult] = await db
+      .insert(gameResults)
+      .values(gameResult)
+      .returning();
+    return newGameResult;
+  }
+
+  async updateGameResultById(id: number, gameResultUpdate: Partial<InsertGameResult>): Promise<GameResultDB | undefined> {
+    const [updatedGameResult] = await db
+      .update(gameResults)
+      .set(gameResultUpdate)
+      .where(eq(gameResults.id, id))
+      .returning();
+    return updatedGameResult || undefined;
+  }
+
+  async deleteGameResult(id: number): Promise<boolean> {
+    const result = await db.delete(gameResults).where(eq(gameResults.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
 
