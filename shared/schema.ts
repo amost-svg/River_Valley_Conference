@@ -30,7 +30,7 @@ export const sports = pgTable("sports", {
   season: text("season").notNull(), // "fall", "winter", "spring"
 });
 
-export const games: any = pgTable("games", {
+export const games = pgTable("games", {
   id: serial("id").primaryKey(),
   homeTeamId: integer("home_team_id").references(() => schools.id),
   awayTeamId: integer("away_team_id").references(() => schools.id),

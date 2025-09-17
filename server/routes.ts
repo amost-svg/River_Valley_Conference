@@ -7,7 +7,9 @@ import fs from "fs/promises";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { storage } from "./storage";
-import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema, insertCsvUploadSchema } from "@shared/schema";
+import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema, insertCsvUploadSchema, gameResultEntrySchema } from "@shared/schema";
+import { computeSummary, validateScoringDetails } from "@shared/scoring";
+import { SPORT_TO_SCORING_TYPE, getSportProfile } from "@shared/scoringProfiles";
 // import { ICalParser } from "./ical-parser"; // Removed - replaced with CSV parser
 import DuplicateGameManager from "./duplicate-game-manager";
 
@@ -74,6 +76,37 @@ const csvUpload = multer({
   }
 });
 
+// Authentication middleware functions - must be declared before use
+const requireAuth = async (req: any, res: any, next: any) => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  const user = await storage.getUser(userId);
+  if (!user || !user.isActive) {
+    return res.status(401).json({ message: "User not found or inactive" });
+  }
+  
+  req.user = user;
+  next();
+};
+
+const requireSuperAdmin = async (req: any, res: any, next: any) => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  const user = await storage.getUser(userId);
+  if (!user || !user.isActive || !user.isSuperAdmin) {
+    return res.status(403).json({ message: "Super Admin access required" });
+  }
+  
+  req.user = user;
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Schools
   app.get("/api/schools", async (req, res) => {
@@ -131,6 +164,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(games);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch games" });
+    }
+  });
+
+  // Sport-specific Game Results
+  app.post("/api/games/:id/results", requireAuth, async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      
+      // Get user info from session
+      const userId = (req as any).session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || !user.isActive) {
+        return res.status(401).json({ message: "User not found or inactive" });
+      }
+
+      // Get the game to validate and determine sport/teams
+      const game = await storage.getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      // SECURITY FIX: Authorization check - only super admins OR users associated with game schools can submit results
+      const isAuthorized = user.isSuperAdmin || 
+        (game.homeTeamId && user.schoolId === game.homeTeamId) ||
+        (game.awayTeamId && user.schoolId === game.awayTeamId);
+      
+      if (!isAuthorized) {
+        return res.status(403).json({ 
+          message: "Access denied. You can only submit results for games involving your school." 
+        });
+      }
+
+      // Check if result already exists
+      const existingResult = await storage.getGameResultByGameId(gameId);
+      if (existingResult) {
+        return res.status(409).json({ message: "Game result already exists. Use PUT to update." });
+      }
+
+      // Validate request body using discriminated union schema
+      const validatedData = gameResultEntrySchema.parse({
+        ...req.body,
+        gameId,
+        enteredBy: userId,
+        enteredByName: user.name
+      });
+
+      // DATA INTEGRITY FIX: Validate scoringType matches the game's sport
+      const sport = await storage.getSportById(game.sportId);
+      if (!sport) {
+        return res.status(404).json({ message: "Sport not found for this game" });
+      }
+
+      const expectedScoringType = SPORT_TO_SCORING_TYPE[sport.name.toLowerCase()];
+      if (!expectedScoringType) {
+        return res.status(400).json({ 
+          message: `Scoring type not defined for sport: ${sport.name}. Please contact administrator.` 
+        });
+      }
+
+      if (validatedData.scoringType !== expectedScoringType) {
+        return res.status(400).json({ 
+          message: `Invalid scoring type. Expected '${expectedScoringType}' for ${sport.name}, but received '${validatedData.scoringType}'.`,
+          expectedScoringType,
+          providedScoringType: validatedData.scoringType,
+          sport: sport.name
+        });
+      }
+
+      // SEMANTIC VALIDATION FIX: Use sport-specific validators
+      const validationErrors = validateScoringDetails(validatedData.details, validatedData.scoringType);
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          message: "Scoring data validation failed",
+          errors: validationErrors,
+          sport: sport.name,
+          scoringType: validatedData.scoringType
+        });
+      }
+
+      // Compute summary using sport-specific scoring logic
+      const scoringSummary = computeSummary(
+        validatedData.details,
+        validatedData.scoringType,
+        game.homeTeamId || 0,
+        game.awayTeamId || 0
+      );
+
+      // Create the game result record
+      const gameResult = await storage.createGameResult({
+        gameId: validatedData.gameId,
+        scoringType: validatedData.scoringType,
+        details: validatedData.details as Record<string, any>,
+        homeTotal: scoringSummary.homeTotal,
+        awayTotal: scoringSummary.awayTotal,
+        winnerTeamId: scoringSummary.winnerTeamId,
+        decidedBy: scoringSummary.decidedBy,
+        enteredBy: validatedData.enteredBy,
+        enteredByName: validatedData.enteredByName
+      });
+
+      // Update the game's basic score fields for backwards compatibility
+      await storage.updateGame(gameId, {
+        homeScore: scoringSummary.homeTotal,
+        awayScore: scoringSummary.awayTotal,
+        isCompleted: true,
+        resultEnteredBy: validatedData.enteredBy,
+        resultEnteredAt: new Date()
+      });
+
+      // Update standings for conference games
+      if (game.isConferenceGame && game.homeTeamId && game.awayTeamId) {
+        const updatedGame = await storage.getGame(gameId);
+        if (updatedGame) {
+          await storage.updateStandingsFromGame(updatedGame);
+        }
+      }
+
+      res.status(201).json({
+        gameResult,
+        summary: scoringSummary,
+        message: "Game result submitted successfully"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Request validation error", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error submitting game result:", error);
+      res.status(500).json({ message: "Failed to submit game result" });
+    }
+  });
+
+  app.get("/api/games/:id/results", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      
+      // Get the game result
+      const gameResult = await storage.getGameResultByGameId(gameId);
+      
+      if (!gameResult) {
+        return res.status(404).json({ message: "Game result not found" });
+      }
+
+      // Get the associated game for context
+      const game = await storage.getGame(gameId);
+      
+      res.json({
+        gameResult,
+        game,
+        message: "Game result retrieved successfully"
+      });
+    } catch (error) {
+      console.error("Error retrieving game result:", error);
+      res.status(500).json({ message: "Failed to retrieve game result" });
     }
   });
 
@@ -403,36 +596,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Authentication middleware
-  const requireAuth = async (req: any, res: any, next: any) => {
-    const userId = req.session?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
-    const user = await storage.getUser(userId);
-    if (!user || !user.isActive) {
-      return res.status(401).json({ message: "User not found or inactive" });
-    }
-    
-    req.user = user;
-    next();
-  };
-
-  const requireSuperAdmin = async (req: any, res: any, next: any) => {
-    const userId = req.session?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
-    const user = await storage.getUser(userId);
-    if (!user || !user.isActive || !user.isSuperAdmin) {
-      return res.status(403).json({ message: "Super Admin access required" });
-    }
-    
-    req.user = user;
-    next();
-  };
 
   // Super Admin Routes - User Management
   app.get("/api/super-admin/users", requireSuperAdmin, async (req, res) => {
