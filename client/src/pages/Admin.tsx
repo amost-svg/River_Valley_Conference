@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format, isSameDay, startOfMonth, endOfMonth, isToday } from "date-fns";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -103,6 +105,8 @@ export default function Admin() {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [selectedSchoolFilter, setSelectedSchoolFilter] = useState<string>("all");
   const [selectedSportFilter, setSelectedSportFilter] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const { toast } = useToast();
   
   // File input refs
@@ -466,7 +470,37 @@ export default function Admin() {
     setIsGameResultDialogOpen(true);
   };
 
-  // Filtered games for Results tab
+  // Helper function to get games for a specific date
+  const getGamesForDate = (date: Date) => {
+    if (!games) return [];
+    return games.filter((game) => {
+      const gameDate = new Date(game.gameDate);
+      return isSameDay(gameDate, date);
+    });
+  };
+
+  // Helper function to get games with school and sport filters
+  const getFilteredGamesForDate = (date: Date) => {
+    const dayGames = getGamesForDate(date);
+    return dayGames.filter((game) => {
+      const schoolMatch = selectedSchoolFilter === "all" || 
+        game.homeTeamId?.toString() === selectedSchoolFilter || 
+        game.awayTeamId?.toString() === selectedSchoolFilter;
+      
+      const sportMatch = selectedSportFilter === "all" || 
+        game.sportId?.toString() === selectedSportFilter;
+      
+      return schoolMatch && sportMatch;
+    });
+  };
+
+  // Get dates that have games for calendar highlighting
+  const getGameDates = () => {
+    if (!games) return [];
+    return games.map(game => new Date(game.gameDate));
+  };
+
+  // Filtered games for Results tab (keeping original logic)
   const filteredGames = useMemo(() => {
     if (!games) return [];
     
@@ -556,10 +590,10 @@ export default function Admin() {
             )}
           </TabsList>
 
-          {/* Dashboard Tab - Game Management */}
+          {/* Dashboard Tab - Calendar View */}
           <TabsContent value="dashboard" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Games Dashboard</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Games Calendar</h2>
               <Badge variant="outline" className="text-conference-navy">
                 {games?.length || 0} Total Games
               </Badge>
@@ -601,131 +635,156 @@ export default function Admin() {
               </CardContent>
             </Card>
 
-            {/* Upcoming Games Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Today's Games</CardTitle>
-                <CardDescription>Click on any game to record results</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {games?.filter(game => {
-                    const today = new Date().toDateString();
-                    const gameDate = new Date(game.gameDate).toDateString();
-                    return gameDate === today;
-                  }).length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No games scheduled for today</p>
-                  ) : (
-                    games?.filter(game => {
-                      const today = new Date().toDateString();
-                      const gameDate = new Date(game.gameDate).toDateString();
-                      return gameDate === today;
-                    }).map((game) => {
-                      const homeSchool = schools?.find(s => s.id === game.homeTeamId);
-                      const awaySchool = schools?.find(s => s.id === game.awayTeamId);
-                      const sport = sports?.find(s => s.id === game.sportId);
-                      
-                      return (
-                        <Card key={game.id} className="cursor-pointer hover:bg-gray-50 transition-colors"
-                              onClick={() => {
-                                setSelectedGame(game);
-                                setIsGameResultDialogOpen(true);
-                                gameResultForm.setValue("gameId", game.id);
-                              }}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4">
-                                <div className="flex flex-col items-center min-w-24">
-                                  <span className="text-xs text-gray-500">AWAY</span>
-                                  <span className="font-medium text-sm text-center">{awaySchool?.name}</span>
-                                </div>
-                                <div className="text-xl font-bold text-gray-400">@</div>
-                                <div className="flex flex-col items-center min-w-24">
-                                  <span className="text-xs text-gray-500">HOME</span>
-                                  <span className="font-medium text-sm text-center">{homeSchool?.name}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-4">
-                                <div className="text-right">
-                                  <div className="font-medium">{sport?.name}</div>
-                                  <div className="text-sm text-gray-600">
-                                    {game.gameTime} • {new Date(game.gameDate).toLocaleDateString()}
-                                  </div>
-                                </div>
-                                {game.isCompleted ? (
-                                  <div className="flex items-center space-x-2">
-                                    <Badge variant="default" className="bg-green-100 text-green-800">
-                                      {game.homeScore} - {game.awayScore}
-                                    </Badge>
-                                    <CheckCircle className="h-5 w-5 text-green-600" />
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center space-x-2">
-                                    <Badge variant="outline">Click to Record</Badge>
-                                    <Clock className="h-5 w-5 text-gray-400" />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Calendar and Sidebar Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Calendar Section */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Games Calendar</CardTitle>
+                    <CardDescription>Navigate to past and future games by selecting dates</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      month={calendarMonth}
+                      onMonthChange={setCalendarMonth}
+                      className="rounded-md border"
+                      modifiers={{
+                        hasGame: getGameDates(),
+                        today: new Date()
+                      }}
+                      modifiersStyles={{
+                        hasGame: {
+                          backgroundColor: 'var(--primary)',
+                          color: 'white',
+                          borderRadius: '50%'
+                        },
+                        today: {
+                          fontWeight: 'bold',
+                          textDecoration: 'underline'
+                        }
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
 
-            {/* Upcoming Week Games */}
-            <Card>
-              <CardHeader>
-                <CardTitle>This Week's Games</CardTitle>
-                <CardDescription>All scheduled games for the next 7 days</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {games?.filter(game => {
-                    const now = new Date();
-                    const gameDate = new Date(game.gameDate);
-                    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                    return gameDate >= now && gameDate <= weekFromNow;
-                  }).slice(0, 10).map((game) => {
-                    const homeSchool = schools?.find(s => s.id === game.homeTeamId);
-                    const awaySchool = schools?.find(s => s.id === game.awayTeamId);
-                    const sport = sports?.find(s => s.id === game.sportId);
+              {/* Sidebar Section */}
+              <div className="space-y-4">
+                {/* Filters */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Filters</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="school-filter" className="text-sm font-medium">School</Label>
+                      <Select value={selectedSchoolFilter} onValueChange={setSelectedSchoolFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Schools" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Schools</SelectItem>
+                          {schools?.map((school) => (
+                            <SelectItem key={school.id} value={school.id.toString()}>
+                              {school.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     
-                    return (
-                      <div key={game.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                           onClick={() => {
-                             setSelectedGame(game);
-                             setIsGameResultDialogOpen(true);
-                             gameResultForm.setValue("gameId", game.id);
-                           }}>
-                        <div className="flex items-center space-x-4">
-                          <div className="w-16 text-center">
-                            <div className="text-xs text-gray-500">{new Date(game.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                            <div className="text-xs text-gray-600">{game.gameTime}</div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-sm">{awaySchool?.name}</span>
-                            <span className="text-gray-400">@</span>
-                            <span className="font-medium text-sm">{homeSchool?.name}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary" className="text-xs">{sport?.name}</Badge>
-                          {game.isCompleted && (
-                            <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
-                              Final: {game.homeScore}-{game.awayScore}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                    <div>
+                      <Label htmlFor="sport-filter" className="text-sm font-medium">Sport</Label>
+                      <Select value={selectedSportFilter} onValueChange={setSelectedSportFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Sports" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Sports</SelectItem>
+                          {sports?.map((sport) => (
+                            <SelectItem key={sport.id} value={sport.id.toString()}>
+                              {sport.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Selected Date Games */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      {isToday(selectedDate) ? "Today's Games" : `Games on ${format(selectedDate, 'MMM dd, yyyy')}`}
+                    </CardTitle>
+                    <CardDescription>Click on any game to record results</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {getFilteredGamesForDate(selectedDate).length === 0 ? (
+                        <p className="text-gray-500 text-center py-4 text-sm">
+                          {isToday(selectedDate) 
+                            ? "No games scheduled for today" 
+                            : "No games on this date"
+                          }
+                        </p>
+                      ) : (
+                        getFilteredGamesForDate(selectedDate).map((game) => {
+                          const homeSchool = schools?.find(s => s.id === game.homeTeamId);
+                          const awaySchool = schools?.find(s => s.id === game.awayTeamId);
+                          const sport = sports?.find(s => s.id === game.sportId);
+                          
+                          return (
+                            <Card key={game.id} className="cursor-pointer hover:bg-gray-50 transition-colors border"
+                                  onClick={() => {
+                                    setSelectedGame(game);
+                                    setIsGameResultDialogOpen(true);
+                                    gameResultForm.setValue("gameId", game.id);
+                                  }}
+                                  data-testid={`game-card-${game.id}`}>
+                              <CardContent className="p-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-xs text-gray-500">{game.gameTime}</div>
+                                    <Badge variant="secondary" className="text-xs">{sport?.name}</Badge>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-sm">
+                                      <div className="font-medium">{awaySchool?.name}</div>
+                                      <div className="text-xs text-gray-500">@ {homeSchool?.name}</div>
+                                    </div>
+                                    
+                                    {game.isCompleted ? (
+                                      <div className="flex items-center space-x-1">
+                                        <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                          {game.homeScore} - {game.awayScore}
+                                        </Badge>
+                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center space-x-1">
+                                        <Badge variant="outline" className="text-xs">Pending</Badge>
+                                        <Clock className="h-4 w-4 text-gray-400" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
 
 
