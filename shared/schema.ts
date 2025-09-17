@@ -403,7 +403,14 @@ export const tennisMatchSchema = z.object({
 });
 
 export const tennisScoringSchema = z.object({
-  matches: z.array(tennisMatchSchema),
+  matches: z.array(z.object({
+    position: z.string(),
+    homePlayers: z.string().optional(),
+    awayPlayers: z.string().optional(),
+    winner: z.enum(['home', 'away', 'forfeit_home', 'forfeit_away']),
+    score: z.string().optional(),
+    completed: z.boolean().default(true),
+  })),
   homeMatchesWon: z.number().int().min(0),
   awayMatchesWon: z.number().int().min(0),
   winner: z.enum(['home', 'away', 'tie']),
@@ -419,14 +426,19 @@ export const golfPlayerSchema = z.object({
 });
 
 export const golfScoringSchema = z.object({
-  players: z.array(golfPlayerSchema),
+  players: z.array(z.object({
+    name: z.string(),
+    school: z.enum(['home', 'away']),
+    score: z.number().int().min(18),
+    isScoring: z.boolean().default(true),
+  })),
   homeTeamTotal: z.number().int().min(0),
   awayTeamTotal: z.number().int().min(0),
-  winner: z.enum(['home', 'away']),
+  winner: z.enum(['home', 'away', 'tie']),
   scoringPlayers: z.object({
-    home: z.array(z.number().int()).optional(), // Indices of scoring players
+    home: z.array(z.number().int()).optional(),
     away: z.array(z.number().int()).optional(),
-  }),
+  }).optional(),
 });
 
 // Unified sport scoring schema with discriminated union
