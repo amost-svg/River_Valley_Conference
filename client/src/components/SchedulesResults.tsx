@@ -120,12 +120,14 @@ export default function SchedulesResults() {
     return `${game.homeScore}-${game.awayScore}`;
   };
 
-  // Get next 6 games for the selected sport
+  // Get next 6 games for the selected sport (only show upcoming games, hide past games)
   const getUpcomingGames = (games: GameWithDetails[] | undefined) => {
     if (!games) return [];
     const now = new Date();
+    // Set to start of today to include games happening today
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     return games
-      .filter(game => new Date(game.gameDate) >= now || !game.isCompleted)
+      .filter(game => new Date(game.gameDate) >= today)
       .sort((a, b) => new Date(a.gameDate).getTime() - new Date(b.gameDate).getTime())
       .slice(0, 6);
   };
