@@ -547,9 +547,8 @@ export default function Admin() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="upload">Upload Schedule</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             {user?.isSuperAdmin && (
@@ -729,16 +728,6 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
-          {/* CSV Upload Tab */}
-          <TabsContent value="upload" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Schedule Upload</h2>
-              <Badge variant="outline" className="text-blue-600">
-                CSV Import System
-              </Badge>
-            </div>
-            <ScheduleUploader />
-          </TabsContent>
 
           {/* School Editor Tab */}
           <TabsContent value="school" className="space-y-6">
