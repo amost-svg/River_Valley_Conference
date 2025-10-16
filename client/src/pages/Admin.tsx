@@ -35,7 +35,9 @@ import {
   X,
   LogOut,
   User as UserIcon,
-  RefreshCw
+  RefreshCw,
+  AlertCircle,
+  ClipboardCheck
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -146,6 +148,11 @@ export default function Admin() {
   });
   const { data: pendingSubmissionsByDate } = useQuery<{ [date: string]: number }>({ 
     queryKey: ["/api/admin/pending-submissions-by-date"] 
+  });
+  
+  // Query for pending game submissions
+  const { data: pendingGameSubmissions } = useQuery<any[]>({
+    queryKey: ["/api/admin/pending-game-submissions"]
   });
   
   // Helper function to format date consistently without timezone conversion
@@ -951,6 +958,71 @@ export default function Admin() {
                 </Card>
               </div>
             </div>
+
+            {/* Pending Items Card */}
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-orange-800 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5" />
+                      Pending Submissions
+                    </CardTitle>
+                    <CardDescription>Items awaiting review and approval</CardDescription>
+                  </div>
+                  <Badge variant="outline" className="bg-white text-orange-600 border-orange-300">
+                    {(pendingGameSubmissions?.length || 0) + (submissions?.filter(s => !s.isModerated).length || 0)} Total
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Pending Games */}
+                  <div 
+                    className="p-4 bg-white rounded-lg border border-orange-200 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => {
+                      // TODO: Open pending games modal
+                      toast({
+                        title: "Pending Games",
+                        description: `${pendingGameSubmissions?.length || 0} games awaiting approval`
+                      });
+                    }}
+                    data-testid="card-pending-games"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Pending Games</p>
+                        <p className="text-3xl font-bold text-orange-600">{pendingGameSubmissions?.length || 0}</p>
+                        <p className="text-xs text-gray-500 mt-1">Games to add to schedule</p>
+                      </div>
+                      <Calendar className="h-8 w-8 text-orange-400" />
+                    </div>
+                  </div>
+
+                  {/* Pending Results */}
+                  <div 
+                    className="p-4 bg-white rounded-lg border border-orange-200 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => {
+                      // TODO: Open pending results modal
+                      toast({
+                        title: "Pending Results",
+                        description: `${submissions?.filter(s => !s.isModerated).length || 0} results awaiting approval`
+                      });
+                    }}
+                    data-testid="card-pending-results"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Pending Results</p>
+                        <p className="text-3xl font-bold text-orange-600">{submissions?.filter(s => !s.isModerated).length || 0}</p>
+                        <p className="text-xs text-gray-500 mt-1">Game results to review</p>
+                      </div>
+                      <ClipboardCheck className="h-8 w-8 text-orange-400" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Mini Conference Standings */}
             <Card>
