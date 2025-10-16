@@ -288,6 +288,7 @@ export default function Admin() {
   const resetPdfForm = () => {
     pdfForm.reset();
     clearPdf();
+    clearImage();
     setIsPdfDialogOpen(false);
   };
 
@@ -401,6 +402,11 @@ export default function Admin() {
         content: data.excerpt || `PDF Document: ${selectedPdf.name}`,
       }));
       formData.append('pdf', selectedPdf);
+      
+      // Add optional image if selected
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
 
       const response = await fetch('/api/admin/news-enhanced', {
         method: 'POST',
@@ -1288,6 +1294,7 @@ export default function Admin() {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Upload PDF Article</DialogTitle>
+              <p className="text-sm text-gray-500">Upload a PDF document with optional thumbnail image</p>
             </DialogHeader>
             <Form {...pdfForm}>
               <form onSubmit={pdfForm.handleSubmit(onSubmitPdfArticle)} className="space-y-4">
@@ -1298,21 +1305,120 @@ export default function Admin() {
                     <FormItem>
                       <FormLabel>Article Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="PDF article title" {...field} />
+                        <Input placeholder="PDF article title" {...field} data-testid="input-pdf-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={pdfForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-pdf-category">
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="General">General</SelectItem>
+                          <SelectItem value="Championship">Championship</SelectItem>
+                          <SelectItem value="All-Conference">All-Conference</SelectItem>
+                          <SelectItem value="Sportsmanship">Sportsmanship</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={pdfForm.control}
+                  name="excerpt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Excerpt (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Brief description of the PDF content" {...field} data-testid="textarea-pdf-excerpt" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div>
+                  <Label htmlFor="pdf-upload">PDF File *</Label>
+                  <div className="mt-2">
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handlePdfSelect}
+                      className="hidden"
+                      id="pdf-upload"
+                      data-testid="input-pdf-file"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => pdfInputRef.current?.click()}
+                      className="w-full"
+                      data-testid="button-select-pdf"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      {selectedPdf ? selectedPdf.name : 'Select PDF File'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="pdf-image-upload">Thumbnail Image (Optional)</Label>
+                  <p className="text-xs text-gray-500 mb-2">Upload an optional thumbnail image for the PDF article</p>
+                  <div className="mt-2">
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      id="pdf-image-upload"
+                      data-testid="input-pdf-image"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="w-full"
+                      data-testid="button-select-pdf-image"
+                    >
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      {selectedImage ? selectedImage.name : 'Select Thumbnail Image'}
+                    </Button>
+                    {imagePreview && (
+                      <div className="mt-2">
+                        <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex justify-end space-x-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsPdfDialogOpen(false)}
+                    data-testid="button-cancel-pdf"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">Upload PDF</Button>
+                  <Button type="submit" disabled={!selectedPdf} data-testid="button-upload-pdf">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload PDF
+                  </Button>
                 </div>
               </form>
             </Form>
