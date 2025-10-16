@@ -1339,6 +1339,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to sync/generate static games JSON for fast calendar loading
+  app.post("/api/admin/sync-games-json", requireSuperAdmin, async (req, res) => {
+    try {
+      const games = await storage.getGames();
+      const schools = await storage.getSchools();
+      const sports = await storage.getSports();
+      
+      // Transform games to lightweight format
+      const gamesData = games.map(game => {
+        const homeSchool = schools.find(s => s.id === game.homeTeamId);
+        const awaySchool = schools.find(s => s.id === game.awayTeamId);
+        const sport = sports.find(s => s.id === game.sportId);
+        
+        return {
+          id: game.id,
+          sport: sport?.name || "Unknown",
+          sportId: game.sportId,
+          level: game.level || "Varsity",
+          conference: game.isConferenceGame !== false,
+          startISO: new Date(game.gameDate).toISOString(),
+          gameTime: game.gameTime,
+          home: homeSchool?.name || game.homeTeamName || "TBD",
+          homeId: game.homeTeamId,
+          away: awaySchool?.name || game.awayTeamName || "TBD",
+          awayId: game.awayTeamId,
+          location: game.location || homeSchool?.name || "TBD",
+          status: game.isCompleted ? "final" : "scheduled",
+          homeScore: game.homeScore,
+          awayScore: game.awayScore
+        };
+      });
+      
+      // Create public/data directory if it doesn't exist
+      const dataDir = path.join(process.cwd(), 'public', 'data');
+      await fs.mkdir(dataDir, { recursive: true });
+      
+      // Write JSON with timestamp version
+      const timestamp = Date.now();
+      const jsonPath = path.join(dataDir, 'games.json');
+      await fs.writeFile(
+        jsonPath,
+        JSON.stringify({
+          version: timestamp,
+          lastSync: new Date().toISOString(),
+          games: gamesData
+        }, null, 2)
+      );
+      
+      res.json({
+        message: "Games JSON synced successfully",
+        gamesCount: gamesData.length,
+        version: timestamp,
+        path: "/data/games.json"
+      });
+    } catch (error) {
+      console.error("Error syncing games JSON:", error);
+      res.status(500).json({ message: "Failed to sync games JSON" });
+    }
+  });
+
+  // Serve static games JSON
+  app.get("/data/games.json", async (req, res) => {
+    try {
+      const jsonPath = path.join(process.cwd(), 'public', 'data', 'games.json');
+      const data = await fs.readFile(jsonPath, 'utf-8');
+      
+      // Set cache headers
+      res.set({
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=300', // 5 minutes
+        'ETag': Date.now().toString()
+      });
+      
+      res.send(data);
+    } catch (error) {
+      // If file doesn't exist, trigger sync first
+      res.status(404).json({ 
+        message: "Games data not yet synced. Please use /api/admin/sync-games-json first." 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, isSameDay, startOfMonth, endOfMonth, isToday } from "date-fns";
+import { formatConferenceDate, isSameConferenceDay, formatDateForDisplay } from "@shared/dateUtils";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -565,12 +566,11 @@ export default function Admin() {
     setIsGameResultDialogOpen(true);
   };
 
-  // Helper function to get games for a specific date
+  // Helper function to get games for a specific date (timezone-aware)
   const getGamesForDate = (date: Date) => {
     if (!games) return [];
     return games.filter((game) => {
-      const gameDate = new Date(game.gameDate);
-      return isSameDay(gameDate, date);
+      return isSameConferenceDay(game.gameDate, date);
     });
   };
 
@@ -640,11 +640,7 @@ export default function Admin() {
   };
 
   const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
+    return formatDateForDisplay(date);
   };
 
   return (
@@ -727,9 +723,38 @@ export default function Admin() {
                 <h2 className="text-2xl font-bold text-gray-900">River Valley Conference — Games Calendar</h2>
                 <p className="text-gray-600 mt-1">View and manage scheduled games</p>
               </div>
-              <Badge variant="outline" className="text-conference-navy">
-                {games?.length || 0} Total Games
-              </Badge>
+              <div className="flex items-center gap-3">
+                {user?.isSuperAdmin && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      apiRequest("POST", "/api/admin/sync-games-json", {})
+                        .then((data: any) => {
+                          toast({
+                            title: "Games Synced",
+                            description: `${data.gamesCount} games synced successfully for fast loading.`
+                          });
+                        })
+                        .catch(() => {
+                          toast({
+                            title: "Sync Failed",
+                            description: "Failed to sync games data.",
+                            variant: "destructive"
+                          });
+                        });
+                    }}
+                    className="text-conference-navy border-conference-navy hover:bg-conference-navy hover:text-white"
+                    data-testid="button-sync-games"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync Games
+                  </Button>
+                )}
+                <Badge variant="outline" className="text-conference-navy">
+                  {games?.length || 0} Total Games
+                </Badge>
+              </div>
             </div>
 
             {/* Calendar and Sidebar Layout */}
