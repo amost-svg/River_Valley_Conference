@@ -622,8 +622,8 @@ export default function Admin() {
   const handleCalendarDateClick = (date: Date) => {
     const pendingCount = getPendingSubmissionCount(date);
     if (pendingCount > 0) {
-      setApprovalDialogDate(date);
-      setIsApprovalDialogOpen(true);
+      // Open the new pending submissions dialog instead of old approval dialog
+      setIsPendingSubmissionsDialogOpen(true);
     } else {
       setSelectedDate(date);
     }
@@ -830,10 +830,10 @@ export default function Admin() {
                               <span>{date.getDate()}</span>
                               {pendingCount > 0 && (
                                 <span 
-                                  className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg hover:bg-red-600 transition-colors"
+                                  className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg hover:bg-orange-600 transition-colors animate-pulse"
                                   style={{ fontSize: '10px', minWidth: '18px', minHeight: '18px' }}
                                   data-testid={`calendar-badge-${formatDateForAPI(date)}`}
-                                  title={`${pendingCount} pending submission${pendingCount > 1 ? 's' : ''}`}
+                                  title={`${pendingCount} pending submission${pendingCount > 1 ? 's' : ''} - Click to review`}
                                 >
                                   {pendingCount}
                                 </span>
