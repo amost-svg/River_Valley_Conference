@@ -85,11 +85,26 @@ const pdfArticleSchema = z.object({
   excerpt: z.string().optional(),
 });
 
+// Add Game Submission schema (for pending game submissions)
+const addGameSubmissionSchema = z.object({
+  sportId: z.number().min(1, "Please select a sport"),
+  level: z.string().min(1, "Please select a level"),
+  isConference: z.boolean(),
+  gameDate: z.string().min(1, "Please select a date"),
+  gameTime: z.string().min(1, "Please enter a time"),
+  homeTeamId: z.number().min(1, "Please select a home team"),
+  awayTeamId: z.number().min(1, "Please select an away team"),
+  location: z.string().min(1, "Location is required"),
+  notes: z.string().optional(),
+  externalLink: z.string().url().optional().or(z.literal("")),
+});
+
 type GameFormData = z.infer<typeof gameSchema>;
 type NewsFormData = z.infer<typeof newsSchema>;
 type EnhancedNewsFormData = z.infer<typeof enhancedNewsSchema>;
 type GameResultFormData = z.infer<typeof gameResultSchema>;
 type PdfArticleFormData = z.infer<typeof pdfArticleSchema>;
+type AddGameSubmissionFormData = z.infer<typeof addGameSubmissionSchema>;
 
 export default function Admin() {
   const { user } = useAuth();
@@ -109,6 +124,7 @@ export default function Admin() {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [approvalDialogDate, setApprovalDialogDate] = useState<Date | null>(null);
+  const [isAddGameSubmissionDialogOpen, setIsAddGameSubmissionDialogOpen] = useState(false);
   const { toast } = useToast();
   
   // File input refs
@@ -619,8 +635,8 @@ export default function Admin() {
     });
   }, [games, selectedSchoolFilter, selectedSportFilter]);
 
-  const moderateSubmission = (id: number, notes?: string) => {
-    moderateSubmissionMutation.mutate({ id, notes });
+  const moderateSubmission = (id: number, action: "approve" | "reject", notes?: string) => {
+    moderateSubmissionMutation.mutate({ id, action, notes });
   };
 
   const formatDate = (date: string | Date) => {
@@ -653,6 +669,15 @@ export default function Admin() {
             <div className="flex justify-between items-center h-16">
               <h1 className="text-2xl font-bold text-white">RVC Admin Dashboard</h1>
               <div className="flex items-center space-x-4">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setLocation("/")}
+                  className="text-white border-white hover:bg-white hover:text-conference-navy"
+                  data-testid="button-back-to-homepage"
+                >
+                  Back to Homepage
+                </Button>
                 <div className="text-white text-sm">
                   <div className="flex items-center">
                     <UserIcon className="h-4 w-4 mr-2" />
@@ -684,8 +709,9 @@ export default function Admin() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${user?.isSuperAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="standings">Conference Standings</TabsTrigger>
             <TabsTrigger value="school">My School</TabsTrigger>
             <TabsTrigger value="news">News</TabsTrigger>
             {user?.isSuperAdmin && (
@@ -695,48 +721,16 @@ export default function Admin() {
 
           {/* Dashboard Tab - Calendar View */}
           <TabsContent value="dashboard" className="space-y-6">
+            {/* Calendar Header */}
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Games Calendar</h2>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">River Valley Conference — Games Calendar</h2>
+                <p className="text-gray-600 mt-1">View and manage scheduled games</p>
+              </div>
               <Badge variant="outline" className="text-conference-navy">
                 {games?.length || 0} Total Games
               </Badge>
             </div>
-
-            {/* Standings Management Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Conference Standings</CardTitle>
-                    <CardDescription>Update standings from completed games</CardDescription>
-                  </div>
-                  <Button 
-                    onClick={() => recalculateStandingsMutation.mutate()}
-                    disabled={recalculateStandingsMutation.isPending}
-                    className="bg-conference-navy hover:bg-conference-gold text-white"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${recalculateStandingsMutation.isPending ? 'animate-spin' : ''}`} />
-                    {recalculateStandingsMutation.isPending ? 'Recalculating...' : 'Recalculate Standings'}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  Recalculate conference standings based on all completed games. This will update wins, losses, 
-                  and percentages for all teams across all sports.
-                </p>
-                <div className="flex items-center space-x-4 text-sm">
-                  <Badge variant="outline" className="text-gray-600">
-                    <Trophy className="h-3 w-3 mr-1" />
-                    Auto-updates after each game result
-                  </Badge>
-                  <Badge variant="outline" className="text-gray-600">
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Manual recalculation available
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Calendar and Sidebar Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -744,8 +738,21 @@ export default function Admin() {
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Games Calendar</CardTitle>
-                    <CardDescription>Navigate to past and future games by selecting dates</CardDescription>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Games Calendar</CardTitle>
+                        <CardDescription>Navigate to past and future games by selecting dates</CardDescription>
+                      </div>
+                      <Button 
+                        size="sm"
+                        onClick={() => setIsAddGameSubmissionDialogOpen(true)}
+                        className="bg-conference-gold hover:bg-conference-navy text-conference-navy hover:text-white"
+                        data-testid="button-add-game"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add a Game
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <CalendarComponent
@@ -918,8 +925,81 @@ export default function Admin() {
                 </Card>
               </div>
             </div>
+
+            {/* Mini Conference Standings */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Quick Standings (Top 5)</CardTitle>
+                    <CardDescription>Conference standings snapshot</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      onClick={() => recalculateStandingsMutation.mutate()}
+                      disabled={recalculateStandingsMutation.isPending}
+                      size="sm"
+                      variant="outline"
+                      className="text-conference-navy border-conference-navy hover:bg-conference-navy hover:text-white"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${recalculateStandingsMutation.isPending ? 'animate-spin' : ''}`} />
+                      Recalculate Standings
+                    </Button>
+                    <Button 
+                      onClick={() => setActiveTab("standings")}
+                      size="sm"
+                      className="bg-conference-navy hover:bg-conference-gold text-white"
+                      data-testid="button-view-full-standings"
+                    >
+                      View full standings →
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  View complete standings with sortable tables in the Conference Standings tab. Auto-updates from approved game results.
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
+          {/* Conference Standings Tab */}
+          <TabsContent value="standings" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Conference Standings</h2>
+                <p className="text-gray-600 mt-1">Sortable standings tables by sport</p>
+              </div>
+              <Button 
+                onClick={() => recalculateStandingsMutation.mutate()}
+                disabled={recalculateStandingsMutation.isPending}
+                className="bg-conference-navy hover:bg-conference-gold text-white"
+                data-testid="button-recalculate-standings"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${recalculateStandingsMutation.isPending ? 'animate-spin' : ''}`} />
+                {recalculateStandingsMutation.isPending ? 'Recalculating...' : 'Recalculate Standings'}
+              </Button>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Standings Management</CardTitle>
+                <CardDescription>
+                  View and manage conference standings. Click "Recalculate Standings" to update from all approved game results.
+                  Admin override available per team (coming soon).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center text-gray-500 py-12">
+                  <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-lg font-medium mb-2">Conference Standings View</p>
+                  <p className="text-sm">Full sortable standings tables will be displayed here.</p>
+                  <p className="text-sm mt-2">Features coming: Sort by any column, admin override per school, streak tracking</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* School Editor Tab */}
           <TabsContent value="school" className="space-y-6">
@@ -1234,7 +1314,11 @@ export default function Admin() {
                       <CardContent className="space-y-4">
                         {gameSubmissions
                           .filter(submission => !submission.isModerated)
-                          .sort((a, b) => new Date(a.submissionDate).getTime() - new Date(b.submissionDate).getTime())
+                          .sort((a, b) => {
+                            const dateA = a.submissionDate ? new Date(a.submissionDate).getTime() : 0;
+                            const dateB = b.submissionDate ? new Date(b.submissionDate).getTime() : 0;
+                            return dateA - dateB;
+                          })
                           .map((submission, index) => (
                           <div 
                             key={submission.id} 
@@ -1248,7 +1332,7 @@ export default function Admin() {
                                     Submission #{index + 1}
                                   </Badge>
                                   <span className="text-xs text-gray-500">
-                                    {new Date(submission.submissionDate).toLocaleString()}
+                                    {submission.submissionDate ? new Date(submission.submissionDate).toLocaleString() : 'Unknown date'}
                                   </span>
                                 </div>
                                 
