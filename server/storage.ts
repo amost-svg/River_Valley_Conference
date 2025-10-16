@@ -1,13 +1,13 @@
 import { 
   schools, sports, games, standings, news, contacts, users, newsUpdated, 
-  gameResultSubmissions, conferenceOfficials, seasons, csvUploads, gameEditLogs, csvGameMappings,
+  gameResultSubmissions, pendingGameSubmissions, conferenceOfficials, seasons, csvUploads, gameEditLogs, csvGameMappings,
   gameResults,
   type School, type Sport, type Game, type Standing, type News, type Contact,
-  type User, type NewsUpdated, type GameResultSubmission, type ConferenceOfficial,
+  type User, type NewsUpdated, type GameResultSubmission, type PendingGameSubmission, type ConferenceOfficial,
   type Season, type CsvUpload, type GameEditLog, type CsvGameMapping, type GameResultDB,
   type InsertSchool, type InsertSport, type InsertGame, type InsertStanding, 
   type InsertNews, type InsertContact, type InsertUser, type InsertNewsUpdated,
-  type InsertGameResultSubmission, type InsertConferenceOfficial, type GameResult,
+  type InsertGameResultSubmission, type InsertPendingGameSubmission, type InsertConferenceOfficial, type GameResult,
   type InsertSeason, type InsertCsvUpload, type InsertGameEditLog, type InsertCsvGameMapping,
   type InsertGameResult
 } from "@shared/schema";
@@ -78,6 +78,12 @@ export interface IStorage {
   getGameResultSubmissionsByDate(date: string): Promise<(GameResultSubmission & { game: Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport } })[]>;
   createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission>;
   moderateGameResultSubmission(id: number, moderatedBy: number, action: 'approve' | 'reject', notes?: string): Promise<GameResultSubmission | undefined>;
+
+  // Pending Game Submissions
+  getPendingGameSubmissions(): Promise<PendingGameSubmission[]>;
+  createPendingGameSubmission(submission: InsertPendingGameSubmission): Promise<PendingGameSubmission>;
+  approvePendingGameSubmission(id: number, moderatedBy: number, notes?: string): Promise<Game | undefined>;
+  rejectPendingGameSubmission(id: number, moderatedBy: number, notes?: string): Promise<PendingGameSubmission | undefined>;
 
   // Conference Officials
   getConferenceOfficials(): Promise<(ConferenceOfficial & { school: School })[]>;
@@ -1589,6 +1595,84 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updatedSubmission || undefined;
+  }
+
+  // Pending Game Submissions
+  async getPendingGameSubmissions(): Promise<PendingGameSubmission[]> {
+    return await db
+      .select()
+      .from(pendingGameSubmissions)
+      .where(
+        and(
+          eq(pendingGameSubmissions.isApproved, false),
+          eq(pendingGameSubmissions.isRejected, false)
+        )
+      );
+  }
+
+  async createPendingGameSubmission(submission: InsertPendingGameSubmission): Promise<PendingGameSubmission> {
+    const [newSubmission] = await db
+      .insert(pendingGameSubmissions)
+      .values(submission)
+      .returning();
+    return newSubmission;
+  }
+
+  async approvePendingGameSubmission(id: number, moderatedBy: number, notes?: string): Promise<Game | undefined> {
+    // Get the pending submission
+    const [pending] = await db
+      .select()
+      .from(pendingGameSubmissions)
+      .where(eq(pendingGameSubmissions.id, id));
+    
+    if (!pending) return undefined;
+
+    // Create the actual game from the pending submission
+    const [newGame] = await db
+      .insert(games)
+      .values({
+        sportId: pending.sportId,
+        level: pending.level,
+        isConferenceGame: pending.isConference,
+        gameDate: pending.gameDate,
+        gameTime: pending.gameTime,
+        homeTeamId: pending.homeTeamId || undefined,
+        awayTeamId: pending.awayTeamId || undefined,
+        homeTeamName: pending.homeTeamName || undefined,
+        awayTeamName: pending.awayTeamName || undefined,
+        location: pending.location,
+        notes: pending.notes || undefined,
+        isCompleted: false,
+      })
+      .returning();
+
+    // Mark the pending submission as approved
+    await db
+      .update(pendingGameSubmissions)
+      .set({
+        isApproved: true,
+        moderatedBy,
+        moderationNotes: notes || null,
+        moderationDate: new Date(),
+      })
+      .where(eq(pendingGameSubmissions.id, id));
+
+    return newGame;
+  }
+
+  async rejectPendingGameSubmission(id: number, moderatedBy: number, notes?: string): Promise<PendingGameSubmission | undefined> {
+    const [rejected] = await db
+      .update(pendingGameSubmissions)
+      .set({
+        isRejected: true,
+        moderatedBy,
+        moderationNotes: notes || null,
+        moderationDate: new Date(),
+      })
+      .where(eq(pendingGameSubmissions.id, id))
+      .returning();
+    
+    return rejected || undefined;
   }
 
   // Conference Officials

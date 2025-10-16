@@ -46,6 +46,7 @@ import { insertGameSchema, insertNewsSchema, insertNewsUpdatedSchema } from "@sh
 import SchoolEditor from "@/components/SchoolEditor";
 import ScheduleUploader from "@/components/ScheduleUploader";
 import SuperAdminPanel from "@/components/SuperAdminPanel";
+import { AddGameDialog } from "@/components/AddGameDialog";
 import rvcLogoPath from "@assets/RVC logo (3)_1754075250117.png";
 
 // Form schemas
@@ -1513,6 +1514,12 @@ export default function Admin() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Add Game Dialog */}
+        <AddGameDialog
+          open={isAddGameSubmissionDialogOpen}
+          onOpenChange={setIsAddGameSubmissionDialogOpen}
+        />
       </div>
     </div>
   );

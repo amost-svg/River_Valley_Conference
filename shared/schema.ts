@@ -146,6 +146,31 @@ export const gameResultSubmissions = pgTable("game_result_submissions", {
   moderationNotes: text("moderation_notes"),
 });
 
+// Pending game submissions (Add a Game feature)
+export const pendingGameSubmissions = pgTable("pending_game_submissions", {
+  id: serial("id").primaryKey(),
+  sportId: integer("sport_id").references(() => sports.id).notNull(),
+  level: text("level").notNull(), // "Varsity", "JV", etc.
+  isConference: boolean("is_conference").notNull(),
+  gameDate: timestamp("game_date").notNull(),
+  gameTime: text("game_time").notNull(),
+  homeTeamId: integer("home_team_id").references(() => schools.id),
+  awayTeamId: integer("away_team_id").references(() => schools.id),
+  homeTeamName: text("home_team_name"), // For non-RVC opponents
+  awayTeamName: text("away_team_name"), // For non-RVC opponents
+  location: text("location").notNull(),
+  notes: text("notes"),
+  externalLink: text("external_link"),
+  submitterName: text("submitter_name").notNull(),
+  submitterEmail: text("submitter_email").notNull(),
+  submissionDate: timestamp("submission_date").defaultNow(),
+  isApproved: boolean("is_approved").default(false),
+  isRejected: boolean("is_rejected").default(false),
+  moderatedBy: integer("moderated_by").references(() => users.id),
+  moderationNotes: text("moderation_notes"),
+  moderationDate: timestamp("moderation_date"),
+});
+
 // Conference officials/officers
 export const conferenceOfficials = pgTable("conference_officials", {
   id: serial("id").primaryKey(),
@@ -235,6 +260,15 @@ export const insertContactSchema = createInsertSchema(contacts).omit({ id: true,
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertNewsUpdatedSchema = createInsertSchema(newsUpdated).omit({ id: true });
 export const insertGameResultSubmissionSchema = createInsertSchema(gameResultSubmissions).omit({ id: true, submissionDate: true });
+export const insertPendingGameSubmissionSchema = createInsertSchema(pendingGameSubmissions).omit({ 
+  id: true, 
+  submissionDate: true, 
+  isApproved: true, 
+  isRejected: true, 
+  moderatedBy: true, 
+  moderationNotes: true, 
+  moderationDate: true 
+});
 export const insertConferenceOfficialSchema = createInsertSchema(conferenceOfficials).omit({ id: true });
 export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, createdAt: true });
 export const insertCsvUploadSchema = createInsertSchema(csvUploads).omit({ id: true, uploadDate: true });

@@ -154,7 +154,15 @@ Default login credentials (password: "password" - should be changed):
 - **Role-based Access**: Separate authentication for Athletic Directors and conference officials
 - **Admin Dashboard**: Comprehensive admin interface with game management, news publishing, and submission moderation
 - **Game Result Submissions**: Public form allowing visitors to submit game results for review
+- **Add Game Submissions**: Athletic Directors and public users can submit new games to the schedule for admin approval
 - **Google Calendar Integration**: Real-time synchronization with 8 sport-specific Google Calendars
+
+### Game Submission System (Added October 2025)
+- **Add a Game Feature**: Public submission form for adding games to the conference schedule
+- **Dual Team Selection**: Toggle between conference school selection and custom team names for non-conference games
+- **Pending Submissions**: All submissions stored in pending state awaiting admin approval/rejection
+- **Admin Moderation**: Approve submissions to add games to schedule, or reject with moderation notes
+- **Complete Workflow**: Form validation, success notifications, and automatic dialog management
 
 ### Enhanced User Experience
 - **Homepage Restructuring**: Updated section ordering with proper anchor navigation (Home → Schedules → Schools → About → News → Contact)
@@ -200,6 +208,7 @@ Default login credentials (password: "password" - should be changed):
 
 ```
 Changelog:
+- October 16, 2025. Added "Add a Game" submission system with pending approval workflow and dual team selection
 - August 01, 2025. Implemented comprehensive visual design system with school colors integration
 - August 01, 2025. Enhanced all components with modern gradients, card designs, and color-coded elements
 - August 01, 2025. Added comprehensive news management with PDF upload and image upload capabilities

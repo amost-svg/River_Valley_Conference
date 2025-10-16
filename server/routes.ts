@@ -7,7 +7,7 @@ import fs from "fs/promises";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { storage } from "./storage";
-import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertNewsUpdatedSchema, insertCsvUploadSchema, gameResultEntrySchema } from "@shared/schema";
+import { insertContactSchema, insertSchoolSchema, insertSportSchema, insertGameSchema, insertStandingSchema, insertNewsSchema, insertUserSchema, insertGameResultSubmissionSchema, insertPendingGameSubmissionSchema, insertNewsUpdatedSchema, insertCsvUploadSchema, gameResultEntrySchema } from "@shared/schema";
 import { computeSummary, validateScoringDetails } from "@shared/scoring";
 import { SPORT_TO_SCORING_TYPE, getSportProfile } from "@shared/scoringProfiles";
 // import { ICalParser } from "./ical-parser"; // Removed - replaced with CSV parser
@@ -832,6 +832,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error resolving duplicate:", error);
       res.status(500).json({ message: "Failed to resolve duplicate" });
+    }
+  });
+
+  // Pending Game Submissions
+  app.post("/api/pending-game-submissions", async (req, res) => {
+    try {
+      const validatedData = insertPendingGameSubmissionSchema.parse(req.body);
+      const submission = await storage.createPendingGameSubmission(validatedData);
+      res.status(201).json({ 
+        message: "Game submitted successfully. It will be reviewed before publishing.",
+        submission 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to submit game" });
+    }
+  });
+
+  // Get pending game submissions (Admin)
+  app.get("/api/admin/pending-game-submissions", requireAuth, async (req, res) => {
+    try {
+      const submissions = await storage.getPendingGameSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch pending game submissions" });
+    }
+  });
+
+  // Approve pending game submission (Admin)
+  app.post("/api/admin/pending-game-submissions/:id/approve", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { notes } = req.body;
+      const moderatedBy = (req as any).user.id;
+      
+      const game = await storage.approvePendingGameSubmission(id, moderatedBy, notes);
+      if (!game) {
+        return res.status(404).json({ message: "Pending submission not found" });
+      }
+      
+      res.json({ 
+        message: "Game approved and added to schedule successfully.",
+        game 
+      });
+    } catch (error) {
+      console.error("Error approving game submission:", error);
+      res.status(500).json({ message: "Failed to approve game submission" });
+    }
+  });
+
+  // Reject pending game submission (Admin)
+  app.post("/api/admin/pending-game-submissions/:id/reject", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { notes } = req.body;
+      const moderatedBy = (req as any).user.id;
+      
+      const submission = await storage.rejectPendingGameSubmission(id, moderatedBy, notes);
+      if (!submission) {
+        return res.status(404).json({ message: "Pending submission not found" });
+      }
+      
+      res.json({ 
+        message: "Game submission rejected.",
+        submission 
+      });
+    } catch (error) {
+      console.error("Error rejecting game submission:", error);
+      res.status(500).json({ message: "Failed to reject game submission" });
     }
   });
 
