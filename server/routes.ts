@@ -1140,6 +1140,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Convert publishDate string back to Date object if needed
+      if (formData.publishDate && typeof formData.publishDate === 'string') {
+        formData.publishDate = new Date(formData.publishDate);
+      }
+
       const validatedData = insertNewsUpdatedSchema.parse(formData);
       const news = await storage.createNewsUpdated(validatedData);
       
