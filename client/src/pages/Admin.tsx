@@ -545,6 +545,34 @@ export default function Admin() {
     },
   });
 
+  // Toggle publish mutation
+  const togglePublishMutation = useMutation({
+    mutationFn: async ({ id, isPublished }: { id: number; isPublished: boolean }) => {
+      return apiRequest("PATCH", `/api/admin/news-updated/${id}`, { isPublished });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Article updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/news-updated"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update article", variant: "destructive" });
+    },
+  });
+
+  // Delete article mutation
+  const deleteArticleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/admin/news-updated/${id}`, {});
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Article deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/news-updated"] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete article", variant: "destructive" });
+    },
+  });
+
   const onSubmitGame = (data: GameFormData) => {
     createGameMutation.mutate(data);
   };
@@ -563,6 +591,29 @@ export default function Admin() {
 
   const onSubmitGameResult = (data: GameResultFormData) => {
     submitGameResultMutation.mutate(data);
+  };
+
+  // News management handlers
+  const handleTogglePublish = (article: NewsUpdated & { author: User }) => {
+    togglePublishMutation.mutate({
+      id: article.id,
+      isPublished: !article.isPublished
+    });
+  };
+
+  const handleEditArticle = (article: NewsUpdated & { author: User }) => {
+    // TODO: Implement edit dialog with pre-filled data
+    toast({ 
+      title: "Edit Feature", 
+      description: "Edit functionality coming soon", 
+      variant: "default" 
+    });
+  };
+
+  const handleDeleteArticle = (id: number) => {
+    if (confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
+      deleteArticleMutation.mutate(id);
+    }
   };
 
   // Helper functions for Results tab
@@ -1124,28 +1175,95 @@ export default function Admin() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Published Articles</CardTitle>
+                <CardTitle>All Articles</CardTitle>
                 <CardDescription>Manage conference news and announcements</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {news?.slice(0, 10).map((article) => (
-                    <div key={article.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{article.title}</h4>
-                        <p className="text-sm text-gray-600 mt-1">{article.excerpt}</p>
-                        <div className="flex items-center space-x-4 mt-2">
-                          <Badge variant="outline">{article.category}</Badge>
-                          <span className="text-xs text-gray-500">
-                            {new Date(article.publishDate).toLocaleDateString()}
-                          </span>
+                  {enhancedNews && enhancedNews.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <p>No articles yet. Create your first article above.</p>
+                    </div>
+                  ) : (
+                    enhancedNews?.map((article) => (
+                      <div key={article.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors" data-testid={`article-item-${article.id}`}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium text-lg">{article.title}</h4>
+                            {!article.isPublished && (
+                              <Badge variant="secondary" className="text-xs">Draft</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-3">{article.excerpt}</p>
+                          <div className="flex items-center flex-wrap gap-3">
+                            <Badge variant="outline">{article.category}</Badge>
+                            <span className="text-xs text-gray-500">
+                              {new Date(article.publishDate).toLocaleDateString()}
+                            </span>
+                            {article.author && (
+                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <UserIcon className="h-3 w-3" />
+                                {article.author.username}
+                              </span>
+                            )}
+                            <div className="flex items-center gap-2">
+                              {article.imageUrl && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <ImageIcon className="h-3 w-3 mr-1" />
+                                  Image
+                                </Badge>
+                              )}
+                              {article.pdfUrl && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  PDF
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 ml-4">
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor={`publish-toggle-${article.id}`} className="text-xs text-gray-600">
+                              {article.isPublished ? 'Published' : 'Draft'}
+                            </Label>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleTogglePublish(article)}
+                              className="h-8 px-2"
+                              data-testid={`button-toggle-publish-${article.id}`}
+                            >
+                              {article.isPublished ? (
+                                <Eye className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" />
+                              )}
+                            </Button>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditArticle(article)}
+                            className="h-8 px-2"
+                            data-testid={`button-edit-article-${article.id}`}
+                          >
+                            <Edit className="h-4 w-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteArticle(article.id)}
+                            className="h-8 px-2"
+                            data-testid={`button-delete-article-${article.id}`}
+                          >
+                            <X className="h-4 w-4 text-red-600" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {article.imageUrl && <ImageIcon className="h-4 w-4 text-blue-600" />}
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

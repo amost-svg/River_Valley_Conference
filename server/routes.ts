@@ -1056,6 +1056,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/admin/news-updated/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedNews = await storage.updateNewsUpdated(id, req.body);
+      if (!updatedNews) {
+        return res.status(404).json({ message: "News article not found" });
+      }
+      res.json(updatedNews);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update news article" });
+    }
+  });
+
+  app.delete("/api/admin/news-updated/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteNewsUpdated(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "News article not found" });
+      }
+      res.json({ message: "News article deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete news article" });
+    }
+  });
+
   // File Upload Routes
   app.post("/api/admin/upload/image", upload.single('image'), (req, res) => {
     try {

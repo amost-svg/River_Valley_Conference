@@ -71,6 +71,7 @@ export interface IStorage {
   getNewsUpdatedById(id: number): Promise<(NewsUpdated & { author: User }) | undefined>;
   createNewsUpdated(news: InsertNewsUpdated): Promise<NewsUpdated>;
   updateNewsUpdated(id: number, news: Partial<InsertNewsUpdated>): Promise<NewsUpdated | undefined>;
+  deleteNewsUpdated(id: number): Promise<boolean>;
 
   // Game Result Submissions
   getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport } })[]>;
@@ -723,6 +724,7 @@ export class MemStorage implements IStorage {
   async getNewsUpdatedById(id: number): Promise<(NewsUpdated & { author: User }) | undefined> { return undefined; }
   async createNewsUpdated(news: InsertNewsUpdated): Promise<NewsUpdated> { return { ...news, id: 1, isPublished: true, excerpt: news.excerpt || null, imageUrl: news.imageUrl || null, pdfUrl: news.pdfUrl || null }; }
   async updateNewsUpdated(id: number, news: Partial<InsertNewsUpdated>): Promise<NewsUpdated | undefined> { return undefined; }
+  async deleteNewsUpdated(id: number): Promise<boolean> { return false; }
   async getGameResultSubmissions(): Promise<(GameResultSubmission & { game: Game & { homeTeam: School; awayTeam: School; sport: Sport } })[]> { 
     // Return submissions with enriched game data
     return Array.from(this.gameResultSubmissions.values()).map(submission => {
@@ -1501,6 +1503,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(newsUpdated.id, id))
       .returning();
     return updatedNews || undefined;
+  }
+
+  async deleteNewsUpdated(id: number): Promise<boolean> {
+    const result = await db
+      .delete(newsUpdated)
+      .where(eq(newsUpdated.id, id))
+      .returning();
+    return result.length > 0;
   }
 
   // Game Result Submissions
