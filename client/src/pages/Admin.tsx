@@ -49,6 +49,7 @@ import SchoolEditor from "@/components/SchoolEditor";
 import ScheduleUploader from "@/components/ScheduleUploader";
 import SuperAdminPanel from "@/components/SuperAdminPanel";
 import { AddGameDialog } from "@/components/AddGameDialog";
+import { PendingSubmissionsDialog } from "@/components/PendingSubmissionsDialog";
 import rvcLogoPath from "@assets/RVC logo (3)_1754075250117.png";
 
 // Form schemas
@@ -129,6 +130,7 @@ export default function Admin() {
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [approvalDialogDate, setApprovalDialogDate] = useState<Date | null>(null);
   const [isAddGameSubmissionDialogOpen, setIsAddGameSubmissionDialogOpen] = useState(false);
+  const [isPendingSubmissionsDialogOpen, setIsPendingSubmissionsDialogOpen] = useState(false);
   const { toast } = useToast();
   
   // File input refs
@@ -980,13 +982,7 @@ export default function Admin() {
                   {/* Pending Games */}
                   <div 
                     className="p-4 bg-white rounded-lg border border-orange-200 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      // TODO: Open pending games modal
-                      toast({
-                        title: "Pending Games",
-                        description: `${pendingGameSubmissions?.length || 0} games awaiting approval`
-                      });
-                    }}
+                    onClick={() => setIsPendingSubmissionsDialogOpen(true)}
                     data-testid="card-pending-games"
                   >
                     <div className="flex items-center justify-between">
@@ -1002,13 +998,7 @@ export default function Admin() {
                   {/* Pending Results */}
                   <div 
                     className="p-4 bg-white rounded-lg border border-orange-200 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      // TODO: Open pending results modal
-                      toast({
-                        title: "Pending Results",
-                        description: `${submissions?.filter(s => !s.isModerated).length || 0} results awaiting approval`
-                      });
-                    }}
+                    onClick={() => setIsPendingSubmissionsDialogOpen(true)}
                     data-testid="card-pending-results"
                   >
                     <div className="flex items-center justify-between">
@@ -1591,6 +1581,12 @@ export default function Admin() {
         <AddGameDialog
           open={isAddGameSubmissionDialogOpen}
           onOpenChange={setIsAddGameSubmissionDialogOpen}
+        />
+
+        {/* Pending Submissions Dialog */}
+        <PendingSubmissionsDialog
+          open={isPendingSubmissionsDialogOpen}
+          onOpenChange={setIsPendingSubmissionsDialogOpen}
         />
       </div>
     </div>
