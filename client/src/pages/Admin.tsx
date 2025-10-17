@@ -736,7 +736,7 @@ export default function Admin() {
                   variant="outline" 
                   size="sm"
                   onClick={() => setLocation("/")}
-                  className="text-white border-white hover:bg-white hover:text-conference-navy"
+                  className="text-white border-white hover:bg-white hover:text-conference-navy bg-[#dddedf]"
                   data-testid="button-back-to-homepage"
                 >
                   Back to Homepage
