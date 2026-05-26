@@ -1,0 +1,122 @@
+I want to migrate the River Valley Conference website from a Replit/Express/PostgreSQL app to a Cloudflare Pages frontend with a Supabase backend.
+
+Do not rewrite the app yet. First, perform a full technical audit and create a migration plan.
+
+Current app:
+- React/Vite frontend
+- Express backend
+- Drizzle/PostgreSQL schema
+- Existing API routes in server/routes.ts
+- Existing database schema in shared/schema.ts
+- Existing storage logic in server/storage.ts
+- Existing local uploads folder
+- Existing admin/login/session system
+- Some old Flask/SQLite remnants may still exist in the repo
+
+Target architecture:
+- Cloudflare Pages for the frontend
+- Supabase Postgres for database
+- Supabase Auth for authentication
+- Supabase Storage for images/PDF uploads
+- Supabase RLS policies for authorization
+- Cloudflare Pages Functions only for privileged server-side tasks such as CSV imports, standings recalculation, duplicate resolution, and email notifications
+
+Please create a detailed migration audit with these sections:
+
+1. Current app structure
+   - Frontend files
+   - Backend files
+   - Shared schema files
+   - Old/legacy files that should be removed later
+   - Upload/storage locations
+   - Build scripts
+
+2. Current API inventory
+   Create a table of every /api route found in server/routes.ts.
+   For each route include:
+   - Method
+   - Path
+   - Purpose
+   - Public or authenticated
+   - Database tables touched
+   - Whether it should become direct Supabase client access, a Cloudflare Pages Function, or a Supabase Edge Function
+
+3. Current database inventory
+   Analyze shared/schema.ts.
+   List every table.
+   For each table include:
+   - Purpose
+   - Current columns
+   - Relationships
+   - Whether it should stay, be renamed, be merged, or be removed
+   - Suggested Supabase table name
+   - Suggested indexes
+   - Suggested RLS policy needs
+
+4. Auth migration plan
+   Analyze the current users/session/auth system.
+   Propose a Supabase Auth replacement.
+   Create a recommended profiles table tied to auth.users.
+   Define roles:
+   - super_admin
+   - conference_admin
+   - athletic_director
+   - principal
+   - school_user
+
+5. RLS policy plan
+   Propose row-level security policies for:
+   - Public read tables
+   - Authenticated school-specific users
+   - Super admins
+   - Pending submissions
+   - Game result submissions
+   - News publishing
+   - Storage uploads
+
+6. Storage migration plan
+   Identify all local upload usage.
+   Propose Supabase Storage buckets:
+   - school-assets
+   - news-images
+   - news-pdfs
+   - uploads
+   Include public/private recommendations and access rules.
+
+7. Frontend migration plan
+   Identify every place the frontend calls /api/*.
+   Propose how each query/mutation should be rewritten:
+   - Direct Supabase client
+   - Cloudflare Pages Function
+   - Supabase Edge Function
+
+8. Build/deployment plan
+   Propose changes needed for Cloudflare Pages:
+   - build:client script
+   - dist/public output
+   - wrangler.toml
+   - _redirects
+   - environment variables
+   - removal of Replit dev banner
+
+9. Cleanup plan
+   Identify files that appear legacy or should not be committed/deployed:
+   - .agents
+   - .config
+   - flask_app
+   - local SQLite files
+   - uploaded test PDFs
+   - attached_assets that are no longer used
+   - old generated zip files
+   - local database files
+
+10. Migration phases
+   Break the work into safe phases.
+   Each phase should have:
+   - Goal
+   - Files changed
+   - Risk level
+   - Test checklist
+   - Rollback plan
+
+Do not make code changes yet. Produce the audit as a markdown document called SUPABASE_MIGRATION_PLAN.md.
