@@ -166,6 +166,7 @@ const GolfForm = forwardRef<FormHandle, GolfFormProps>(({ game, onSubmit, onVali
     submit: () => {
       form.handleSubmit(handleSubmit)();
     },
+    isValid: () => form.formState.isValid,
   }));
 
   return (

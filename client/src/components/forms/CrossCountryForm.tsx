@@ -185,6 +185,7 @@ const CrossCountryForm = forwardRef<FormHandle, CrossCountryFormProps>(({ game, 
     submit: () => {
       form.handleSubmit(handleSubmit)();
     },
+    isValid: () => form.formState.isValid,
   }));
 
   return (

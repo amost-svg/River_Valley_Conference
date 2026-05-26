@@ -161,6 +161,7 @@ const BaseballForm = forwardRef<FormHandle, BaseballFormProps>(({ game, onSubmit
     submit: () => {
       form.handleSubmit(handleSubmit)();
     },
+    isValid: () => form.formState.isValid,
   }));
 
   return (

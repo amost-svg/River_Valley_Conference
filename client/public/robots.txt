@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://rivervalleyconference.com/sitemap.xml
+
+# Disallow admin areas for search engines
+Disallow: /admin/
+Disallow: /api/
+
+# Allow access to public assets
+Allow: /assets/
+Allow: /public/
+Allow: /*.css
+Allow: /*.js
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.gif
+Allow: /*.svg
+Allow: /*.webp
+
+# Crawl delay
+Crawl-delay: 1

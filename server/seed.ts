@@ -6,16 +6,16 @@ async function seedDatabase() {
 
   // Insert schools
   const schoolsData = [
-    { name: "Beecher High School", mascot: "Bobcats", location: "Beecher, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/beecher-min.png" },
-    { name: "Central High School", mascot: "Comets", location: "Clifton, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/central-min.png" },
-    { name: "Donovan High School", mascot: "Wildcats", location: "Donovan, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/donovan-min1.png" },
-    { name: "Gardner South Wilmington High School", mascot: "Panthers", location: "Gardner, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gsw-min.png" },
-    { name: "Grace Christian Academy", mascot: "Crusaders", location: "Huntley, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gca-min.png" },
-    { name: "Grant Park High School", mascot: "Dragons", location: "Grant Park, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gp-min.png" },
-    { name: "Illinois Lutheran High School", mascot: "Chargers", location: "Crete, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/ill-luth-min.png" },
-    { name: "Momence High School", mascot: "Redskins", location: "Momence, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/momence-min.png" },
-    { name: "St. Anne High School", mascot: "Cardinals", location: "St. Anne, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/stanne-min.png" },
-    { name: "Tri-Point High School", mascot: "Chargers", location: "Cullom, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/tripoint-min.png" },
+    { name: "Beecher High School", mascot: "Bobcats", address: "Beecher, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/beecher-min.png" },
+    { name: "Central High School", mascot: "Comets", address: "Clifton, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/central-min.png" },
+    { name: "Donovan High School", mascot: "Wildcats", address: "Donovan, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/donovan-min1.png" },
+    { name: "Gardner South Wilmington High School", mascot: "Panthers", address: "Gardner, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gsw-min.png" },
+    { name: "Grace Christian Academy", mascot: "Crusaders", address: "Huntley, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gca-min.png" },
+    { name: "Grant Park High School", mascot: "Dragons", address: "Grant Park, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/gp-min.png" },
+    { name: "Illinois Lutheran High School", mascot: "Chargers", address: "Crete, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/ill-luth-min.png" },
+    { name: "Momence High School", mascot: "Redskins", address: "Momence, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/momence-min.png" },
+    { name: "St. Anne High School", mascot: "Cardinals", address: "St. Anne, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/stanne-min.png" },
+    { name: "Tri-Point High School", mascot: "Chargers", address: "Cullom, IL", imageUrl: "https://www.rvc-il.com/uploads/2/2/3/6/22362378/tripoint-min.png" },
   ];
 
   await db.insert(schools).values(schoolsData);

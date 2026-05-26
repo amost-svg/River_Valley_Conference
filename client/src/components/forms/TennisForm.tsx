@@ -149,6 +149,7 @@ const TennisForm = forwardRef<FormHandle, TennisFormProps>(({ game, onSubmit, on
     submit: () => {
       form.handleSubmit(handleSubmit)();
     },
+    isValid: () => form.formState.isValid,
   }));
 
   return (

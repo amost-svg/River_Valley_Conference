@@ -155,7 +155,7 @@ export default function GlobalCalendar() {
         userId: user?.id 
       });
     },
-    onSuccess: (data, sport) => {
+    onSuccess: (data: any, sport) => {
       toast({
         title: "Calendar Synced Successfully",
         description: `${data.calendarName}: ${data.eventsImported} events imported, ${data.duplicatesSkipped} duplicates skipped`,

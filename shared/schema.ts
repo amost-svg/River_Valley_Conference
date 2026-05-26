@@ -602,6 +602,7 @@ export type Contact = typeof contacts.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewsUpdated = typeof newsUpdated.$inferSelect;
 export type GameResultSubmission = typeof gameResultSubmissions.$inferSelect;
+export type PendingGameSubmission = typeof pendingGameSubmissions.$inferSelect;
 export type ConferenceOfficial = typeof conferenceOfficials.$inferSelect;
 
 export type InsertSchool = z.infer<typeof insertSchoolSchema>;
@@ -613,6 +614,7 @@ export type InsertContact = z.infer<typeof insertContactSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertNewsUpdated = z.infer<typeof insertNewsUpdatedSchema>;
 export type InsertGameResultSubmission = z.infer<typeof insertGameResultSubmissionSchema>;
+export type InsertPendingGameSubmission = z.infer<typeof insertPendingGameSubmissionSchema>;
 export type InsertConferenceOfficial = z.infer<typeof insertConferenceOfficialSchema>;
 export type Season = typeof seasons.$inferSelect;
 export type CsvUpload = typeof csvUploads.$inferSelect;

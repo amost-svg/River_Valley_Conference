@@ -180,6 +180,7 @@ const TrackForm = forwardRef<FormHandle, TrackFormProps>(({ game, onSubmit, onVa
     submit: () => {
       form.handleSubmit(handleSubmit)();
     },
+    isValid: () => form.formState.isValid,
   }));
 
   return (

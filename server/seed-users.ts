@@ -129,7 +129,7 @@ async function seedUsers() {
     
     // Display final user count by school
     console.log("\n=== Users by School ===");
-    for (const [schoolName, schoolId] of schoolMap) {
+    for (const [schoolName, schoolId] of Array.from(schoolMap.entries())) {
       const schoolUsers = await db.select().from(users).where(eq(users.schoolId, schoolId));
       console.log(`${schoolName}: ${schoolUsers.length} users`);
       schoolUsers.forEach(user => {

@@ -165,6 +165,7 @@ const WrestlingForm = forwardRef<FormHandle, WrestlingFormProps>(({ game, onSubm
     submit: () => {
       form.handleSubmit(handleSubmit)();
     },
+    isValid: () => form.formState.isValid,
   }));
 
   return (

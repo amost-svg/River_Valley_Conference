@@ -223,7 +223,7 @@ export class MemStorage implements IStorage {
         homeScore: game.homeScore || null,
         awayScore: game.awayScore || null,
         isCompleted: game.isCompleted || false
-      });
+      } as Game);
     });
 
     // Initialize standings for River Valley Conference schools
@@ -427,7 +427,18 @@ export class MemStorage implements IStorage {
       notes: game.notes || null,
       externalEventId: game.externalEventId || null,
       uploadedBy: game.uploadedBy || null,
-      createdAt: game.createdAt || new Date()
+      createdAt: game.createdAt || new Date(),
+      isDuplicateResolved: game.isDuplicateResolved ?? null,
+      duplicateOfGameId: game.duplicateOfGameId ?? null,
+      gameOwnerSchoolId: game.gameOwnerSchoolId ?? null,
+      gameSummary: game.gameSummary ?? null,
+      keyPlayers: game.keyPlayers ?? null,
+      gameHighlights: game.gameHighlights ?? null,
+      nextGameInfo: game.nextGameInfo ?? null,
+      recordAfterGame: game.recordAfterGame ?? null,
+      conferenceRecord: game.conferenceRecord ?? null,
+      resultEnteredBy: game.resultEnteredBy ?? null,
+      resultEnteredAt: game.resultEnteredAt ?? null,
     };
     this.games.set(id, newGame);
     return newGame;
@@ -751,7 +762,7 @@ export class MemStorage implements IStorage {
     Array.from(this.gameResultSubmissions.values())
       .filter(submission => !submission.isModerated)
       .forEach(submission => {
-        const dateKey = submission.submissionDate.toISOString().split('T')[0];
+        const dateKey = submission.submissionDate?.toISOString().split('T')[0] ?? '';
         submissionsByDate[dateKey] = (submissionsByDate[dateKey] || 0) + 1;
       });
       
@@ -763,14 +774,15 @@ export class MemStorage implements IStorage {
     const targetDate = new Date(date);
     const submissions = Array.from(this.gameResultSubmissions.values())
       .filter(submission => {
+        if (!submission.submissionDate) return false;
         const submissionDate = new Date(submission.submissionDate);
         return submissionDate.toISOString().split('T')[0] === date && !submission.isModerated;
       });
     
     return submissions.map(submission => {
       const game = this.games.get(submission.gameId);
-      const homeTeam = game?.homeTeamId ? this.schools.get(game.homeTeamId) : null;
-      const awayTeam = game?.awayTeamId ? this.schools.get(game.awayTeamId) : null;
+      const homeTeam = game?.homeTeamId ? (this.schools.get(game.homeTeamId) ?? null) : null;
+      const awayTeam = game?.awayTeamId ? (this.schools.get(game.awayTeamId) ?? null) : null;
       const sport = game?.sportId ? this.sports.get(game.sportId) : null;
       
       return {
@@ -995,6 +1007,22 @@ export class MemStorage implements IStorage {
   async deleteGameResult(id: number): Promise<boolean> {
     return this.gameResults.delete(id);
   }
+
+  async getPendingGameSubmissions(): Promise<PendingGameSubmission[]> {
+    return [];
+  }
+
+  async createPendingGameSubmission(submission: InsertPendingGameSubmission): Promise<PendingGameSubmission> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async approvePendingGameSubmission(id: number, moderatedBy: number, notes?: string): Promise<Game | undefined> {
+    return undefined;
+  }
+
+  async rejectPendingGameSubmission(id: number, moderatedBy: number, notes?: string): Promise<PendingGameSubmission | undefined> {
+    return undefined;
+  }
 }
 
 // DatabaseStorage implementation
@@ -1072,7 +1100,9 @@ export class DatabaseStorage implements IStorage {
     // Get away teams separately
     const gamesWithDetails = [];
     for (const row of result) {
-      const [awayTeam] = await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId));
+      const [awayTeam] = row.game.awayTeamId !== null
+        ? await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId))
+        : [undefined];
       gamesWithDetails.push({
         ...row.game,
         homeTeam: row.homeTeam!,
@@ -1099,7 +1129,9 @@ export class DatabaseStorage implements IStorage {
     // Get away teams separately
     const gamesWithDetails = [];
     for (const row of result) {
-      const [awayTeam] = await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId));
+      const [awayTeam] = row.game.awayTeamId !== null
+        ? await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId))
+        : [undefined];
       gamesWithDetails.push({
         ...row.game,
         homeTeam: row.homeTeam!,
@@ -1530,7 +1562,9 @@ export class DatabaseStorage implements IStorage {
     // Get away teams separately
     const submissionsWithDetails = [];
     for (const row of result) {
-      const [awayTeam] = await db.select().from(schools).where(eq(schools.id, row.game!.awayTeamId));
+      const [awayTeam] = row.game!.awayTeamId !== null
+        ? await db.select().from(schools).where(eq(schools.id, row.game!.awayTeamId))
+        : [undefined];
       submissionsWithDetails.push({
         ...row.submission,
         game: {
@@ -1565,6 +1599,41 @@ export class DatabaseStorage implements IStorage {
     }
 
     return submissionsByDate;
+  }
+
+  async getGameResultSubmissionsByDate(date: string): Promise<(GameResultSubmission & { game: Game & { homeTeam: School | null; awayTeam: School | null; sport: Sport } })[]> {
+    const result = await db
+      .select({
+        submission: gameResultSubmissions,
+        game: games,
+        homeTeam: schools,
+        sport: sports,
+      })
+      .from(gameResultSubmissions)
+      .leftJoin(games, eq(gameResultSubmissions.gameId, games.id))
+      .leftJoin(schools, eq(games.homeTeamId, schools.id))
+      .leftJoin(sports, eq(games.sportId, sports.id))
+      .where(eq(gameResultSubmissions.isModerated, false));
+
+    const submissionsWithDetails = [];
+    for (const row of result) {
+      if (!row.submission || !row.game) continue;
+      const submissionDate = row.submission.submissionDate;
+      if (!submissionDate || submissionDate.toISOString().split('T')[0] !== date) continue;
+      const [awayTeam] = row.game.awayTeamId !== null
+        ? await db.select().from(schools).where(eq(schools.id, row.game.awayTeamId))
+        : [undefined];
+      submissionsWithDetails.push({
+        ...row.submission,
+        game: {
+          ...row.game,
+          homeTeam: row.homeTeam ?? null,
+          awayTeam: awayTeam ?? null,
+          sport: row.sport!,
+        }
+      });
+    }
+    return submissionsWithDetails;
   }
 
   async createGameResultSubmission(submission: InsertGameResultSubmission): Promise<GameResultSubmission> {

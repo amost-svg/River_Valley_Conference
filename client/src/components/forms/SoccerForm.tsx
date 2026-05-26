@@ -164,6 +164,7 @@ const SoccerForm = forwardRef<FormHandle, SoccerFormProps>(({ game, onSubmit, on
     submit: () => {
       form.handleSubmit(handleSubmit)();
     },
+    isValid: () => form.formState.isValid,
   }));
 
   return (

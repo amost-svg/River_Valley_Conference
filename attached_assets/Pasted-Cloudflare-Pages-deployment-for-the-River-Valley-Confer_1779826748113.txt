@@ -1,0 +1,129 @@
+Cloudflare Pages deployment for the River Valley Conference site failed before the React build even started.
+
+The log says:
+- No Wrangler configuration file found
+- Cloudflare detected Python and tried to run: pip install .
+- pip install failed because multiple top-level packages were discovered:
+  public, server, shared, client, uploads, flask_app, node_modules, attached_assets
+
+This means the repo still contains Python/Flask packaging files or legacy Python remnants that are confusing Cloudflare. I want this deployed as a React/Vite frontend on Cloudflare Pages, not as a Python package.
+
+Please fix Phase 1 of the Cloudflare migration.
+
+Tasks:
+
+1. Identify why Cloudflare is detecting Python.
+   Search for:
+   - pyproject.toml
+   - setup.py
+   - setup.cfg
+   - requirements.txt
+   - Pipfile
+   - flask_app
+   - any Python build metadata
+
+2. If pyproject.toml, setup.py, setup.cfg, Pipfile, or requirements.txt are only old/legacy Replit/Flask leftovers, remove them from the root of the repo or move them into an archive folder that Cloudflare will not interpret as the project build system.
+
+3. Do not delete important source code without confirming it is legacy.
+   If flask_app is no longer used, move it to:
+   legacy/flask_app
+   or remove it if it is definitely unused.
+
+4. Add Cloudflare Pages config at the repo root:
+
+wrangler.toml
+
+with:
+
+name = "river-valley-conference"
+pages_build_output_dir = "dist/public"
+compatibility_date = "2026-05-26"
+
+5. Update package.json scripts so the frontend can be built by itself.
+
+Add:
+
+"build:client": "vite build"
+
+Keep the existing full Replit/Express build as:
+
+"build:full": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist"
+
+Do not require the Express server build for Cloudflare Pages.
+
+6. Add SPA redirect file:
+
+client/public/_redirects
+
+with:
+
+/* /index.html 200
+
+7. Move or copy SEO files into the Vite public folder if they exist:
+
+public/robots.txt -> client/public/robots.txt
+public/sitemap.xml -> client/public/sitemap.xml
+
+8. Remove the Replit dev banner from:
+
+client/index.html
+
+9. Add a temporary Cloudflare Pages Function proxy:
+
+functions/api/[[path]].ts
+
+This should proxy /api/* requests to context.env.API_ORIGIN.
+
+The function should:
+- Read API_ORIGIN from context.env.API_ORIGIN
+- Preserve method, path, query string, body, and safe headers
+- Forward cookies
+- Return the backend response
+- Return a clear 500 JSON error if API_ORIGIN is missing
+
+This is temporary until we migrate the backend to Supabase.
+
+10. Make sure .gitignore includes:
+
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+.local
+.agents
+uploads
+*.db
+*.db-journal
+
+11. Run:
+
+npm run check
+npm run build:client
+
+Fix all errors until both pass.
+
+12. Confirm:
+- dist/public exists
+- dist/public/index.html exists
+- dist/public/_redirects exists
+- dist/public/robots.txt exists if robots.txt exists in the project
+- dist/public/sitemap.xml exists if sitemap.xml exists in the project
+- Cloudflare should no longer detect this as a Python project
+
+13. Commit and push:
+
+git add .
+git commit -m "Prepare RVC frontend for Cloudflare Pages deployment"
+git push origin main
+
+Final response:
+Tell me:
+- What Python/Flask files were removed, moved, or left alone
+- Did npm run check pass?
+- Did npm run build:client pass?
+- Was wrangler.toml added?
+- Was _redirects added?
+- Was the Replit dev banner removed?
+- Is the temporary /api proxy in place?
+- Is the site ready to retry Cloudflare Pages?

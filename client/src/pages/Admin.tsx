@@ -1204,7 +1204,7 @@ export default function Admin() {
                             {article.author && (
                               <span className="text-xs text-gray-500 flex items-center gap-1">
                                 <UserIcon className="h-3 w-3" />
-                                {article.author.username}
+                                {article.author.name}
                               </span>
                             )}
                             <div className="flex items-center gap-2">
