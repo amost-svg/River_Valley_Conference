@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import Admin from "@/pages/Admin";
 import Login from "@/pages/Login";
+import ResetPassword from "@/pages/ResetPassword";
 import School from "@/pages/School";
 import SportCalendar from "@/pages/SportCalendar";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -13,11 +15,28 @@ import TermsOfUse from "@/pages/TermsOfUse";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 
+
+function AuthLinkRedirect() {
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const type = hash.get("type");
+    const isPasswordFlow = type === "invite" || type === "recovery";
+
+    if (isPasswordFlow && window.location.pathname !== "/reset-password") {
+      window.location.replace(`/reset-password${window.location.hash}`);
+    }
+  }, []);
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/set-password" component={ResetPassword} />
       <Route path="/admin" component={() => (
         <ProtectedRoute>
           <Admin />
@@ -37,6 +56,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
+        <AuthLinkRedirect />
         <Router />
       </TooltipProvider>
     </QueryClientProvider>

@@ -1,26 +1,53 @@
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useCallback, useEffect, useState } from "react";
+import { authChangeEventName, getRvcUserContext } from "@/lib/supabaseAuth";
 
 interface User {
-  id: number;
+  id: any;
   email: string;
   name: string;
   role: string;
-  schoolId: number | null;
+  schoolId: any;
   isSuperAdmin: boolean;
 }
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery({
-    queryKey: ["/api/auth/me"],
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const [user, setUser] = useState<User | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const context = await getRvcUserContext();
+      setUser((context ?? undefined) as User | undefined);
+      setError(null);
+    } catch (nextError) {
+      setUser(undefined);
+      setError(nextError instanceof Error ? nextError : new Error("Unable to load the account."));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+
+    const handleChange = () => void refresh();
+    window.addEventListener(authChangeEventName, handleChange);
+    window.addEventListener("storage", handleChange);
+
+    return () => {
+      window.removeEventListener(authChangeEventName, handleChange);
+      window.removeEventListener("storage", handleChange);
+    };
+  }, [refresh]);
 
   return {
-    user: user as User | undefined,
+    user,
     isLoading,
-    isAuthenticated: !!user && !error,
-    isError: !!error,
+    isAuthenticated: Boolean(user) && !error,
+    isError: Boolean(error),
+    error,
+    refresh,
   };
 }
