@@ -1,225 +1,161 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft,
+  Building2,
+  ExternalLink,
+  Globe,
+  MapPin,
+  Phone,
+  Play,
+  ShieldCheck,
+  Trophy,
+  User,
+  Users,
+} from "lucide-react";
+import { Link, useParams } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, MapPin, Phone, User, Building, Trophy, Play, Mail, Globe } from "lucide-react";
-import type { School } from "@shared/schema";
+import {
+  formatSchoolAddress,
+  getPublicSchool,
+  getSchoolLogoUrl,
+} from "@/lib/schoolDirectory";
+
+function ResourceButton({ url, label, icon }: { url: string | null; label: string; icon: React.ReactNode }) {
+  if (!url) return null;
+  return (
+    <Button variant="outline" asChild>
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        {icon}
+        {label}
+        <ExternalLink className="ml-1 h-3.5 w-3.5" />
+      </a>
+    </Button>
+  );
+}
 
 export default function SchoolPage() {
   const { id } = useParams<{ id: string }>();
-  
-  const { data: school, isLoading, error } = useQuery<School>({
-    queryKey: ["/api/schools", id],
-    queryFn: async () => {
-      const response = await fetch(`/api/schools/${id}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch school");
-      }
-      return response.json();
-    },
-    enabled: !!id,
+
+  const schoolQuery = useQuery({
+    queryKey: ["supabase", "school", id],
+    queryFn: () => getPublicSchool(id),
+    enabled: Boolean(id),
   });
 
-  if (error) {
+  if (schoolQuery.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/">
-            <Button variant="outline" className="mb-6">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">School Not Found</h1>
-            <p className="text-red-600">Sorry, we couldn't find this school. Please try again.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Skeleton className="w-32 h-10 mb-6" />
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <Skeleton className="mb-6 h-10 w-32" />
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Skeleton className="h-8 w-48 mb-2" />
-                  <Skeleton className="h-6 w-32" />
-                </div>
-                <Skeleton className="w-24 h-24 rounded-lg" />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Skeleton className="h-32 w-full" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
-              </div>
-            </CardContent>
+            <CardHeader><Skeleton className="h-24 w-full" /></CardHeader>
+            <CardContent className="space-y-6"><Skeleton className="h-36 w-full" /><Skeleton className="h-48 w-full" /></CardContent>
           </Card>
         </div>
       </div>
     );
   }
 
-  if (!school) {
+  if (schoolQuery.error || !schoolQuery.data) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/">
-            <Button variant="outline" className="mb-6">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <Link href="/#schools">
+            <Button variant="outline" className="mb-6"><ArrowLeft className="mr-2 h-4 w-4" />Back to schools</Button>
           </Link>
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">School Not Found</h1>
-            <p className="text-gray-600">This school doesn't exist or has been removed.</p>
-          </div>
+          <Card><CardContent className="p-10 text-center"><h1 className="mb-3 text-3xl font-bold">School Not Found</h1><p className="text-muted-foreground">This member-school profile is unavailable.</p></CardContent></Card>
         </div>
       </div>
     );
   }
 
+  const school = schoolQuery.data;
+  const logoUrl = getSchoolLogoUrl(school.logo_path, school.slug);
+  const address = formatSchoolAddress(school);
+  const directionsUrl = address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+    : null;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Link href="/">
-          <Button variant="outline" className="mb-6">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </Button>
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <Link href="/#schools">
+          <Button variant="outline" className="mb-6"><ArrowLeft className="mr-2 h-4 w-4" />Back to schools</Button>
         </Link>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-3xl">{school.name}</CardTitle>
-                <div className="flex items-center gap-2 mt-2">
-                  <Trophy className="h-5 w-5 text-conference-gold" />
-                  <span className="text-conference-gold font-medium text-lg">{school.mascot}</span>
+        <Card className="overflow-hidden">
+          <div className="h-2 bg-conference-green" />
+          <CardHeader className="bg-gradient-to-br from-white to-slate-50">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-5">
+                <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-white shadow-sm">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt={`${school.name} logo`} className="h-full w-full object-contain p-3" />
+                  ) : (
+                    <Building2 className="h-12 w-12 text-gray-400" />
+                  )}
+                </div>
+                <div>
+                  <CardTitle className="text-3xl md:text-4xl">{school.name}</CardTitle>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {school.mascot && <Badge className="bg-conference-gold text-conference-navy"><Trophy className="mr-1 h-3.5 w-3.5" />{school.mascot}</Badge>}
+                    {school.city && school.state && <Badge variant="outline"><MapPin className="mr-1 h-3.5 w-3.5" />{school.city}, {school.state}</Badge>}
+                  </div>
                 </div>
               </div>
-              {school.imageUrl && (
-                <img 
-                  src={school.imageUrl} 
-                  alt={`${school.name} logo`}
-                  className="w-24 h-24 object-contain rounded-lg"
-                />
+              {school.livestream_url && (
+                <Button size="lg" asChild className="bg-red-600 hover:bg-red-700">
+                  <a href={school.livestream_url} target="_blank" rel="noopener noreferrer">
+                    <Play className="mr-2 h-5 w-5" />Watch {school.livestream_platform || "live"}
+                  </a>
+                </Button>
               )}
             </div>
           </CardHeader>
-          
-          <CardContent className="space-y-8">
-            {/* Mission Statement */}
-            {school.missionStatement && (
-              <div className="bg-conference-navy/5 p-6 rounded-lg">
-                <h3 className="font-semibold text-xl mb-3 text-conference-navy">Mission Statement</h3>
-                <p className="text-gray-700 leading-relaxed">{school.missionStatement}</p>
-              </div>
+
+          <CardContent className="space-y-8 p-6 md:p-8">
+            {school.mission_statement && (
+              <section className="rounded-xl bg-conference-navy/5 p-6">
+                <h2 className="mb-3 text-xl font-semibold text-conference-navy">Mission Statement</h2>
+                <p className="leading-relaxed text-gray-700">{school.mission_statement}</p>
+              </section>
             )}
 
-            {/* Contact Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-xl mb-4 text-conference-navy">Contact Information</h3>
-                <div className="space-y-3">
-                  {school.city && school.state && (
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-5 w-5 text-gray-500" />
-                      <span>{school.city}, {school.state}</span>
-                    </div>
+            <div className="grid gap-8 md:grid-cols-2">
+              <section>
+                <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-conference-navy"><MapPin className="h-5 w-5" />Contact Information</h2>
+                <div className="space-y-4">
+                  {address && (
+                    <div className="flex items-start gap-3"><MapPin className="mt-0.5 h-5 w-5 text-gray-500" /><div><p>{address}</p>{directionsUrl && <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">Get directions</a>}</div></div>
                   )}
-                  
-                  {school.phoneNumber && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-5 w-5 text-gray-500" />
-                      <span>{school.phoneNumber}</span>
-                    </div>
+                  {school.phone && (
+                    <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-gray-500" /><a href={`tel:${school.phone.replace(/[^\d+]/g, "")}`} className="hover:underline">{school.phone}</a></div>
                   )}
                 </div>
-              </div>
+              </section>
 
-              {/* Administration */}
-              <div>
-                <h3 className="font-semibold text-xl mb-4 text-conference-navy">Administration</h3>
-                <div className="space-y-3">
-                  {school.superintendentName && (
-                    <div className="flex items-center gap-3">
-                      <User className="h-5 w-5 text-gray-500" />
-                      <span>Superintendent: {school.superintendentName}</span>
-                    </div>
-                  )}
-                  {school.principalName && (
-                    <div className="flex items-center gap-3">
-                      <Building className="h-5 w-5 text-gray-500" />
-                      <span>Principal: {school.principalName}</span>
-                    </div>
-                  )}
-                  {school.athleticDirectorName && (
-                    <div className="flex items-center gap-3">
-                      <Trophy className="h-5 w-5 text-gray-500" />
-                      <span>Athletic Director: {school.athleticDirectorName}</span>
-                    </div>
-                  )}
+              <section>
+                <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-conference-navy"><Users className="h-5 w-5" />Administration</h2>
+                <div className="space-y-4">
+                  {school.superintendent_name && <div className="flex items-center gap-3"><User className="h-5 w-5 text-gray-500" /><span><span className="font-medium">Superintendent:</span> {school.superintendent_name}</span></div>}
+                  {school.principal_name && <div className="flex items-center gap-3"><Building2 className="h-5 w-5 text-gray-500" /><span><span className="font-medium">Principal:</span> {school.principal_name}</span></div>}
+                  {school.athletic_director_name && <div className="flex items-center gap-3"><Trophy className="h-5 w-5 text-gray-500" /><span><span className="font-medium">Athletic Director:</span> {school.athletic_director_name}</span></div>}
                 </div>
-              </div>
+              </section>
             </div>
 
-            {/* Links and Resources */}
-            <div>
-              <h3 className="font-semibold text-xl mb-4 text-conference-navy">Links & Resources</h3>
+            <section>
+              <h2 className="mb-4 text-xl font-semibold text-conference-navy">Links & Resources</h2>
               <div className="flex flex-wrap gap-3">
-                {school.website && (
-                  <Button variant="outline" asChild>
-                    <a href={school.website} target="_blank" rel="noopener noreferrer">
-                      <Globe className="h-4 w-4 mr-2" />
-                      School Website
-                    </a>
-                  </Button>
-                )}
-                {school.athleticWebsite && (
-                  <Button variant="outline" asChild>
-                    <a href={school.athleticWebsite} target="_blank" rel="noopener noreferrer">
-                      <Trophy className="h-4 w-4 mr-2" />
-                      Athletics Website
-                    </a>
-                  </Button>
-                )}
-                {school.ihsaPageLink && (
-                  <Button variant="outline" asChild>
-                    <a href={school.ihsaPageLink} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      IHSA Page
-                    </a>
-                  </Button>
-                )}
-                {school.liveStreamingUrl && (
-                  <Button variant="outline" asChild>
-                    <a href={school.liveStreamingUrl} target="_blank" rel="noopener noreferrer">
-                      <Play className="h-4 w-4 mr-2" />
-                      Live Stream
-                    </a>
-                  </Button>
-                )}
+                <ResourceButton url={school.website_url} label="School Website" icon={<Globe className="mr-2 h-4 w-4" />} />
+                <ResourceButton url={school.athletics_url} label="Athletics & Schedules" icon={<Trophy className="mr-2 h-4 w-4" />} />
+                <ResourceButton url={school.ihsa_url} label="IHSA Profile" icon={<ShieldCheck className="mr-2 h-4 w-4" />} />
+                <ResourceButton url={school.livestream_url} label={school.livestream_platform || "Livestream"} icon={<Play className="mr-2 h-4 w-4" />} />
               </div>
-              
-              {school.liveStreamingPlatform && (
-                <div className="mt-4">
-                  <Badge variant="secondary">
-                    Streaming Platform: {school.liveStreamingPlatform}
-                  </Badge>
-                </div>
-              )}
-            </div>
+            </section>
           </CardContent>
         </Card>
       </div>

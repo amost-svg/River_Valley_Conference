@@ -246,6 +246,7 @@ export async function getRvcUserContext() {
 
   const roles = memberships.map((membership) => membership.role);
   const primaryMembership = memberships[0];
+  const schoolMembership = memberships.find((membership) => membership.school_id);
   const role = roles.includes("conference_admin")
     ? "SuperAdmin"
     : roles.includes("school_principal")
@@ -263,7 +264,7 @@ export async function getRvcUserContext() {
         ? session.user.user_metadata.full_name
         : session.user.email ?? "RVC user"),
     role,
-    schoolId: primaryMembership?.school_id ?? null,
+    schoolId: schoolMembership?.school_id ?? null,
     isSuperAdmin: roles.includes("conference_admin"),
   };
 }
