@@ -42,6 +42,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { signOut } from "@/lib/supabaseAuth";
 import { useLocation } from "wouter";
 import type { School, Sport, Game, News, GameResultSubmission, User, NewsUpdated } from "@shared/schema";
 import { insertGameSchema, insertNewsSchema, insertNewsUpdatedSchema } from "@shared/schema";
@@ -294,12 +295,9 @@ export default function Admin() {
 
   // Logout mutation
   const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/logout", {});
-      return response.json();
-    },
+    mutationFn: async () => signOut(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.clear();
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
@@ -1204,7 +1202,7 @@ export default function Admin() {
                             {article.author && (
                               <span className="text-xs text-gray-500 flex items-center gap-1">
                                 <UserIcon className="h-3 w-3" />
-                                {article.author.name}
+                                {article.author.username}
                               </span>
                             )}
                             <div className="flex items-center gap-2">
