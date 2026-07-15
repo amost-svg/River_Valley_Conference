@@ -1,0 +1,62 @@
+name: RVC Source of Truth Check
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check 2>&1 | tee typecheck.log
+
+      - name: Build client
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build:client 2>&1 | tee build-client.log
+
+      - name: Upload validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvc-validation-logs
+          path: |
+            typecheck.log
+            build-client.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce validation result
+        if: always()
+        shell: bash
+        run: |
+          if [[ "${{ steps.typecheck.outcome }}" != "success" || "${{ steps.build.outcome }}" != "success" ]]; then
+            echo "Validation failed. Review the rvc-validation-logs artifact."
+            exit 1
+          fi
