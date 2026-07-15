@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Database, Menu, Settings, Trophy, X } from "lucide-react";
+import { LogIn, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import rvcLogo from "@assets/RVC logo (3)_1754081720129.png";
@@ -75,19 +75,9 @@ export default function Navigation() {
                   {item.label}
                 </button>
               ))}
-              <Link href="/conference/tournaments">
-                <Button variant="ghost" size="sm" className="text-gray-300 hover:bg-white/10 hover:text-conference-gold">
-                  <Trophy className="mr-2 h-4 w-4" /> Tournaments
-                </Button>
-              </Link>
-              <Link href="/conference">
-                <Button size="sm" className="ml-2 bg-conference-gold text-conference-navy hover:bg-yellow-400">
-                  <Database className="mr-2 h-4 w-4" /> Conference Hub
-                </Button>
-              </Link>
               <Link href="/conference-admin">
-                <Button variant="outline" size="sm" className="ml-1 border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy">
-                  <Settings className="mr-2 h-4 w-4" /> Manage
+                <Button variant="outline" size="sm" className="ml-2 border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy">
+                  <LogIn className="mr-2 h-4 w-4" /> Admin Login
                 </Button>
               </Link>
             </div>
@@ -104,9 +94,8 @@ export default function Navigation() {
               aria-expanded={isMenuOpen}
               aria-controls="mobile-menu"
               aria-label="Toggle navigation menu"
-              data-testid="button-mobile-menu-toggle"
             >
-              {isMenuOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
         </div>
@@ -117,19 +106,13 @@ export default function Navigation() {
           <ul className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
             {navItems.map((item) => (
               <li key={item.id}>
-                <button onClick={() => goToSection(item.id)} className="block min-h-[44px] w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-300 transition-colors hover:bg-blue-800 hover:text-white focus:bg-blue-800 focus:text-white focus:outline-none focus:ring-2 focus:ring-conference-gold">
+                <button onClick={() => goToSection(item.id)} className="block min-h-[44px] w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-300 transition-colors hover:bg-blue-800 hover:text-white">
                   {item.label}
                 </button>
               </li>
             ))}
             <li className="mt-2 border-t border-blue-800 pt-2">
-              <Link href="/conference/tournaments"><Button variant="outline" className="min-h-[44px] w-full border-white/30 text-white hover:bg-white/10" onClick={() => setIsMenuOpen(false)}><Trophy className="mr-2 h-4 w-4" /> Tournaments</Button></Link>
-            </li>
-            <li>
-              <Link href="/conference"><Button className="min-h-[44px] w-full bg-conference-gold text-conference-navy hover:bg-yellow-400" onClick={() => setIsMenuOpen(false)}><Database className="mr-2 h-4 w-4" /> Conference Hub</Button></Link>
-            </li>
-            <li>
-              <Link href="/conference-admin"><Button variant="outline" className="min-h-[44px] w-full border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy" onClick={() => setIsMenuOpen(false)}><Settings className="mr-2 h-4 w-4" /> Manage Conference</Button></Link>
+              <Link href="/conference-admin"><Button variant="outline" className="min-h-[44px] w-full border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy" onClick={() => setIsMenuOpen(false)}><LogIn className="mr-2 h-4 w-4" /> Admin Login</Button></Link>
             </li>
           </ul>
         </nav>

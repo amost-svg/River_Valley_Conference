@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { CalendarClock, Database, Gamepad2, ShieldCheck, Trophy } from "lucide-react";
+import { CalendarClock, Database, Home, Newspaper, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Seo from "@/components/Seo";
 
@@ -8,7 +8,7 @@ const workspaces = [
     href: "/conference-admin/core",
     icon: Database,
     title: "Conference Data",
-    description: "Import and validate schedules, submit and confirm scores, resolve standings ties, manage honors, events, documents, co-ops, and data-quality issues.",
+    description: "Import and validate schedules, submit and confirm scores, resolve standings ties, manage honors, events, co-ops, and data-quality issues.",
   },
   {
     href: "/conference-admin/games",
@@ -17,10 +17,10 @@ const workspaces = [
     description: "Reschedule, postpone, cancel, or record a conference-authorized forfeit with the required explanation and audit trail.",
   },
   {
-    href: "/conference-admin/tournaments",
-    icon: Trophy,
-    title: "Tournament Brackets",
-    description: "Seed tournaments from official standings, generate bracket rounds, review BYEs, and publish the approved bracket.",
+    href: "/conference-admin/content",
+    icon: Newspaper,
+    title: "News & Resources",
+    description: "Write complete public announcements and manage the private rules, operations guides, and conference resources library.",
   },
 ] as const;
 
@@ -29,7 +29,7 @@ export default function ConferenceWorkspaceHome() {
     <div className="min-h-screen bg-slate-50">
       <Seo
         title="RVC Conference Management"
-        description="Secure River Valley Conference management workspace for schedules, results, standings, tournaments, honors, and resources."
+        description="Secure River Valley Conference management workspace for schedules, results, standings, news, honors, and resources."
         type="website"
       />
       <header className="bg-conference-navy text-white">
@@ -39,17 +39,16 @@ export default function ConferenceWorkspaceHome() {
           </div>
           <h1 className="mt-3 text-3xl font-bold sm:text-4xl">Manage the RVC Source of Truth</h1>
           <p className="mt-3 max-w-3xl text-slate-200">
-            Choose the area you need. Every approved change is stored in Supabase under role-based access and recorded in the conference audit trail.
+            Approved schedules, results, standings, and public announcements entered here feed the public website. Rules and conference documents remain inside this signed-in domain.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/conference"><Button className="bg-conference-gold text-conference-navy hover:bg-yellow-400"><Gamepad2 className="mr-2 h-4 w-4" /> Open public conference hub</Button></Link>
-            <Link href="/"><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10">Return to RVC home</Button></Link>
+          <div className="mt-6">
+            <Link href="/"><Button className="bg-conference-gold text-conference-navy hover:bg-yellow-400"><Home className="mr-2 h-4 w-4" /> Open public homepage</Button></Link>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           {workspaces.map(({ href, icon: Icon, title, description }) => (
             <div key={href} className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-conference-navy text-white">

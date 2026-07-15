@@ -1,213 +1,189 @@
-import React, { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy } from "lucide-react";
-import type { Standing, School, Sport } from "@shared/schema";
+import { CheckCircle2, Trophy } from "lucide-react";
+import { publicSelect } from "@/lib/rvcData";
 
-type StandingWithDetails = Standing & {
-  school: School;
-  sport: Sport;
+interface Season { id: string; name: string }
+interface Sport {
+  id: string;
+  slug: string;
+  name: string;
+  gender_label: string | null;
+  standings_enabled: boolean;
+}
+interface PublicStanding {
+  id: string;
+  sport_id: string;
+  rank: number | null;
+  team_id: string;
+  team_name: string;
+  mascot: string | null;
+  conference_wins: number;
+  conference_losses: number;
+  conference_ties: number;
+  overall_wins: number;
+  overall_losses: number;
+  overall_ties: number;
+  conference_percentage: number;
+  streak: string | null;
+  tie_status: string;
+}
+interface StandingsData { season: Season; sports: Sport[]; standings: PublicStanding[] }
+
+const sportThemes: Record<string, { header: string; active: string; dot: string }> = {
+  "girls-volleyball": { header: "from-purple-700 to-fuchsia-500", active: "border-purple-600 bg-purple-50 text-purple-700", dot: "bg-purple-500" },
+  "boys-soccer": { header: "from-emerald-700 to-green-500", active: "border-emerald-600 bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+  "girls-basketball": { header: "from-rose-700 to-pink-500", active: "border-rose-600 bg-rose-50 text-rose-700", dot: "bg-rose-500" },
+  "boys-basketball": { header: "from-orange-700 to-amber-500", active: "border-orange-600 bg-orange-50 text-orange-700", dot: "bg-orange-500" },
+  baseball: { header: "from-blue-800 to-sky-500", active: "border-blue-600 bg-blue-50 text-blue-700", dot: "bg-blue-500" },
+  softball: { header: "from-yellow-600 to-orange-500", active: "border-yellow-600 bg-yellow-50 text-yellow-800", dot: "bg-yellow-500" },
+  "track-field": { header: "from-red-700 to-rose-500", active: "border-red-600 bg-red-50 text-red-700", dot: "bg-red-500" },
+  "scholastic-bowl": { header: "from-indigo-800 to-violet-500", active: "border-indigo-600 bg-indigo-50 text-indigo-700", dot: "bg-indigo-500" },
 };
+const defaultTheme = { header: "from-conference-navy to-blue-600", active: "border-conference-navy bg-blue-50 text-conference-navy", dot: "bg-conference-navy" };
+
+function sportLabel(sport: Sport) {
+  return sport.gender_label && sport.gender_label !== "Coed" ? `${sport.gender_label} ${sport.name}` : sport.name;
+}
+
+function record(wins: number, losses: number, ties: number) {
+  return `${wins}-${losses}${ties ? `-${ties}` : ""}`;
+}
+
+function percentage(value: number) {
+  return Number(value || 0).toFixed(3).replace(/^0/, "");
+}
+
+async function loadStandings(): Promise<StandingsData> {
+  const seasons = await publicSelect<Season[]>("seasons?is_active=eq.true&select=id,name&limit=1");
+  const season = seasons[0];
+  if (!season) throw new Error("No active conference season is configured.");
+  const [sports, standings] = await Promise.all([
+    publicSelect<Sport[]>("sports?is_active=eq.true&standings_enabled=eq.true&select=id,slug,name,gender_label,standings_enabled&order=display_order.asc"),
+    publicSelect<PublicStanding[]>(`public_standings?season_id=eq.${encodeURIComponent(season.id)}&select=id,sport_id,rank,team_id,team_name,mascot,conference_wins,conference_losses,conference_ties,overall_wins,overall_losses,overall_ties,conference_percentage,streak,tie_status&order=sport_name.asc,rank.asc,team_name.asc`),
+  ]);
+  return { season, sports, standings };
+}
 
 export default function ConferenceStandings() {
-  const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
-
-  const { data: sports, isLoading: sportsLoading } = useQuery<Sport[]>({
-    queryKey: ["/api/sports"],
+  const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["public-home-standings"],
+    queryFn: loadStandings,
+    staleTime: 60_000,
   });
 
-  // Set initial sport when sports are loaded
-  React.useEffect(() => {
-    if (sports && sports.length > 0 && selectedSportId === null) {
-      setSelectedSportId(sports[0].id);
-    }
-  }, [sports, selectedSportId]);
+  useEffect(() => {
+    if (!selectedSportId && data?.sports.length) setSelectedSportId(data.sports[0].id);
+  }, [data?.sports, selectedSportId]);
 
-  const { data: standings, isLoading: standingsLoading, error } = useQuery<StandingWithDetails[]>({
-    queryKey: ["/api/standings", selectedSportId],
-    queryFn: async () => {
-      if (!selectedSportId) return [];
-      const response = await fetch(`/api/standings?sportId=${selectedSportId}`);
-      if (!response.ok) throw new Error('Failed to fetch standings');
-      return response.json();
-    },
-    enabled: !!selectedSportId,
-  });
-
-  const calculateWinPercentage = (wins: number, losses: number, ties: number = 0) => {
-    const total = wins + losses + ties;
-    if (total === 0) return "0.000";
-    return ((wins + ties * 0.5) / total).toFixed(3);
-  };
-
-  const getSportGradient = (sportName: string) => {
-    switch (sportName?.toLowerCase()) {
-      case 'volleyball':
-        return 'bg-gradient-to-r from-purple-600 to-pink-600';
-      case 'soccer':
-        return 'bg-gradient-to-r from-green-600 to-emerald-600';
-      case 'basketball':
-        return 'bg-gradient-to-r from-orange-600 to-red-600';
-      case 'baseball':
-        return 'bg-gradient-to-r from-blue-600 to-indigo-600';
-      case 'softball':
-        return 'bg-gradient-to-r from-yellow-600 to-orange-600';
-      case 'track':
-        return 'bg-gradient-to-r from-red-600 to-rose-600';
-      case 'cross country':
-        return 'bg-gradient-to-r from-teal-600 to-cyan-600';
-      case 'scholastic bowl':
-        return 'bg-gradient-to-r from-indigo-600 to-purple-600';
-      default:
-        return 'bg-gradient-to-r from-conference-navy to-central-blue';
-    }
-  };
-
-  const getSportTabColor = (sportName: string, isSelected: boolean) => {
-    if (!isSelected) return "text-gray-500 hover:text-conference-navy border-transparent";
-    
-    switch (sportName?.toLowerCase()) {
-      case 'volleyball':
-        return 'text-purple-600 border-purple-600 bg-purple-50';
-      case 'soccer':
-        return 'text-green-600 border-green-600 bg-green-50';
-      case 'basketball':
-        return 'text-orange-600 border-orange-600 bg-orange-50';
-      case 'baseball':
-        return 'text-blue-600 border-blue-600 bg-blue-50';
-      case 'softball':
-        return 'text-yellow-600 border-yellow-600 bg-yellow-50';
-      case 'track':
-        return 'text-red-600 border-red-600 bg-red-50';
-      case 'cross country':
-        return 'text-teal-600 border-teal-600 bg-teal-50';
-      case 'scholastic bowl':
-        return 'text-indigo-600 border-indigo-600 bg-indigo-50';
-      default:
-        return 'text-conference-navy border-conference-navy bg-blue-50';
-    }
-  };
-
-  const selectedSport = sports?.find(sport => sport.id === selectedSportId);
-
-  // Sort standings by win percentage
-  const sortedStandings = standings?.sort((a, b) => {
-    const aWinPct = parseFloat(calculateWinPercentage(a.wins, a.losses, a.ties));
-    const bWinPct = parseFloat(calculateWinPercentage(b.wins, b.losses, b.ties));
-    return bWinPct - aWinPct;
-  }) || [];
-
-  if (error) {
-    return (
-      <section id="standings" className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Conference Standings</h2>
-            <p className="text-red-600">Failed to load standings. Please try again later.</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const selectedSport = data?.sports.find((sport) => sport.id === selectedSportId);
+  const rows = useMemo(
+    () => data?.standings.filter((standing) => standing.sport_id === selectedSportId) ?? [],
+    [data?.standings, selectedSportId],
+  );
+  const hasResults = rows.some((row) => row.conference_wins + row.conference_losses + row.conference_ties > 0);
+  const theme = selectedSport ? (sportThemes[selectedSport.slug] ?? defaultTheme) : defaultTheme;
 
   return (
-    <section id="standings" className="py-16 bg-section-gradient-2">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12 section-divider pb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Conference Standings</h2>
-          <p className="text-lg text-gray-600">Current season standings updated from game results</p>
+    <section id="standings" className="bg-section-gradient-2 py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="section-divider mb-10 pb-8 text-center">
+          <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">Conference Standings</h2>
+          <p className="text-lg text-gray-600">Select a sport to view its official conference table</p>
         </div>
 
-        {/* Sport Tabs */}
-        <div className="flex flex-wrap justify-center mb-8 border-b gap-2">
-          {sportsLoading
-            ? Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} className="h-12 w-24" />
-              ))
-            : sports?.map((sport) => (
-                <Button
-                  key={sport.id}
-                  variant="ghost"
-                  onClick={() => setSelectedSportId(sport.id)}
-                  className={`px-6 py-3 font-semibold border-b-2 rounded-none transition-all duration-200 ${getSportTabColor(sport.name, selectedSportId === sport.id)}`}
-                >
-                  {sport.name}
-                </Button>
-              ))
-          }
-        </div>
+        {error ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center">
+            <p className="font-semibold text-amber-900">Standings are temporarily unavailable.</p>
+            <p className="mt-1 text-sm text-amber-800">Please refresh the page in a moment.</p>
+          </div>
+        ) : isLoading ? (
+          <div className="mx-auto max-w-5xl space-y-5">
+            <div className="flex justify-center gap-2">{Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-11 w-28" />)}</div>
+            <Skeleton className="h-96 w-full rounded-xl" />
+          </div>
+        ) : (
+          <>
+            <div className="mb-7 flex gap-2 overflow-x-auto pb-2 lg:flex-wrap lg:justify-center">
+              {data?.sports.map((sport) => {
+                const sportTheme = sportThemes[sport.slug] ?? defaultTheme;
+                const active = sport.id === selectedSportId;
+                return (
+                  <Button
+                    key={sport.id}
+                    variant="outline"
+                    onClick={() => setSelectedSportId(sport.id)}
+                    className={`flex-none gap-2 rounded-full border-2 px-4 ${active ? sportTheme.active : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"}`}
+                  >
+                    <span className={`h-2.5 w-2.5 rounded-full ${sportTheme.dot}`} />
+                    {sportLabel(sport)}
+                  </Button>
+                );
+              })}
+            </div>
 
-        {/* Standings Table */}
-        {selectedSportId && (
-          <Card className="shadow overflow-hidden max-w-4xl mx-auto">
-            <CardHeader className={`${getSportGradient(selectedSport?.name || '')} text-white`}>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                {selectedSport?.name} Standings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">W</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">L</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">T</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pct</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {standingsLoading
-                      ? Array.from({ length: 6 }).map((_, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
-                            <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8" /></td>
-                            <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-12" /></td>
-                          </tr>
-                        ))
-                      : sortedStandings.length > 0 ? (
-                          sortedStandings.map((standing, index) => (
-                            <tr key={standing.id} className={index === 0 ? "bg-yellow-50" : index === 1 ? "bg-gray-50" : ""}>
-                              <td className="px-6 py-4 text-sm text-center font-semibold text-gray-900">
-                                #{index + 1}
-                              </td>
-                              <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                <div className="flex items-center gap-2">
-                                  {index === 0 && <Trophy className="h-4 w-4 text-yellow-500" />}
-                                  {standing.school.name} {standing.school.mascot}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-center text-gray-900 font-semibold">{standing.wins}</td>
-                              <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.losses}</td>
-                              <td className="px-6 py-4 text-sm text-center text-gray-900">{standing.ties || 0}</td>
-                              <td className="px-6 py-4 text-sm text-center font-bold text-conference-navy">
-                                {calculateWinPercentage(standing.wins, standing.losses, standing.ties)}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                              <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                              <p className="text-lg font-semibold mb-1">No Standings Available</p>
-                              <p className="text-sm">Standings will appear after games are completed and results are recorded.</p>
+            {selectedSport && (
+              <Card className="mx-auto max-w-5xl overflow-hidden border-0 shadow-xl">
+                <CardHeader className={`bg-gradient-to-r ${theme.header} text-white`}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Trophy className="h-5 w-5" /> {sportLabel(selectedSport)} Standings
+                    </CardTitle>
+                    <span className="text-sm text-white/80">{data?.season.name}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                        <tr>
+                          <th className="px-5 py-3 text-left">Rank</th>
+                          <th className="px-5 py-3 text-left">Team</th>
+                          <th className="px-5 py-3 text-center">Conference</th>
+                          <th className="px-5 py-3 text-center">Pct.</th>
+                          <th className="px-5 py-3 text-center">Overall</th>
+                          <th className="px-5 py-3 text-left">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {rows.map((row, index) => (
+                          <tr key={row.id} className={hasResults && index === 0 ? "bg-amber-50/70" : "hover:bg-slate-50"}>
+                            <td className="px-5 py-4 text-lg font-black text-conference-navy">{hasResults ? row.rank ?? "—" : "—"}</td>
+                            <td className="px-5 py-4">
+                              <div className="font-bold text-slate-950">{row.team_name}</div>
+                              <div className="text-xs text-slate-500">{row.mascot}</div>
+                            </td>
+                            <td className="px-5 py-4 text-center font-semibold">{record(row.conference_wins, row.conference_losses, row.conference_ties)}</td>
+                            <td className="px-5 py-4 text-center font-semibold text-conference-navy">{percentage(row.conference_percentage)}</td>
+                            <td className="px-5 py-4 text-center text-slate-600">{record(row.overall_wins, row.overall_losses, row.overall_ties)}</td>
+                            <td className="px-5 py-4">
+                              {hasResults ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Official</span>
+                              ) : (
+                                <span className="text-xs font-medium text-slate-500">Season not started</span>
+                              )}
                             </td>
                           </tr>
-                        )
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                        ))}
+                        {!rows.length && (
+                          <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">Teams will appear after the conference roster is finalized.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  {!hasResults && rows.length > 0 && (
+                    <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 text-center text-sm text-slate-600">
+                      Rankings will activate after the first confirmed conference result.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
     </section>
