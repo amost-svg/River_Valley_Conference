@@ -10,7 +10,6 @@ import { deleteRows, getCurrentUserId, insertRows, memberSelect, updateRows } fr
 import { queryClient } from "@/lib/queryClient";
 
 interface UserContext {
-  name: string;
   role: string;
   isSuperAdmin: boolean;
 }
@@ -40,7 +39,6 @@ interface ConferenceDocument {
 }
 
 interface ContentData {
-  user: UserContext;
   news: NewsItem[];
   documents: ConferenceDocument[];
 }
@@ -81,7 +79,7 @@ async function loadContentData(): Promise<ContentData> {
     ),
   ]);
 
-  return { user, news, documents };
+  return { news, documents };
 }
 
 export default function ConferenceContentAdmin() {
