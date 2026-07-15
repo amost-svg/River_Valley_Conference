@@ -9,7 +9,6 @@ import Admin from "@/pages/Admin";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
 import GameOperations from "@/pages/GameOperations";
-import TournamentCenter from "@/pages/TournamentCenter";
 import Login from "@/pages/Login";
 import ResetPassword from "@/pages/ResetPassword";
 import School from "@/pages/School";
@@ -67,11 +66,6 @@ function Router() {
       <Route path="/conference-admin/games" component={() => (
         <ProtectedRoute>
           <GameOperations />
-        </ProtectedRoute>
-      )} />
-      <Route path="/conference-admin/tournaments" component={() => (
-        <ProtectedRoute>
-          <TournamentCenter adminMode />
         </ProtectedRoute>
       )} />
       <Route path="/schools/:id" component={School} />
