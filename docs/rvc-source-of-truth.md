@@ -157,6 +157,15 @@ The schedule importer accepts the `Importable RVC Master` CSV and:
 
 Imported default start times must be verified by the appropriate AD before publication.
 
+## Required deployment variables
+
+Cloudflare Pages may provide:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY` or `VITE_SUPABASE_ANON_KEY`
+
+The production build also includes the public Supabase URL and publishable browser key as a Vite production fallback. The browser never receives a Supabase service-role key.
+
 ## Security model
 
 - RLS is enabled on every source-of-truth table.
