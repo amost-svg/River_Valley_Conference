@@ -161,6 +161,7 @@ The following migrations are recorded in the hosted project's migration history:
 - `20260715124634_rvc_2026_27_rules_events_documents_seed`
 - `20260715124719_rvc_2026_27_coops_tournaments_awards_seed`
 - `20260715130957_rvc_forfeits_and_bracket_generation`
+- `20260715132559_rvc_performance_indexes_and_policy_cleanup`
 
 ## Required deployment variables
 
@@ -179,3 +180,5 @@ The browser never receives a Supabase service-role key.
 - Write operations are restricted by conference role, school role, or both.
 - Sensitive workflows use `SECURITY DEFINER` RPC functions with explicit internal role checks and fixed search paths.
 - Every new operational table has audit triggers.
+- Foreign-key lookup indexes cover the new operational relationships.
+- Write policies are action-specific so authenticated reads do not evaluate redundant broad policies.
