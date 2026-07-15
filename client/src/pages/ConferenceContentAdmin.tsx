@@ -160,7 +160,7 @@ export default function ConferenceContentAdmin() {
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-conference-gold"><Newspaper className="h-4 w-4" /> RVC Admin Domain</div>
             <h1 className="mt-2 text-3xl font-bold">News and Conference Resources</h1>
-            <p className="mt-2 max-w-3xl text-sm text-slate-300">Write public conference communication here. Rules and operations resources remain available only to signed-in RVC members.</p>
+            <p className="mt-2 max-w-3xl text-sm text-slate-300">Write public conference communication here. Rules and operations resources remain inside the authenticated RVC domain.</p>
           </div>
           <Link href="/conference-admin"><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10"><ArrowLeft className="mr-2 h-4 w-4" /> Admin home</Button></Link>
         </div>
@@ -210,7 +210,7 @@ export default function ConferenceContentAdmin() {
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 text-white"><BookOpen className="h-5 w-5" /></div>
-            <div><h2 className="text-xl font-bold text-slate-950">Rules and conference resources</h2><p className="mt-1 text-sm text-slate-600">These links are members-only. They are never returned to anonymous visitors, even if someone accidentally selects a public setting elsewhere.</p></div>
+            <div><h2 className="text-xl font-bold text-slate-950">Rules and conference resources</h2><p className="mt-1 text-sm text-slate-600">These links stay inside the authenticated RVC domain. A database safeguard prevents them from being exposed through the public website.</p></div>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-[1fr_220px_1fr_auto] md:items-end">
             <label className="text-sm font-semibold text-slate-700">Title<input className={`${controlClass} mt-1`} value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
@@ -230,7 +230,7 @@ export default function ConferenceContentAdmin() {
               });
               setDocumentTitle("");
               setDocumentUrl("");
-            }, "Members-only resource added")}><FileText className="mr-2 h-4 w-4" /> Add</Button>
+            }, "Internal resource added")}><FileText className="mr-2 h-4 w-4" /> Add</Button>
           </div>
 
           <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
@@ -241,7 +241,7 @@ export default function ConferenceContentAdmin() {
                   <tr key={document.id}>
                     <td className="px-4 py-3 font-semibold text-slate-950">{document.title}</td>
                     <td className="px-4 py-3 text-slate-600">{document.category}</td>
-                    <td className="px-4 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Signed-in members</span></td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Authenticated RVC domain</span></td>
                     <td className="px-4 py-3"><div className="flex justify-end gap-2">{document.external_url && <a href={document.external_url} target="_blank" rel="noreferrer"><Button variant="outline" size="sm"><ExternalLink className="h-4 w-4" /></Button></a>}<Button variant="destructive" size="sm" onClick={() => void run(() => deleteRows("conference_documents", `id=eq.${document.id}`), "Resource removed")}><Trash2 className="h-4 w-4" /></Button></div></td>
                   </tr>
                 ))}
