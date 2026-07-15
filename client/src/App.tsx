@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import Admin from "@/pages/Admin";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
+import ConferenceContentAdmin from "@/pages/ConferenceContentAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
 import GameOperations from "@/pages/GameOperations";
 import Login from "@/pages/Login";
@@ -66,6 +67,11 @@ function Router() {
       <Route path="/conference-admin/games" component={() => (
         <ProtectedRoute>
           <GameOperations />
+        </ProtectedRoute>
+      )} />
+      <Route path="/conference-admin/content" component={() => (
+        <ProtectedRoute>
+          <ConferenceContentAdmin />
         </ProtectedRoute>
       )} />
       <Route path="/schools/:id" component={School} />
