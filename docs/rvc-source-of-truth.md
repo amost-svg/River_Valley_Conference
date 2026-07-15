@@ -27,7 +27,7 @@ Google Drive remains the source for collaborative documents and historical worki
 - `/conference-admin` — role-aware workspace landing page
 - `/conference-admin/core` — schedules, scores, standings, honors, events, co-ops, and data-quality review
 - `/conference-admin/games` — rescheduling, postponement, cancellation, and forfeits
-- `/conference-admin/content` — public news writing and the members-only rules and conference-resource library
+- `/conference-admin/content` — public news writing and the internal rules and conference-resource library
 
 ## Core data model
 
@@ -54,7 +54,7 @@ The source-of-truth work adds:
 
 The public homepage is the presentation layer. It receives approved school information, schedules, final results, standings, and published announcements from Supabase.
 
-Rules, constitutions, operations guides, officials information, and other conference working resources are restricted to authenticated RVC members. A database trigger forces all `conference_documents` records to members-only visibility so an administrative mistake cannot expose them publicly.
+Rules, constitutions, operations guides, officials information, and other conference working resources stay inside the authenticated RVC domain. A database trigger forces all `conference_documents` records away from public visibility so an administrative mistake cannot expose them on the public website.
 
 ## Conference news
 
@@ -161,7 +161,7 @@ Imported default start times must be verified by the appropriate AD before publi
 
 - RLS is enabled on every source-of-truth table.
 - Anonymous users see only approved public data and published news.
-- Conference documents are members-only.
+- Conference documents are internal to the authenticated RVC domain.
 - Authenticated users see data permitted by conference or school membership.
 - Write operations are restricted by conference role, school role, or both.
 - Sensitive workflows use `SECURITY DEFINER` RPC functions with explicit internal role checks and fixed search paths.
