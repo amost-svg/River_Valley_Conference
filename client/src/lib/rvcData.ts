@@ -103,6 +103,69 @@ export function rpc<T>(functionName: string, body: Record<string, unknown>): Pro
   );
 }
 
+export async function invokeFunction<T>(functionName: string, body: Record<string, unknown>): Promise<T> {
+  return request<T>(
+    `/functions/v1/${functionName}`,
+    { method: "POST", body: JSON.stringify(body) },
+    { authenticated: true },
+  );
+}
+
+export async function uploadFile(
+  bucket: string,
+  objectPath: string,
+  file: File,
+  options: { upsert?: boolean } = {},
+): Promise<string> {
+  const config = getConfiguration();
+  const session = await getSession();
+  if (!session) throw new Error("Please sign in to upload files.");
+
+  const response = await fetch(
+    `${config.url}/storage/v1/object/${encodeURIComponent(bucket)}/${objectPath.split("/").map(encodeURIComponent).join("/")}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.key,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": file.type || "application/octet-stream",
+        "x-upsert": options.upsert === false ? "false" : "true",
+      },
+      body: file,
+    },
+  );
+  if (!response.ok) throw await parseError(response);
+  return objectPath;
+}
+
+export async function createSignedStorageUrl(bucket: string, objectPath: string, expiresIn = 3600): Promise<string> {
+  const config = getConfiguration();
+  const session = await getSession();
+  if (!session) throw new Error("Please sign in to open this file.");
+  const response = await fetch(
+    `${config.url}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${objectPath.split("/").map(encodeURIComponent).join("/")}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.key,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn }),
+    },
+  );
+  if (!response.ok) throw await parseError(response);
+  const payload = await response.json() as { signedURL?: string; signedUrl?: string };
+  const signedPath = payload.signedURL ?? payload.signedUrl;
+  if (!signedPath) throw new Error("Supabase did not return a signed file URL.");
+  return signedPath.startsWith("http") ? signedPath : `${config.url}/storage/v1${signedPath}`;
+}
+
+export function publicStorageUrl(bucket: string, objectPath: string): string {
+  const config = getConfiguration();
+  return `${config.url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 export async function getCurrentUserId(): Promise<string> {
   const session = await getSession();
   if (!session) throw new Error("Please sign in to continue.");
