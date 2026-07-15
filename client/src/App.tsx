@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import Admin from "@/pages/Admin";
-import ConferenceHub from "@/pages/ConferenceHub";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
 import GameOperations from "@/pages/GameOperations";
@@ -34,12 +33,19 @@ function AuthLinkRedirect() {
   return null;
 }
 
+function PublicConferenceRedirect() {
+  useEffect(() => {
+    window.location.replace("/#standings");
+  }, []);
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/conference" component={ConferenceHub} />
-      <Route path="/conference/tournaments" component={() => <TournamentCenter />} />
+      <Route path="/conference" component={PublicConferenceRedirect} />
+      <Route path="/conference/tournaments" component={PublicConferenceRedirect} />
       <Route path="/login" component={Login} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/set-password" component={ResetPassword} />
