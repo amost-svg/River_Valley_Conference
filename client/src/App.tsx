@@ -5,7 +5,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
-import Admin from "@/pages/Admin";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
 import ConferenceContentAdmin from "@/pages/ConferenceContentAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
@@ -40,6 +39,14 @@ function PublicConferenceRedirect() {
   return null;
 }
 
+function ConferenceDashboardRoute() {
+  return (
+    <ProtectedRoute>
+      <ConferenceAdmin />
+    </ProtectedRoute>
+  );
+}
+
 function Router() {
   return (
     <Switch>
@@ -49,19 +56,16 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/set-password" component={ResetPassword} />
-      <Route path="/admin" component={() => (
-        <ProtectedRoute>
-          <Admin />
-        </ProtectedRoute>
-      )} />
-      <Route path="/conference-admin" component={() => (
+
+      {/* The Supabase-backed conference dashboard is the primary admin landing page. */}
+      <Route path="/admin" component={ConferenceDashboardRoute} />
+      <Route path="/conference-admin" component={ConferenceDashboardRoute} />
+      <Route path="/conference-admin/core" component={ConferenceDashboardRoute} />
+
+      {/* The launcher remains available as an optional tools index, but no longer replaces the dashboard. */}
+      <Route path="/conference-admin/tools" component={() => (
         <ProtectedRoute>
           <ConferenceWorkspaceHome />
-        </ProtectedRoute>
-      )} />
-      <Route path="/conference-admin/core" component={() => (
-        <ProtectedRoute>
-          <ConferenceAdmin />
         </ProtectedRoute>
       )} />
       <Route path="/conference-admin/games" component={() => (
