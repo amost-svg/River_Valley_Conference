@@ -1,3 +1,4 @@
+drop policy if exists school_contacts_admin_insert on public.school_contacts;
 drop policy if exists school_contacts_scoped_insert on public.school_contacts;
 create policy school_contacts_scoped_insert
 on public.school_contacts
