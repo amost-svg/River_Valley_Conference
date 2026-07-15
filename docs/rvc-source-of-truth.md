@@ -54,7 +54,7 @@ The source-of-truth work adds:
 
 The public homepage is the presentation layer. It receives approved school information, schedules, final results, standings, and published announcements from Supabase.
 
-Rules, constitutions, operations guides, officials information, and other conference working resources stay inside the authenticated RVC domain. A database trigger forces all `conference_documents` records away from public visibility so an administrative mistake cannot expose them on the public website.
+Rules, constitutions, operations guides, officials information, and other conference working resources stay inside the authenticated RVC domain. A database trigger prevents `conference_documents` records from being given public visibility, so an administrative mistake cannot expose them on the public website.
 
 ## Conference news
 
