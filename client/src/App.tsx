@@ -8,6 +8,9 @@ import Home from "@/pages/Home";
 import Admin from "@/pages/Admin";
 import ConferenceHub from "@/pages/ConferenceHub";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
+import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
+import GameOperations from "@/pages/GameOperations";
+import TournamentCenter from "@/pages/TournamentCenter";
 import Login from "@/pages/Login";
 import ResetPassword from "@/pages/ResetPassword";
 import School from "@/pages/School";
@@ -36,6 +39,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/conference" component={ConferenceHub} />
+      <Route path="/conference/tournaments" component={() => <TournamentCenter />} />
       <Route path="/login" component={Login} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/set-password" component={ResetPassword} />
@@ -46,7 +50,22 @@ function Router() {
       )} />
       <Route path="/conference-admin" component={() => (
         <ProtectedRoute>
+          <ConferenceWorkspaceHome />
+        </ProtectedRoute>
+      )} />
+      <Route path="/conference-admin/core" component={() => (
+        <ProtectedRoute>
           <ConferenceAdmin />
+        </ProtectedRoute>
+      )} />
+      <Route path="/conference-admin/games" component={() => (
+        <ProtectedRoute>
+          <GameOperations />
+        </ProtectedRoute>
+      )} />
+      <Route path="/conference-admin/tournaments" component={() => (
+        <ProtectedRoute>
+          <TournamentCenter adminMode />
         </ProtectedRoute>
       )} />
       <Route path="/schools/:id" component={School} />
