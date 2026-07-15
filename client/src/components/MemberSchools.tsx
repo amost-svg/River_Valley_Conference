@@ -19,7 +19,6 @@ interface PublicSchool {
 interface SchoolBrand {
   primary: string;
   secondary: string;
-  text: string;
 }
 
 // The RVC member-school spreadsheet is the source for school names and mascots.
@@ -27,19 +26,19 @@ interface SchoolBrand {
 // established athletic colors. Hex values are web-safe approximations rather
 // than a claim of school-issued brand standards.
 const schoolBrands: Record<string, SchoolBrand> = {
-  beecher: { primary: "#F97316", secondary: "#111827", text: "#FFFFFF" },
-  central: { primary: "#1D4ED8", secondary: "#FFFFFF", text: "#FFFFFF" },
-  donovan: { primary: "#F5B335", secondary: "#111827", text: "#111827" },
-  "gardner-south-wilmington": { primary: "#F05A28", secondary: "#111827", text: "#FFFFFF" },
-  "grace-christian-academy": { primary: "#0B2D5C", secondary: "#D4AF37", text: "#FFFFFF" },
-  "grant-park": { primary: "#166534", secondary: "#FACC15", text: "#FFFFFF" },
-  "illinois-lutheran": { primary: "#1E3A8A", secondary: "#FACC15", text: "#FFFFFF" },
-  momence: { primary: "#B91C1C", secondary: "#FFFFFF", text: "#FFFFFF" },
-  "st-anne": { primary: "#B91C1C", secondary: "#111827", text: "#FFFFFF" },
-  "tri-point": { primary: "#1D4ED8", secondary: "#F59E0B", text: "#FFFFFF" },
+  beecher: { primary: "#F97316", secondary: "#111827" },
+  central: { primary: "#1D4ED8", secondary: "#FFFFFF" },
+  donovan: { primary: "#F5B335", secondary: "#111827" },
+  "gardner-south-wilmington": { primary: "#F05A28", secondary: "#111827" },
+  "grace-christian-academy": { primary: "#0B2D5C", secondary: "#D4AF37" },
+  "grant-park": { primary: "#166534", secondary: "#FACC15" },
+  "illinois-lutheran": { primary: "#1E3A8A", secondary: "#FACC15" },
+  momence: { primary: "#B91C1C", secondary: "#FFFFFF" },
+  "st-anne": { primary: "#B91C1C", secondary: "#111827" },
+  "tri-point": { primary: "#1D4ED8", secondary: "#F59E0B" },
 };
 
-const defaultBrand: SchoolBrand = { primary: "#0F2A4A", secondary: "#D4AF37", text: "#FFFFFF" };
+const defaultBrand: SchoolBrand = { primary: "#0F2A4A", secondary: "#D4AF37" };
 
 function initials(name: string) {
   return name
