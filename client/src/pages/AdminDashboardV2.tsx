@@ -239,7 +239,8 @@ function formatShortDate(value: string | null) {
 
 function sportLabel(sport?: Sport | CalendarGame) {
   if (!sport) return "Conference";
-  return sport.gender_label && sport.gender_label !== "Coed" ? `${sport.gender_label} ${sport.name ?? sport.sport_name}` : (sport.name ?? sport.sport_name);
+  const name = "sport_name" in sport ? sport.sport_name : sport.name;
+  return sport.gender_label && sport.gender_label !== "Coed" ? `${sport.gender_label} ${name}` : name;
 }
 
 function safeFilename(value: string) {
