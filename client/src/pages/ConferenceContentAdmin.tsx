@@ -69,6 +69,8 @@ function formatDate(value: string | null) {
 async function loadContentData(): Promise<ContentData> {
   const user = await getRvcUserContext() as UserContext | null;
   if (!user) throw new Error("Please sign in to manage conference content.");
+  const canManageContent = user.isSuperAdmin || ["SuperAdmin", "conference_admin", "conference_official", "press_editor"].includes(user.role);
+  if (!canManageContent) throw new Error("Conference administrator, official, or communications access is required.");
 
   const [news, documents] = await Promise.all([
     memberSelect<NewsItem[]>(
