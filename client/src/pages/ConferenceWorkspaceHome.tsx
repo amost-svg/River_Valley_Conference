@@ -20,7 +20,7 @@ const workspaces = [
     href: "/conference-admin/content",
     icon: Newspaper,
     title: "News & Resources",
-    description: "Write genuine public announcements and manage the private rules, operations guides, and conference resources library.",
+    description: "Write complete public announcements and manage the private rules, operations guides, and conference resources library.",
   },
 ] as const;
 
