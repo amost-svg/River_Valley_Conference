@@ -75,7 +75,7 @@ export default function Navigation() {
                   {item.label}
                 </button>
               ))}
-              <Link href="/conference-admin">
+              <Link href="/admin">
                 <Button variant="outline" size="sm" className="ml-2 border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy">
                   <LogIn className="mr-2 h-4 w-4" /> Admin Login
                 </Button>
@@ -112,7 +112,7 @@ export default function Navigation() {
               </li>
             ))}
             <li className="mt-2 border-t border-blue-800 pt-2">
-              <Link href="/conference-admin"><Button variant="outline" className="min-h-[44px] w-full border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy" onClick={() => setIsMenuOpen(false)}><LogIn className="mr-2 h-4 w-4" /> Admin Login</Button></Link>
+              <Link href="/admin"><Button variant="outline" className="min-h-[44px] w-full border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy" onClick={() => setIsMenuOpen(false)}><LogIn className="mr-2 h-4 w-4" /> Admin Login</Button></Link>
             </li>
           </ul>
         </nav>
