@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
+import AdminDashboardV2 from "@/pages/AdminDashboardV2";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
 import ConferenceContentAdmin from "@/pages/ConferenceContentAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
@@ -39,10 +40,10 @@ function PublicConferenceRedirect() {
   return null;
 }
 
-function ConferenceDashboardRoute() {
+function AdminDashboardRoute() {
   return (
     <ProtectedRoute>
-      <ConferenceAdmin />
+      <AdminDashboardV2 />
     </ProtectedRoute>
   );
 }
@@ -57,12 +58,16 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/set-password" component={ResetPassword} />
 
-      {/* The Supabase-backed conference dashboard is the primary admin landing page. */}
-      <Route path="/admin" component={ConferenceDashboardRoute} />
-      <Route path="/conference-admin" component={ConferenceDashboardRoute} />
-      <Route path="/conference-admin/core" component={ConferenceDashboardRoute} />
+      <Route path="/admin" component={AdminDashboardRoute} />
+      <Route path="/conference-admin" component={AdminDashboardRoute} />
+      <Route path="/conference-admin/dashboard" component={AdminDashboardRoute} />
 
-      {/* The launcher remains available as an optional tools index, but no longer replaces the dashboard. */}
+      {/* Existing specialist tools remain available while their workflows are folded into the main dashboard. */}
+      <Route path="/conference-admin/core" component={() => (
+        <ProtectedRoute>
+          <ConferenceAdmin />
+        </ProtectedRoute>
+      )} />
       <Route path="/conference-admin/tools" component={() => (
         <ProtectedRoute>
           <ConferenceWorkspaceHome />
