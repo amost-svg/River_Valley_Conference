@@ -17,12 +17,8 @@ interface UserContext {
 interface NewsItem {
   id: string;
   title: string;
-  slug: string;
   excerpt: string | null;
-  body: string | null;
   category: string | null;
-  image_path: string | null;
-  pdf_path: string | null;
   status: string;
   published_at: string | null;
   created_at: string;
@@ -33,9 +29,6 @@ interface ConferenceDocument {
   title: string;
   category: string;
   external_url: string | null;
-  visibility: string;
-  status: string;
-  updated_at: string;
 }
 
 interface ContentData {
@@ -72,10 +65,10 @@ async function loadContentData(): Promise<ContentData> {
 
   const [news, documents] = await Promise.all([
     memberSelect<NewsItem[]>(
-      "news_items?select=id,title,slug,excerpt,body,category,image_path,pdf_path,status,published_at,created_at&order=created_at.desc",
+      "news_items?select=id,title,excerpt,category,status,published_at,created_at&order=created_at.desc",
     ),
     memberSelect<ConferenceDocument[]>(
-      "conference_documents?select=id,title,category,external_url,visibility,status,updated_at&order=category.asc,title.asc",
+      "conference_documents?select=id,title,category,external_url&order=category.asc,title.asc",
     ),
   ]);
 
