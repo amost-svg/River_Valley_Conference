@@ -29,8 +29,8 @@ interface SchoolBrand {
 const schoolBrands: Record<string, SchoolBrand> = {
   beecher: { primary: "#F97316", secondary: "#111827", text: "#FFFFFF" },
   central: { primary: "#1D4ED8", secondary: "#FFFFFF", text: "#FFFFFF" },
-  donovan: { primary: "#6B21A8", secondary: "#FACC15", text: "#FFFFFF" },
-  "gardner-south-wilmington": { primary: "#111827", secondary: "#FACC15", text: "#FFFFFF" },
+  donovan: { primary: "#F5B335", secondary: "#111827", text: "#111827" },
+  "gardner-south-wilmington": { primary: "#F05A28", secondary: "#111827", text: "#FFFFFF" },
   "grace-christian-academy": { primary: "#0B2D5C", secondary: "#D4AF37", text: "#FFFFFF" },
   "grant-park": { primary: "#166534", secondary: "#FACC15", text: "#FFFFFF" },
   "illinois-lutheran": { primary: "#1E3A8A", secondary: "#FACC15", text: "#FFFFFF" },
