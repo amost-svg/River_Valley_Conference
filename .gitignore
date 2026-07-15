@@ -3,6 +3,7 @@ dist
 .env
 .env.local
 .env.*.local
+.dev.vars
 .local
 .agents
 uploads
@@ -12,3 +13,4 @@ uploads
 server/public
 vite.config.ts.*
 *.tar.gz
+.wrangler
