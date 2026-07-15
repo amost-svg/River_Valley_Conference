@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Database, Menu, Settings, X } from "lucide-react";
+import { Database, Menu, Settings, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import rvcLogo from "@assets/RVC logo (3)_1754081720129.png";
@@ -75,6 +75,11 @@ export default function Navigation() {
                   {item.label}
                 </button>
               ))}
+              <Link href="/conference/tournaments">
+                <Button variant="ghost" size="sm" className="text-gray-300 hover:bg-white/10 hover:text-conference-gold">
+                  <Trophy className="mr-2 h-4 w-4" /> Tournaments
+                </Button>
+              </Link>
               <Link href="/conference">
                 <Button size="sm" className="ml-2 bg-conference-gold text-conference-navy hover:bg-yellow-400">
                   <Database className="mr-2 h-4 w-4" /> Conference Hub
@@ -118,6 +123,9 @@ export default function Navigation() {
               </li>
             ))}
             <li className="mt-2 border-t border-blue-800 pt-2">
+              <Link href="/conference/tournaments"><Button variant="outline" className="min-h-[44px] w-full border-white/30 text-white hover:bg-white/10" onClick={() => setIsMenuOpen(false)}><Trophy className="mr-2 h-4 w-4" /> Tournaments</Button></Link>
+            </li>
+            <li>
               <Link href="/conference"><Button className="min-h-[44px] w-full bg-conference-gold text-conference-navy hover:bg-yellow-400" onClick={() => setIsMenuOpen(false)}><Database className="mr-2 h-4 w-4" /> Conference Hub</Button></Link>
             </li>
             <li>
