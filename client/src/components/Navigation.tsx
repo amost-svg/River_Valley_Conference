@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, Settings } from "lucide-react";
+import { Database, Menu, Settings, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import rvcLogo from "@assets/RVC logo (3)_1754081720129.png";
@@ -9,60 +9,44 @@ export default function Navigation() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Handle keyboard navigation
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isMenuOpen) {
+      if (event.key === "Escape" && isMenuOpen) {
         setIsMenuOpen(false);
         menuButtonRef.current?.focus();
       }
     };
-
     const handleClickOutside = (event: MouseEvent) => {
       if (
         isMenuOpen &&
         mobileMenuRef.current &&
         !mobileMenuRef.current.contains(event.target as Node) &&
         !menuButtonRef.current?.contains(event.target as Node)
-      ) {
-        setIsMenuOpen(false);
-      }
+      ) setIsMenuOpen(false);
     };
 
     if (isMenuOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("keydown", handleEscapeKey);
+      document.addEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("keydown", handleEscapeKey);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isMenuOpen]);
 
-  // Focus management for mobile menu
   useEffect(() => {
-    if (isMenuOpen) {
-      // Focus first menu item when menu opens
-      const firstMenuItem = mobileMenuRef.current?.querySelector('button');
-      firstMenuItem?.focus();
-    }
+    if (isMenuOpen) mobileMenuRef.current?.querySelector("button")?.focus();
   }, [isMenuOpen]);
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      const offsetTop = element.offsetTop - 64; // Account for sticky header
-      window.scrollTo({
-        top: offsetTop,
-        behavior: 'smooth'
-      });
+  const goToSection = (sectionId: string) => {
+    if (window.location.pathname !== "/") {
+      window.location.assign(`/#${sectionId}`);
+      return;
     }
+    const element = document.getElementById(sectionId);
+    if (element) window.scrollTo({ top: element.offsetTop - 64, behavior: "smooth" });
     setIsMenuOpen(false);
-  };
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
   };
 
   const navItems = [
@@ -76,105 +60,68 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="bg-conference-navy shadow-lg sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center">
-              <img src={rvcLogo} alt="RVC Logo" className="h-8 w-8 mr-3" />
-              <span className="text-white font-bold text-xl">River Valley Conference</span>
-            </div>
-          </div>
-          
-          {/* Desktop Navigation */}
+    <nav className="sticky top-0 z-50 bg-conference-navy shadow-lg">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <Link href="/" className="flex flex-shrink-0 items-center">
+            <img src={rvcLogo} alt="RVC Logo" className="mr-3 h-8 w-8" />
+            <span className="text-xl font-bold text-white">River Valley Conference</span>
+          </Link>
+
           <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              {navItems.map((item, index) => (
-                <button
-                  key={item.id}
-                  onClick={() => scrollToSection(item.id)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    index === 0 
-                      ? "text-white hover:conference-gold" 
-                      : "text-gray-300 hover:conference-gold"
-                  }`}
-                >
+            <div className="ml-10 flex items-baseline space-x-2">
+              {navItems.map((item) => (
+                <button key={item.id} onClick={() => goToSection(item.id)} className="rounded-md px-2 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-conference-gold">
                   {item.label}
                 </button>
               ))}
-              <Link href="/admin">
-                <Button variant="outline" size="sm" className="ml-4 text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin
+              <Link href="/conference">
+                <Button size="sm" className="ml-2 bg-conference-gold text-conference-navy hover:bg-yellow-400">
+                  <Database className="mr-2 h-4 w-4" /> Conference Hub
+                </Button>
+              </Link>
+              <Link href="/conference-admin">
+                <Button variant="outline" size="sm" className="ml-1 border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy">
+                  <Settings className="mr-2 h-4 w-4" /> Manage
                 </Button>
               </Link>
             </div>
           </div>
 
-          {/* Mobile menu button */}
           <div className="md:hidden">
             <Button
               ref={menuButtonRef}
               id="mobile-menu-button"
               variant="ghost"
               size="sm"
-              onClick={toggleMenu}
+              onClick={() => setIsMenuOpen((open) => !open)}
               className="text-gray-300 hover:text-white"
               aria-expanded={isMenuOpen}
               aria-controls="mobile-menu"
               aria-label="Toggle navigation menu"
               data-testid="button-mobile-menu-toggle"
             >
-              {isMenuOpen ? (
-                <X className="h-6 w-6" aria-hidden="true" />
-              ) : (
-                <Menu className="h-6 w-6" aria-hidden="true" />
-              )}
+              {isMenuOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Navigation Menu */}
       {isMenuOpen && (
-        <nav
-          ref={mobileMenuRef}
-          id="mobile-menu"
-          className="md:hidden bg-conference-navy border-t border-blue-800"
-          aria-label="Mobile navigation"
-        >
-          <ul className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {navItems.map((item, index) => (
+        <nav ref={mobileMenuRef} id="mobile-menu" className="border-t border-blue-800 bg-conference-navy md:hidden" aria-label="Mobile navigation">
+          <ul className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
+            {navItems.map((item) => (
               <li key={item.id}>
-                <button
-                  onClick={() => scrollToSection(item.id)}
-                  className="text-gray-300 hover:text-white hover:bg-blue-800 focus:bg-blue-800 focus:text-white focus:outline-none focus:ring-2 focus:ring-conference-gold block px-3 py-2 rounded-md text-base font-medium w-full text-left min-h-[44px] transition-colors"
-                  tabIndex={0}
-                  data-testid={`button-nav-${item.id}`}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      scrollToSection(item.id);
-                    }
-                  }}
-                >
+                <button onClick={() => goToSection(item.id)} className="block min-h-[44px] w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-300 transition-colors hover:bg-blue-800 hover:text-white focus:bg-blue-800 focus:text-white focus:outline-none focus:ring-2 focus:ring-conference-gold">
                   {item.label}
                 </button>
               </li>
             ))}
-            <li className="border-t border-blue-800 mt-2 pt-2">
-              <Link href="/admin">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full text-conference-gold border-conference-gold hover:bg-conference-gold hover:text-conference-navy focus:bg-conference-gold focus:text-conference-navy focus:outline-none focus:ring-2 focus:ring-conference-gold min-h-[44px]"
-                  onClick={() => setIsMenuOpen(false)}
-                  data-testid="button-nav-admin"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin
-                </Button>
-              </Link>
+            <li className="mt-2 border-t border-blue-800 pt-2">
+              <Link href="/conference"><Button className="min-h-[44px] w-full bg-conference-gold text-conference-navy hover:bg-yellow-400" onClick={() => setIsMenuOpen(false)}><Database className="mr-2 h-4 w-4" /> Conference Hub</Button></Link>
+            </li>
+            <li>
+              <Link href="/conference-admin"><Button variant="outline" className="min-h-[44px] w-full border-conference-gold text-conference-gold hover:bg-conference-gold hover:text-conference-navy" onClick={() => setIsMenuOpen(false)}><Settings className="mr-2 h-4 w-4" /> Manage Conference</Button></Link>
             </li>
           </ul>
         </nav>
