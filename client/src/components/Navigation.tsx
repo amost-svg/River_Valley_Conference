@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { LogIn, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import rvcLogo from "@assets/RVC logo (3)_1754081720129.png";
+
+const rvcLogo = "/logos/rvc.png";
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

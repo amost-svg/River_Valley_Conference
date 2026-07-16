@@ -1,146 +1,78 @@
-# River Valley Conference Website
+# River Valley Conference website
 
-A modern, professional website for the River Valley Conference IHSA organization featuring school directories, sports schedules, conference standings, and news announcements.
+The River Valley Conference website is a React and TypeScript application for
+member-school information, schedules, results, standings, news, and conference
+administration.
 
-## Features
+## Current platform
 
-- **Member Schools Directory**: Displays all 10 River Valley Conference schools with authentic logos and information
-- **Sports Schedules & Results**: Interactive schedule viewer with game results across multiple sports
-- **Conference Standings**: Real-time standings tables for Football and Basketball
-- **News & Announcements**: Latest conference news and updates
-- **Contact System**: Contact form for inquiries and communication
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **PostgreSQL Database**: Persistent data storage for all conference information
+- Source control and review: GitHub
+- Frontend hosting: Cloudflare Pages
+- Database and authentication: Supabase
+- Frontend: React, TypeScript, Vite, Tailwind CSS, and shadcn/ui
 
-## Technology Stack
+The default development and production workflows no longer require Replit.
 
-- **Frontend**: React + TypeScript, Vite, TailwindCSS, shadcn/ui components
-- **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: TailwindCSS with custom conference color scheme
-- **Icons**: Lucide React icons
+## Development
 
-## River Valley Conference Schools
+Requirements:
 
-1. Beecher High School (Bobcats) - Beecher, IL
-2. Central High School (Comets) - Clifton, IL
-3. Donovan High School (Wildcats) - Donovan, IL
-4. Gardner South Wilmington High School (Panthers) - Gardner, IL
-5. Grace Christian Academy (Crusaders) - Huntley, IL
-6. Grant Park High School (Dragons) - Grant Park, IL
-7. Illinois Lutheran High School (Chargers) - Crete, IL
-8. Momence High School (Redskins) - Momence, IL
-9. St. Anne High School (Cardinals) - St. Anne, IL
-10. Tri-Point High School (Chargers) - Cullom, IL
+- Node.js 20
+- npm
 
-## Setup Instructions
+Install and run:
 
-### Prerequisites
-
-- Node.js 18+ 
-- PostgreSQL database
-- npm or yarn package manager
-
-### Installation
-
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Environment Variables**
-   Create a `.env` file in the root directory:
-   ```env
-   DATABASE_URL=your_postgresql_connection_string
-   NODE_ENV=development
-   ```
-
-3. **Database Setup**
-   ```bash
-   # Push database schema
-   npm run db:push
-   
-   # Seed the database with River Valley Conference data
-   npx tsx server/seed.ts
-   ```
-
-4. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
-
-   The application will be available at `http://localhost:5000`
-
-### Production Deployment
-
-1. **Build the Application**
-   ```bash
-   npm run build
-   ```
-
-2. **Start Production Server**
-   ```bash
-   npm start
-   ```
-
-## Project Structure
-
-```
-├── client/                 # Frontend React application
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── pages/          # Page components
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── lib/            # Utilities and configurations
-├── server/                 # Backend Express application
-│   ├── index.ts           # Server entry point
-│   ├── routes.ts          # API routes
-│   ├── storage.ts         # Database operations
-│   ├── db.ts              # Database connection
-│   └── seed.ts            # Database seeding script
-├── shared/                 # Shared types and schemas
-│   └── schema.ts          # Database schema definitions
-└── README.md              # This file
+```bash
+npm ci
+npm run dev
 ```
 
-## Available Scripts
+The Vite development server prints its local URL when it starts.
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run db:push` - Push database schema changes
-- `npm run db:studio` - Open Drizzle Studio (database viewer)
+## Validation
 
-## Database Schema
+```bash
+npm run check
+npm run build
+```
 
-The application uses PostgreSQL with the following main tables:
+The production frontend is written to `dist/public`. GitHub Actions runs both
+commands on every pull request and every push to `main`.
 
-- **schools**: Member school information
-- **sports**: Available sports programs
-- **games**: Game schedules and results
-- **standings**: Conference standings by sport
-- **news**: News articles and announcements
-- **contacts**: Contact form submissions
+## Environment variables
 
-## Customization
+Copy `.env.example` to `.env.local` for local development and provide:
 
-### Colors
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-The website uses a custom color scheme defined in `client/src/index.css`:
+`API_ORIGIN` is a temporary migration bridge for legacy `/api/*` routes. It
+must be removed after those calls are converted to Supabase. Never commit real
+keys, database connection strings, or service-role credentials.
 
-- **Conference Navy**: Primary brand color
-- **Conference Gold**: Secondary accent color
-- **Conference Green**: Additional accent color
+## Deployment
 
-### Content
+Cloudflare Pages builds the repository with:
 
-- School information is stored in the database and can be updated through the database
-- News articles can be added through the database
-- Game schedules and standings are managed through the database
+- Build command: `npm run build`
+- Output directory: `dist/public`
 
-## Support
+Every pull request receives a Cloudflare preview. Merge only after the preview
+and GitHub validation checks pass.
 
-For questions about the River Valley Conference website, please contact the conference administration through the contact form on the website.
+## Migration
 
-## License
+See [MIGRATION_STATUS.md](MIGRATION_STATUS.md) for the Replit retirement plan,
+what has already moved, and what remains before the old backend can be switched
+off.
 
-This project is developed specifically for the River Valley Conference IHSA organization.
+## Repository layout
+
+```text
+client/       React application and public assets
+functions/    Cloudflare Pages Functions
+shared/       Shared validation and scoring logic
+server/       Temporary legacy Express API reference
+legacy/       Retired Flask prototype
+scripts/      Temporary data-migration utilities
+```

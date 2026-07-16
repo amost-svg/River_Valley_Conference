@@ -2,16 +2,6 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import type { School } from "@shared/schema";
-import beecherLogo from "@assets/Beecher High School Logo.png";
-import centralLogo from "@assets/Clifton Central Logo.png";
-import donovanLogo from "@assets/Donovan Logo.png";
-import gardnerLogo from "@assets/Gardener South Wilmington Logo.png";
-import graceLogo from "@assets/Grace Christian Academy Logo.png";
-import grantParkLogo from "@assets/Grant Park Logo.png";
-import illinoisLutheranLogo from "@assets/Illinois Lutheran Logo.png";
-import momenceLogo from "@assets/Momence Logo.png";
-import stAnneLogo from "@assets/St Anne Logo.png";
-import triPointLogo from "@assets/Tri Point Logo.png";
 
 export default function Hero() {
   const { data: schools } = useQuery<School[]>({
@@ -31,16 +21,16 @@ export default function Hero() {
 
   // School logos in alphabetical order by school name
   const schoolLogos = [
-    { name: "Beecher", logo: beecherLogo },
-    { name: "Central", logo: centralLogo },
-    { name: "Donovan", logo: donovanLogo },
-    { name: "Gardner South Wilmington", logo: gardnerLogo },
-    { name: "Grace Christian Academy", logo: graceLogo },
-    { name: "Grant Park", logo: grantParkLogo },
-    { name: "Illinois Lutheran", logo: illinoisLutheranLogo },
-    { name: "Momence", logo: momenceLogo },
-    { name: "St. Anne", logo: stAnneLogo },
-    { name: "Tri Point", logo: triPointLogo },
+    { name: "Beecher", logo: "/logos/beecher.png" },
+    { name: "Central", logo: "/logos/central.png" },
+    { name: "Donovan", logo: "/logos/donovan.png" },
+    { name: "Gardner South Wilmington", logo: "/logos/gardner-south-wilmington.png" },
+    { name: "Grace Christian Academy", logo: "/logos/grace-christian-academy.png" },
+    { name: "Grant Park", logo: "/logos/grant-park.png" },
+    { name: "Illinois Lutheran", logo: "/logos/illinois-lutheran.png" },
+    { name: "Momence", logo: "/logos/momence.png" },
+    { name: "St. Anne", logo: "/logos/st-anne.png" },
+    { name: "Tri Point", logo: "/logos/tri-point.png" },
   ];
 
   return (

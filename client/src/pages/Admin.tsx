@@ -51,7 +51,8 @@ import ScheduleUploader from "@/components/ScheduleUploader";
 import SuperAdminPanel from "@/components/SuperAdminPanel";
 import { AddGameDialog } from "@/components/AddGameDialog";
 import { PendingSubmissionsDialog } from "@/components/PendingSubmissionsDialog";
-import rvcLogoPath from "@assets/RVC logo (3)_1754075250117.png";
+
+const rvcLogoPath = "/logos/rvc.png";
 
 // Form schemas
 const gameSchema = insertGameSchema.extend({
@@ -1202,7 +1203,7 @@ export default function Admin() {
                             {article.author && (
                               <span className="text-xs text-gray-500 flex items-center gap-1">
                                 <UserIcon className="h-3 w-3" />
-                                {article.author.username}
+                                {article.author.name}
                               </span>
                             )}
                             <div className="flex items-center gap-2">

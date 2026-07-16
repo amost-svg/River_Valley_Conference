@@ -1,6 +1,7 @@
 import { Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail } from "lucide-react";
 import { Link } from "wouter";
-import rvcLogoPath from "@assets/RVC logo (3)_1754081720129.png";
+
+const rvcLogoPath = "/logos/rvc.png";
 
 export default function Footer() {
   const scrollToSection = (sectionId: string) => {
