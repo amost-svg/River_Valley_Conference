@@ -1,146 +1,87 @@
-# River Valley Conference Website
+# River Valley Conference
 
-A modern, professional website for the River Valley Conference IHSA organization featuring school directories, sports schedules, conference standings, and news announcements.
+The official public website and conference-operations portal for the River Valley Conference (RVC), an IHSA conference serving ten member schools in northeastern Illinois.
 
-## Features
+## What the platform does
 
-- **Member Schools Directory**: Displays all 10 River Valley Conference schools with authentic logos and information
-- **Sports Schedules & Results**: Interactive schedule viewer with game results across multiple sports
-- **Conference Standings**: Real-time standings tables for Football and Basketball
-- **News & Announcements**: Latest conference news and updates
-- **Contact System**: Contact form for inquiries and communication
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **PostgreSQL Database**: Persistent data storage for all conference information
+- Publishes the conference’s game-day view, schedules, verified results, and automatically calculated standings.
+- Gives athletic directors and principals a secure daily dashboard for games, scores, confirmations, school profiles, and conference resources.
+- Requires both opponents to confirm a submitted score before it becomes an official result, with conference-administrator review for disputes.
+- Supports approved cooperative programs, including the Tri-Point/GSW girls-basketball program.
+- Keeps private conference documents behind authenticated membership access.
+- Provides conference leaders with schedule import, data-quality, tournament, honors, event, and user-management tools.
 
-## Technology Stack
+## Source-of-truth model
 
-- **Frontend**: React + TypeScript, Vite, TailwindCSS, shadcn/ui components
-- **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: TailwindCSS with custom conference color scheme
-- **Icons**: Lucide React icons
+| Information | Authoritative system |
+| --- | --- |
+| Games, results, standings, users, schools, events, and public content | Supabase |
+| Collaborative and historical working documents | Google Drive |
+| Initial 2026–27 schedule import | `Importable RVC Master` Google Sheet |
+| Public website | Cloudflare Pages |
 
-## River Valley Conference Schools
+The website reads public information directly from Supabase. Authenticated operations use Supabase Auth, Row Level Security, and narrowly scoped database functions.
 
-1. Beecher High School (Bobcats) - Beecher, IL
-2. Central High School (Comets) - Clifton, IL
-3. Donovan High School (Wildcats) - Donovan, IL
-4. Gardner South Wilmington High School (Panthers) - Gardner, IL
-5. Grace Christian Academy (Crusaders) - Huntley, IL
-6. Grant Park High School (Dragons) - Grant Park, IL
-7. Illinois Lutheran High School (Chargers) - Crete, IL
-8. Momence High School (Redskins) - Momence, IL
-9. St. Anne High School (Cardinals) - St. Anne, IL
-10. Tri-Point High School (Chargers) - Cullom, IL
+## Technology
 
-## Setup Instructions
+- React, TypeScript, Vite, Tailwind CSS, and shadcn/ui
+- TanStack Query for client-side data synchronization
+- Supabase Postgres, Auth, Storage, Row Level Security, and database functions
+- Cloudflare Pages for the static production site
 
-### Prerequisites
+The old Replit Express/Postgres implementation remains in the repository only as migration history. Production does not depend on the legacy `/api` server.
 
-- Node.js 18+ 
-- PostgreSQL database
-- npm or yarn package manager
+## Local development
 
-### Installation
+Requirements: Node.js 20+ and npm.
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Environment Variables**
-   Create a `.env` file in the root directory:
-   ```env
-   DATABASE_URL=your_postgresql_connection_string
-   NODE_ENV=development
-   ```
-
-3. **Database Setup**
-   ```bash
-   # Push database schema
-   npm run db:push
-   
-   # Seed the database with River Valley Conference data
-   npx tsx server/seed.ts
-   ```
-
-4. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
-
-   The application will be available at `http://localhost:5000`
-
-### Production Deployment
-
-1. **Build the Application**
-   ```bash
-   npm run build
-   ```
-
-2. **Start Production Server**
-   ```bash
-   npm start
-   ```
-
-## Project Structure
-
-```
-├── client/                 # Frontend React application
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── pages/          # Page components
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── lib/            # Utilities and configurations
-├── server/                 # Backend Express application
-│   ├── index.ts           # Server entry point
-│   ├── routes.ts          # API routes
-│   ├── storage.ts         # Database operations
-│   ├── db.ts              # Database connection
-│   └── seed.ts            # Database seeding script
-├── shared/                 # Shared types and schemas
-│   └── schema.ts          # Database schema definitions
-└── README.md              # This file
+```bash
+npm ci
+npm run check
+npm run build:client
+npm run dev
 ```
 
-## Available Scripts
+Create a local `.env` file with:
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run db:push` - Push database schema changes
-- `npm run db:studio` - Open Drizzle Studio (database viewer)
+```env
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
 
-## Database Schema
+Never commit service-role keys or user credentials.
 
-The application uses PostgreSQL with the following main tables:
+## Routes
 
-- **schools**: Member school information
-- **sports**: Available sports programs
-- **games**: Game schedules and results
-- **standings**: Conference standings by sport
-- **news**: News articles and announcements
-- **contacts**: Contact form submissions
+- `/` — public conference homepage
+- `/login` — conference sign-in
+- `/admin` — daily AD/principal/conference dashboard
+- `/conference-admin/core` — conference-wide operations and source-of-truth tools
+- `/conference-admin/games` — specialist game operations
+- `/conference-admin/content` — specialist content administration
 
-## Customization
+## Schedule operations
 
-### Colors
+Imported master-schedule rows are published with their dates and opponents, while their start time is shown as **Time TBA** until a school verifies it. Athletic directors can then update operational details and report results through the dashboard. Approved results automatically recalculate the public standings.
 
-The website uses a custom color scheme defined in `client/src/index.css`:
+The 2026–27 import intentionally excludes:
 
-- **Conference Navy**: Primary brand color
-- **Conference Gold**: Secondary accent color
-- **Conference Green**: Additional accent color
+- BYE rows
+- self-matchups and exact duplicates
+- superseded Tri-Point girls-basketball rows (the approved co-op uses GSW’s schedule)
+- two extra boys-soccer matchups held for athletic-director confirmation
 
-### Content
+## Database changes
 
-- School information is stored in the database and can be updated through the database
-- News articles can be added through the database
-- Game schedules and standings are managed through the database
+Versioned SQL lives in `supabase/migrations`. Apply migrations through the connected Supabase project, then run the type check and client build before publishing.
 
-## Support
+## Production checks
 
-For questions about the River Valley Conference website, please contact the conference administration through the contact form on the website.
+Before release:
 
-## License
+```bash
+npm run check
+npm run build:client
+```
 
-This project is developed specifically for the River Valley Conference IHSA organization.
+Then verify the public homepage, school profiles, schedule filters, standings, contact submission, login, and authenticated dashboard against the production Supabase project.

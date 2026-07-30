@@ -28,11 +28,19 @@ import {
 } from "@/lib/rvcData";
 import { queryClient } from "@/lib/queryClient";
 
-interface Season { id: string; name: string; code: string }
+interface Season { id: string; name: string; code: string; starts_on: string; ends_on: string }
 interface Sport { id: string; slug: string; name: string; gender_label: string | null; standings_enabled: boolean }
 interface School { id: string; slug: string; name: string; short_name: string | null; mascot: string | null }
 interface Alias { school_id: string; alias: string; normalized_alias: string }
-interface Team { id: string; school_id: string; sport_id: string; display_name: string | null; level: string }
+interface Team {
+  id: string;
+  school_id: string;
+  sport_id: string;
+  display_name: string | null;
+  level: string;
+  is_active: boolean;
+  cooperative_program_id: string | null;
+}
 interface Game {
   id: string;
   sport_id: string;
@@ -88,6 +96,7 @@ interface ImportPreviewRow {
   status: "ready" | "skip" | "blocked";
   reason?: string;
   duplicateKey?: string;
+  isCoopHost?: boolean;
 }
 
 const sections = [
@@ -153,7 +162,7 @@ function centralStart(dateValue: string) {
 async function loadAdminData(): Promise<AdminData> {
   const user = await getRvcUserContext() as UserContext | null;
   if (!user) throw new Error("Please sign in to open the conference workspace.");
-  const seasons = await memberSelect<Season[]>("seasons?is_active=eq.true&select=id,name,code&limit=1");
+  const seasons = await memberSelect<Season[]>("seasons?is_active=eq.true&select=id,name,code,starts_on,ends_on&limit=1");
   const season = seasons[0];
   if (!season) throw new Error("No active RVC season is configured.");
   const sid = encodeURIComponent(season.id);
@@ -162,7 +171,7 @@ async function loadAdminData(): Promise<AdminData> {
     memberSelect<Sport[]>("sports?is_active=eq.true&select=id,slug,name,gender_label,standings_enabled&order=display_order.asc"),
     memberSelect<School[]>("schools?is_active=eq.true&select=id,slug,name,short_name,mascot&order=display_order.asc"),
     memberSelect<Alias[]>("school_aliases?select=school_id,alias,normalized_alias"),
-    memberSelect<Team[]>(`teams?season_id=eq.${sid}&select=id,school_id,sport_id,display_name,level&order=display_name.asc`),
+    memberSelect<Team[]>(`teams?season_id=eq.${sid}&is_active=eq.true&select=id,school_id,sport_id,display_name,level,is_active,cooperative_program_id&order=display_name.asc`),
     memberSelect<Game[]>(`games?season_id=eq.${sid}&select=id,sport_id,home_team_id,away_team_id,starts_at,status,is_published,location_text&order=starts_at.asc`),
     memberSelect<ResultSubmission[]>("result_submissions?select=id,game_id,home_score,away_score,status,submitted_at,review_note&order=submitted_at.desc"),
     memberSelect<Confirmation[]>("result_confirmations?select=id,submission_id,team_id,status,note&order=created_at.desc"),
@@ -240,15 +249,31 @@ export default function ConferenceAdmin() {
       const row: ImportPreviewRow = { sourceRow: index + 2, sportName, date, awayName, homeName, status: "ready" };
       if (!sportName && !date && !awayName && !homeName) return { ...row, status: "skip", reason: "Blank row" };
       const startsAt = centralStart(date);
-      const year = startsAt ? Number(startsAt.slice(0, 4)) : 0;
-      if (!startsAt || (year !== 2026 && year !== 2027)) return { ...row, status: "skip", reason: "Outside active 2026–27 season" };
+      const dateKey = startsAt?.slice(0, 10);
+      if (!startsAt || !dateKey || dateKey < data.season.starts_on || dateKey > data.season.ends_on) {
+        return { ...row, status: "skip", reason: `Outside active ${data.season.name} season` };
+      }
       if (normalizeLookupValue(awayName) === "bye" || normalizeLookupValue(homeName) === "bye") return { ...row, status: "skip", reason: "BYE row" };
       const sourceSportSlug = slugBySource[normalizeLookupValue(sportName)];
       const sportId = sourceSportSlug ? sportAliases.get(sourceSportSlug) : undefined;
       if (!sportId) return { ...row, status: "blocked", reason: "Unknown sport" };
       row.sportId = sportId;
-      const awaySchoolId = aliases.get(normalizeLookupValue(awayName));
-      const homeSchoolId = aliases.get(normalizeLookupValue(homeName));
+      const awayAlias = normalizeLookupValue(awayName);
+      const homeAlias = normalizeLookupValue(homeName);
+      if (
+        sourceSportSlug === "boys-soccer"
+        && (
+          (date === "8/27/2026" && awayAlias === "beecher" && homeAlias === "stanne")
+          || (date === "9/3/2026" && awayAlias === "stanne" && homeAlias === "illinoislutheran")
+        )
+      ) {
+        return { ...row, status: "skip", reason: "Held for AD confirmation: extra round-robin matchup" };
+      }
+      if (sourceSportSlug === "girls-basketball" && (awayAlias === "tripoint" || homeAlias === "tripoint")) {
+        return { ...row, status: "skip", reason: "Superseded by the approved Tri-Point/GSW co-op schedule" };
+      }
+      const awaySchoolId = aliases.get(awayAlias);
+      const homeSchoolId = aliases.get(homeAlias);
       if (!awaySchoolId || !homeSchoolId) return { ...row, status: "blocked", reason: "Unknown school alias" };
       if (awaySchoolId === homeSchoolId) return { ...row, status: "blocked", reason: "Self-matchup" };
       const awayTeam = teamBySportSchool.get(`${sportId}:${awaySchoolId}`);
@@ -257,9 +282,7 @@ export default function ConferenceAdmin() {
       row.awayTeamId = awayTeam.id;
       row.homeTeamId = homeTeam.id;
       row.homeSchoolId = homeSchoolId;
-      if (sourceSportSlug === "girls-basketball" && ["gsw", "tripoint"].includes(normalizeLookupValue(awayName)) || sourceSportSlug === "girls-basketball" && ["gsw", "tripoint"].includes(normalizeLookupValue(homeName))) {
-        return { ...row, status: "blocked", reason: "Blocked until the approved Tri-Point/GSW co-op schedule is reconciled" };
-      }
+      row.isCoopHost = Boolean(sourceSportSlug === "girls-basketball" && homeAlias === "gsw" && homeTeam.cooperative_program_id);
       const duplicateKey = `${sportId}:${startsAt.slice(0, 10)}:${awayTeam.id}:${homeTeam.id}`;
       row.duplicateKey = duplicateKey;
       if (seen.has(duplicateKey) || existingKeys.has(duplicateKey)) return { ...row, status: "skip", reason: "Duplicate matchup" };
@@ -294,9 +317,11 @@ export default function ConferenceAdmin() {
         is_conference: true,
         status: "scheduled",
         is_published: publishImported,
-        location_text: schoolMap.get(row.homeSchoolId ?? "")?.short_name ?? "Home school",
+        location_text: row.isCoopHost ? "Tri-Point/GSW — host site TBA" : (schoolMap.get(row.homeSchoolId ?? "")?.short_name ?? "Home school"),
         notes: `Imported from Importable RVC Master row ${row.sourceRow}. Start time requires school verification.`,
         owner_school_id: row.homeSchoolId,
+        external_source: "Importable RVC Master",
+        external_event_id: `row-${row.sourceRow}`,
       }));
       for (let index = 0; index < games.length; index += 100) await insertRows("games", games.slice(index, index + 100));
       return games.length;

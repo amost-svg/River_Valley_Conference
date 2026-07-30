@@ -1,4 +1,4 @@
-import { Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail } from "lucide-react";
+import { Facebook, Twitter, Instagram, Youtube, MapPin, Mail } from "lucide-react";
 import { Link } from "wouter";
 import rvcLogoPath from "@assets/RVC logo (3)_1754081720129.png";
 
@@ -32,6 +32,10 @@ export default function Footer() {
     "Softball",
     "Track & Field",
     "Scholastic Bowl",
+    "Golf",
+    "Math Competition",
+    "Choir Festival",
+    "Band Festival",
   ];
 
   const socialLinks = [
@@ -119,7 +123,7 @@ export default function Footer() {
 
         <div className="border-t border-blue-800 mt-8 pt-8 text-center">
           <p className="text-gray-300">
-            &copy; 2025 River Valley Conference. All rights reserved. | 
+            &copy; {new Date().getFullYear()} River Valley Conference. All rights reserved. |
             <Link href="/privacy-policy" className="hover:text-white transition-colors ml-1">Privacy Policy</Link> | 
             <Link href="/terms-of-use" className="hover:text-white transition-colors ml-1">Terms of Use</Link>
           </p>
