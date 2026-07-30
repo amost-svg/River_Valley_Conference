@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import type { School } from "@shared/schema";
+import { publicSelect } from "@/lib/rvcData";
 import beecherLogo from "@assets/Beecher High School Logo.png";
 import centralLogo from "@assets/Clifton Central Logo.png";
 import donovanLogo from "@assets/Donovan Logo.png";
@@ -13,9 +13,17 @@ import momenceLogo from "@assets/Momence Logo.png";
 import stAnneLogo from "@assets/St Anne Logo.png";
 import triPointLogo from "@assets/Tri Point Logo.png";
 
+interface SchoolSummary {
+  id: string;
+  slug: string;
+  name: string;
+}
+
 export default function Hero() {
-  const { data: schools } = useQuery<School[]>({
-    queryKey: ["/api/schools"],
+  const { data: schools } = useQuery({
+    queryKey: ["public-supabase-schools"],
+    queryFn: () => publicSelect<SchoolSummary[]>("schools?is_active=eq.true&select=id,slug,name&order=display_order.asc"),
+    staleTime: 5 * 60_000,
   });
 
   const scrollToSection = (sectionId: string) => {
@@ -31,16 +39,16 @@ export default function Hero() {
 
   // School logos in alphabetical order by school name
   const schoolLogos = [
-    { name: "Beecher", logo: beecherLogo },
-    { name: "Central", logo: centralLogo },
-    { name: "Donovan", logo: donovanLogo },
-    { name: "Gardner South Wilmington", logo: gardnerLogo },
-    { name: "Grace Christian Academy", logo: graceLogo },
-    { name: "Grant Park", logo: grantParkLogo },
-    { name: "Illinois Lutheran", logo: illinoisLutheranLogo },
-    { name: "Momence", logo: momenceLogo },
-    { name: "St. Anne", logo: stAnneLogo },
-    { name: "Tri Point", logo: triPointLogo },
+    { slug: "beecher", name: "Beecher", logo: beecherLogo },
+    { slug: "central", name: "Central", logo: centralLogo },
+    { slug: "donovan", name: "Donovan", logo: donovanLogo },
+    { slug: "gardner-south-wilmington", name: "Gardner South Wilmington", logo: gardnerLogo },
+    { slug: "grace-christian-academy", name: "Grace Christian Academy", logo: graceLogo },
+    { slug: "grant-park", name: "Grant Park", logo: grantParkLogo },
+    { slug: "illinois-lutheran", name: "Illinois Lutheran", logo: illinoisLutheranLogo },
+    { slug: "momence", name: "Momence", logo: momenceLogo },
+    { slug: "st-anne", name: "St. Anne", logo: stAnneLogo },
+    { slug: "tri-point", name: "Tri-Point", logo: triPointLogo },
   ];
 
   return (
@@ -69,19 +77,23 @@ export default function Hero() {
             {/* School Logos - Hidden on mobile */}
             <div className="hidden md:flex justify-center items-center gap-6 mt-8">
               {schoolLogos.map((schoolLogo) => {
-                const school = schools?.find(s => s.name === schoolLogo.name);
-                if (!school) return null;
-                
-                return (
+                const school = schools?.find((item) => item.slug === schoolLogo.slug);
+                const logo = (
+                  <div className="w-12 h-12 hover:scale-110 transition-transform cursor-pointer bg-white rounded-lg p-1 flex items-center justify-center">
+                    <img
+                      src={schoolLogo.logo}
+                      alt={`${schoolLogo.name} logo`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                );
+
+                return school ? (
                   <Link key={school.id} href={`/schools/${school.id}`}>
-                    <div className="w-12 h-12 hover:scale-110 transition-transform cursor-pointer bg-white rounded-lg p-1 flex items-center justify-center">
-                      <img 
-                        src={schoolLogo.logo} 
-                        alt={`${schoolLogo.name} logo`}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+                    {logo}
                   </Link>
+                ) : (
+                  <div key={schoolLogo.slug}>{logo}</div>
                 );
               })}
             </div>

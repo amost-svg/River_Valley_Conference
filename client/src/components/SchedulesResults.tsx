@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ interface Game {
   status: string;
   location_text: string | null;
   is_conference: boolean;
+  notes: string | null;
+  external_source: string | null;
 }
 interface GameResult { game_id: string; home_score: number; away_score: number; result_type: string }
 interface ScheduleData { season: Season; sports: Sport[]; teams: Team[]; games: Game[]; results: GameResult[] }
@@ -37,21 +39,40 @@ function sportLabel(sport: Sport) {
   return sport.gender_label && sport.gender_label !== "Coed" ? `${sport.gender_label} ${sport.name}` : sport.name;
 }
 
-function formatDate(value: string) {
+function centralDateKey(value: Date | string) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+function formatDate(value: string, long = false) {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
-    weekday: "short",
-    month: "short",
+    weekday: long ? "long" : "short",
+    month: long ? "long" : "short",
     day: "numeric",
   }).format(new Date(value));
 }
 
-function formatTime(value: string) {
+function formatTime(game: Game) {
+  if (
+    game.external_source === "Importable RVC Master"
+    && game.notes?.includes("Start time requires school verification")
+  ) {
+    return "Time TBA";
+  }
+
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(new Date(game.starts_at));
 }
 
 async function loadSchedule(): Promise<ScheduleData> {
@@ -62,10 +83,10 @@ async function loadSchedule(): Promise<ScheduleData> {
   const [sports, teams, games, results] = await Promise.all([
     publicSelect<Sport[]>("sports?is_active=eq.true&select=id,slug,name,gender_label&order=display_order.asc"),
     publicSelect<Team[]>(`teams?season_id=eq.${sid}&is_active=eq.true&select=id,sport_id,display_name`),
-    publicSelect<Game[]>(`games?season_id=eq.${sid}&is_published=eq.true&select=id,sport_id,home_team_id,away_team_id,starts_at,status,location_text,is_conference&order=starts_at.asc`),
+    publicSelect<Game[]>(`games?season_id=eq.${sid}&is_published=eq.true&select=id,sport_id,home_team_id,away_team_id,starts_at,status,location_text,is_conference,notes,external_source&order=starts_at.asc`),
     publicSelect<GameResult[]>("game_results?select=game_id,home_score,away_score,result_type"),
   ]);
-  const scheduledSportIds = new Set(teams.map((team) => team.sport_id));
+  const scheduledSportIds = new Set(games.map((game) => game.sport_id));
   return { season, sports: sports.filter((sport) => scheduledSportIds.has(sport.id)), teams, games, results };
 }
 
@@ -77,26 +98,62 @@ export default function SchedulesResults() {
     staleTime: 60_000,
   });
 
-  useEffect(() => {
-    if (!selectedSportId && data?.sports.length) setSelectedSportId(data.sports[0].id);
-  }, [data?.sports, selectedSportId]);
-
+  const sportMap = useMemo(() => new Map(data?.sports.map((sport) => [sport.id, sport]) ?? []), [data?.sports]);
   const teamMap = useMemo(() => new Map(data?.teams.map((team) => [team.id, team]) ?? []), [data?.teams]);
   const resultMap = useMemo(() => new Map(data?.results.map((result) => [result.game_id, result]) ?? []), [data?.results]);
   const selectedSport = data?.sports.find((sport) => sport.id === selectedSportId);
   const selectedGames = useMemo(
-    () => data?.games.filter((game) => game.sport_id === selectedSportId) ?? [],
+    () => data?.games.filter((game) => !selectedSportId || game.sport_id === selectedSportId) ?? [],
     [data?.games, selectedSportId],
   );
-  const upcoming = selectedGames.filter((game) => game.status !== "final" && new Date(game.starts_at).getTime() >= Date.now()).slice(0, 6);
-  const recent = selectedGames.filter((game) => game.status === "final").slice(-6).reverse();
+  const todayKey = centralDateKey(new Date());
+  const todayGames = selectedGames.filter((game) => centralDateKey(game.starts_at) === todayKey);
+  const nextDateKey = selectedGames
+    .filter((game) => game.status !== "final" && centralDateKey(game.starts_at) > todayKey)
+    .map((game) => centralDateKey(game.starts_at))
+    .sort()[0];
+  const featuredGames = todayGames.length
+    ? todayGames
+    : selectedGames.filter((game) => nextDateKey && centralDateKey(game.starts_at) === nextDateKey);
+  const upcoming = selectedGames
+    .filter((game) => game.status !== "final" && centralDateKey(game.starts_at) >= todayKey)
+    .slice(0, selectedSportId ? 6 : 12);
+  const recent = selectedGames
+    .filter((game) => game.status === "final")
+    .slice(-(selectedSportId ? 6 : 12))
+    .reverse();
+
+  const GameCard = ({ game }: { game: Game }) => {
+    const sport = sportMap.get(game.sport_id);
+    return (
+      <Card className={`border-l-4 ${sportAccent[sport?.slug ?? ""] ?? "border-conference-navy"} shadow-md`}>
+        <CardContent className="p-6">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-conference-navy">
+            {sport ? sportLabel(sport) : "Conference"}
+          </div>
+          <div className="mb-4 flex items-center justify-between gap-3 text-sm text-slate-500">
+            <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {formatDate(game.starts_at)}</span>
+            <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {formatTime(game)}</span>
+          </div>
+          <div className="text-lg font-bold text-slate-950">
+            {teamMap.get(game.away_team_id ?? "")?.display_name ?? "TBD"}
+            <span className="mx-2 text-sm font-normal text-slate-400">at</span>
+            {teamMap.get(game.home_team_id ?? "")?.display_name ?? "TBD"}
+          </div>
+          <div className="mt-4 flex items-start gap-1.5 text-sm text-slate-600">
+            <MapPin className="mt-0.5 h-4 w-4 flex-none" /> {game.location_text ?? "Location TBA"}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <section id="schedules" className="bg-section-gradient-1 py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="section-divider mb-10 pb-8 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">Schedules & Results</h2>
-          <p className="text-lg text-gray-600">Published directly from the conference management dashboard</p>
+          <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">Today in the RVC</h2>
+          <p className="text-lg text-gray-600">Conference schedules, verified results, and the next contests across all member schools</p>
         </div>
 
         {error ? (
@@ -112,6 +169,13 @@ export default function SchedulesResults() {
         ) : (
           <>
             <div className="mb-8 flex gap-2 overflow-x-auto pb-2 lg:flex-wrap lg:justify-center">
+              <Button
+                variant={selectedSportId === null ? "default" : "outline"}
+                onClick={() => setSelectedSportId(null)}
+                className={`flex-none rounded-full px-5 ${selectedSportId === null ? "bg-conference-navy text-white" : "bg-white"}`}
+              >
+                All sports
+              </Button>
               {data?.sports.map((sport) => (
                 <Button
                   key={sport.id}
@@ -124,49 +188,52 @@ export default function SchedulesResults() {
               ))}
             </div>
 
-            {selectedSport && !selectedGames.length ? (
+            {!selectedGames.length ? (
               <div className="mx-auto max-w-3xl rounded-xl border border-dashed border-slate-300 bg-white px-8 py-12 text-center shadow-sm">
                 <Calendar className="mx-auto mb-4 h-10 w-10 text-conference-navy/50" />
-                <h3 className="text-xl font-bold text-slate-950">The {sportLabel(selectedSport)} schedule is being verified</h3>
+                <h3 className="text-xl font-bold text-slate-950">
+                  {selectedSport ? `The ${sportLabel(selectedSport)} schedule is being verified` : "The conference schedule is being verified"}
+                </h3>
                 <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                  Games will appear here as conference administrators and athletic directors confirm dates, times, locations, and cooperative-team arrangements.
+                  Games appear here as conference administrators and athletic directors confirm dates, times, locations, and cooperative-team arrangements.
                 </p>
               </div>
             ) : (
               <div className="space-y-10">
+                {featuredGames.length > 0 && (
+                  <div className="rounded-2xl bg-conference-navy p-5 shadow-lg sm:p-7">
+                    <div className="mb-5 text-white">
+                      <div className="text-sm font-semibold uppercase tracking-wide text-conference-gold">
+                        {todayGames.length ? "Tonight across the conference" : "Next conference action"}
+                      </div>
+                      <h3 className="mt-1 text-2xl font-bold">{formatDate(featuredGames[0].starts_at, true)}</h3>
+                    </div>
+                    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      {featuredGames.map((game) => <GameCard key={game.id} game={game} />)}
+                    </div>
+                  </div>
+                )}
+
                 {upcoming.length > 0 && (
                   <div>
                     <h3 className="mb-4 text-xl font-bold text-slate-950">Upcoming Games</h3>
                     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                      {upcoming.map((game) => (
-                        <Card key={game.id} className={`border-l-4 ${sportAccent[selectedSport?.slug ?? ""] ?? "border-conference-navy"} shadow-md`}>
-                          <CardContent className="p-6">
-                            <div className="mb-4 flex items-center justify-between text-sm text-slate-500">
-                              <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {formatDate(game.starts_at)}</span>
-                              <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {formatTime(game.starts_at)}</span>
-                            </div>
-                            <div className="text-lg font-bold text-slate-950">
-                              {teamMap.get(game.away_team_id ?? "")?.display_name ?? "TBD"}
-                              <span className="mx-2 text-sm font-normal text-slate-400">at</span>
-                              {teamMap.get(game.home_team_id ?? "")?.display_name ?? "TBD"}
-                            </div>
-                            <div className="mt-4 flex items-center gap-1.5 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {game.location_text ?? "Home school"}</div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {upcoming.map((game) => <GameCard key={game.id} game={game} />)}
                     </div>
                   </div>
                 )}
 
                 {recent.length > 0 && (
                   <div>
-                    <h3 className="mb-4 text-xl font-bold text-slate-950">Recent Results</h3>
+                    <h3 className="mb-4 text-xl font-bold text-slate-950">Recent Verified Results</h3>
                     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                       {recent.map((game) => {
                         const result = resultMap.get(game.id);
+                        const sport = sportMap.get(game.sport_id);
                         return (
                           <Card key={game.id} className="border-l-4 border-emerald-500 shadow-md">
                             <CardContent className="p-6">
+                              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-conference-navy">{sport ? sportLabel(sport) : "Conference"}</div>
                               <div className="mb-4 flex items-center justify-between text-sm text-slate-500">
                                 <span>{formatDate(game.starts_at)}</span>
                                 <span className="flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Final</span>

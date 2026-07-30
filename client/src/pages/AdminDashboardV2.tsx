@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  Database,
   ExternalLink,
   FileText,
   Gamepad2,
@@ -17,6 +18,7 @@ import {
   ImagePlus,
   KeyRound,
   LogOut,
+  Mail,
   Megaphone,
   Plus,
   RefreshCw,
@@ -175,6 +177,17 @@ interface UserDirectoryRow {
   role: string | null;
   membership_status: string | null;
 }
+interface ContactSubmission {
+  id: string;
+  name: string;
+  email: string;
+  school: string | null;
+  subject: string;
+  message: string;
+  status: string;
+  created_at: string;
+  reviewed_at: string | null;
+}
 interface DashboardData {
   user: UserContext;
   season: Season;
@@ -190,9 +203,10 @@ interface DashboardData {
   news: NewsRow[];
   standings: StandingRow[];
   users: UserDirectoryRow[];
+  contactSubmissions: ContactSubmission[];
 }
 
-type Section = "today" | "calendar" | "scores" | "games" | "school" | "standings" | "resources" | "news" | "users";
+type Section = "today" | "calendar" | "scores" | "games" | "school" | "standings" | "resources" | "news" | "contacts" | "users";
 
 const inputClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-conference-navy focus:outline-none focus:ring-2 focus:ring-conference-navy/20";
 
@@ -214,6 +228,10 @@ function formatGameTime(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function gameTimeLabel(game: Pick<CalendarGame, "starts_at" | "notes">) {
+  return game.notes?.includes("Start time requires school verification") ? "Time TBA" : formatGameTime(game.starts_at);
 }
 
 function formatLongDate(value: Date | string) {
@@ -261,7 +279,7 @@ function GameCard({ game, onOpen }: { game: CalendarGame; onOpen: () => void }) 
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-conference-navy">{game.gender_label && game.gender_label !== "Coed" ? `${game.gender_label} ${game.sport_name}` : game.sport_name}</div>
-          <div className="mt-1 text-sm text-slate-500">{formatGameTime(game.starts_at)} · {game.level}</div>
+          <div className="mt-1 text-sm text-slate-500">{gameTimeLabel(game)} · {game.level}</div>
         </div>
         <span className={`rounded-full px-2 py-1 text-xs font-semibold capitalize ${game.status === "final" ? "bg-emerald-100 text-emerald-800" : game.status === "postponed" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>{game.status}</span>
       </div>
@@ -330,7 +348,7 @@ function ScoreModal({ game, sport, onClose, onSaved }: { game: CalendarGame; spo
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true">
       <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 p-5">
-          <div><div className="text-sm font-semibold text-conference-navy">{sportLabel(sport)}</div><h2 className="text-xl font-bold text-slate-950">{game.away_name} at {game.home_name}</h2><p className="text-sm text-slate-500">{formatLongDate(game.starts_at)} · {formatGameTime(game.starts_at)}</p></div>
+          <div><div className="text-sm font-semibold text-conference-navy">{sportLabel(sport)}</div><h2 className="text-xl font-bold text-slate-950">{game.away_name} at {game.home_name}</h2><p className="text-sm text-slate-500">{formatLongDate(game.starts_at)} · {gameTimeLabel(game)}</p></div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
         </div>
         <div className="space-y-5 p-5">
@@ -356,7 +374,7 @@ async function loadDashboard(): Promise<DashboardData> {
   if (!season) throw new Error("No active RVC season is configured.");
   const sid = encodeURIComponent(season.id);
 
-  const [sports, schools, contacts, teams, venues, games, submissions, confirmations, documents, news, standings, users] = await Promise.all([
+  const [sports, schools, contacts, teams, venues, games, submissions, confirmations, documents, news, standings, users, contactSubmissions] = await Promise.all([
     memberSelect<Sport[]>("sports?is_active=eq.true&select=id,slug,name,gender_label,scoring_profile,standings_enabled&order=display_order.asc"),
     memberSelect<School[]>("schools?is_active=eq.true&select=id,slug,name,short_name,mascot,address_line1,city,state,postal_code,phone,superintendent_name,principal_name,athletic_director_name,website_url,athletics_url,ihsa_url,livestream_url,livestream_platform,mission_statement,logo_path&order=display_order.asc"),
     memberSelect<SchoolContact[]>("school_contacts?is_active=eq.true&select=id,school_id,role,full_name,email,office_phone,is_active"),
@@ -369,9 +387,12 @@ async function loadDashboard(): Promise<DashboardData> {
     memberSelect<NewsRow[]>("news_items?select=id,title,excerpt,body,category,image_path,pdf_path,status,published_at,created_at&order=created_at.desc"),
     memberSelect<StandingRow[]>(`public_standings?season_id=eq.${sid}&select=id,sport_id,rank,team_name,conference_wins,conference_losses,conference_ties,tie_status&order=sport_name.asc,rank.asc,team_name.asc`),
     user.isSuperAdmin ? rpc<UserDirectoryRow[]>("admin_user_directory", {}) : Promise.resolve([]),
+    user.isSuperAdmin
+      ? memberSelect<ContactSubmission[]>("contact_submissions?select=id,name,email,school,subject,message,status,created_at,reviewed_at&order=created_at.desc")
+      : Promise.resolve([]),
   ]);
 
-  return { user, season, sports, schools, contacts, teams, venues, games, submissions, confirmations, documents, news, standings, users };
+  return { user, season, sports, schools, contacts, teams, venues, games, submissions, confirmations, documents, news, standings, users, contactSubmissions };
 }
 
 export default function AdminDashboardV2() {
@@ -578,7 +599,10 @@ export default function AdminDashboardV2() {
     ["today", "Today", Home], ["calendar", "Conference Calendar", CalendarDays], ["scores", "Scores & Confirmations", ClipboardCheck],
     ["games", "Add / Manage Games", Gamepad2], ["school", data.user.isSuperAdmin ? "School Profiles" : "My School", Building2],
     ["standings", "Standings", Trophy], ["resources", "Resources", BookOpen], ["news", "News & Publicity", Megaphone],
-    ...(data.user.isSuperAdmin ? [["users", "User Accounts", Users] as [Section, string, React.ElementType]] : []),
+    ...(data.user.isSuperAdmin ? [
+      ["contacts", "Contact Inbox", Mail] as [Section, string, React.ElementType],
+      ["users", "User Accounts", Users] as [Section, string, React.ElementType],
+    ] : []),
   ];
 
   return (
@@ -587,7 +611,7 @@ export default function AdminDashboardV2() {
       <header className="bg-conference-navy text-white">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div><div className="flex items-center gap-2 text-sm font-semibold text-conference-gold"><ShieldCheck className="h-4 w-4" /> Secure conference dashboard</div><h1 className="mt-1 text-2xl font-bold">River Valley Conference</h1><p className="text-sm text-slate-300">{data.user.name} · {data.user.role} · {data.season.name}</p></div>
-          <div className="flex flex-wrap gap-2"><Link href="/"><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10">Public website</Button></Link><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10" onClick={() => void refresh()}><RefreshCw className="mr-2 h-4 w-4" /> Refresh</Button><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10" onClick={() => void signOut().then(() => window.location.assign("/login"))}><LogOut className="mr-2 h-4 w-4" /> Sign out</Button></div>
+          <div className="flex flex-wrap gap-2"><Link href="/"><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10">Public website</Button></Link>{data.user.isSuperAdmin && <Link href="/conference-admin/core"><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10"><Database className="mr-2 h-4 w-4" /> Conference operations</Button></Link>}<Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10" onClick={() => void refresh()}><RefreshCw className="mr-2 h-4 w-4" /> Refresh</Button><Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10" onClick={() => void signOut().then(() => window.location.assign("/login"))}><LogOut className="mr-2 h-4 w-4" /> Sign out</Button></div>
         </div>
       </header>
 
@@ -609,6 +633,8 @@ export default function AdminDashboardV2() {
           {section === "resources" && <><div><h2 className="text-2xl font-bold text-slate-950">Conference resources</h2><p className="text-sm text-slate-600">Constitution, sport-specific operations guides, calendars, and internal conference documents.</p></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.documents.map((document) => <Panel key={document.id} className="flex flex-col p-5"><div className="text-xs font-semibold uppercase tracking-wide text-conference-navy">{document.category ?? "Conference Resource"}</div><h3 className="mt-1 font-bold text-slate-950">{document.title}</h3>{document.description && <p className="mt-2 flex-1 text-sm text-slate-600">{document.description}</p>}<Button variant="outline" className="mt-4" onClick={() => void openDocument(document)}>Open resource <ExternalLink className="ml-2 h-4 w-4" /></Button></Panel>)}</div>{canManageResources && <Panel className="grid gap-4 p-6 md:grid-cols-2"><div className="md:col-span-2"><h3 className="text-lg font-bold">Add a resource</h3></div><Field label="Title"><input className={inputClass} value={resourceTitle} onChange={(event) => setResourceTitle(event.target.value)} /></Field><Field label="Category"><input className={inputClass} value={resourceCategory} onChange={(event) => setResourceCategory(event.target.value)} /></Field><Field label="Sport"><select className={inputClass} value={resourceSportId} onChange={(event) => setResourceSportId(event.target.value)}><option value="">Conference-wide</option>{data.sports.map((sport) => <option key={sport.id} value={sport.id}>{sportLabel(sport)}</option>)}</select></Field><Field label="External link"><input className={inputClass} type="url" value={resourceUrl} onChange={(event) => setResourceUrl(event.target.value)} /></Field><div className="md:col-span-2"><Field label="Or upload a PDF / Office document"><input className={inputClass} type="file" accept="application/pdf,.docx,.xlsx" onChange={(event) => setResourceFile(event.target.files?.[0] ?? null)} /></Field></div><div className="md:col-span-2"><Button onClick={() => void addResource()}><Upload className="mr-2 h-4 w-4" /> Add resource</Button></div></Panel>}</>}
 
           {section === "news" && <><div><h2 className="text-2xl font-bold text-slate-950">News and publicity</h2><p className="text-sm text-slate-600">Create a complete public announcement or upload a conference publicist PDF for newspapers and the website.</p></div>{canEditNews ? <Panel className="grid gap-4 p-6 md:grid-cols-2"><Field label="Headline"><input className={inputClass} value={newsTitle} onChange={(event) => setNewsTitle(event.target.value)} /></Field><Field label="Category"><select className={inputClass} value={newsCategory} onChange={(event) => setNewsCategory(event.target.value)}><option>Conference Update</option><option>Athletics</option><option>Event Recap</option><option>Schedule Update</option><option>Academic</option></select></Field><div className="md:col-span-2"><Field label="Homepage summary"><textarea className={inputClass} rows={3} value={newsExcerpt} onChange={(event) => setNewsExcerpt(event.target.value)} /></Field></div><div className="md:col-span-2"><Field label="Full announcement" hint="Optional when the PDF contains the complete release"><textarea className={inputClass} rows={7} value={newsBody} onChange={(event) => setNewsBody(event.target.value)} /></Field></div><Field label="Publicist PDF"><input className={inputClass} type="file" accept="application/pdf" onChange={(event) => setNewsPdf(event.target.files?.[0] ?? null)} /></Field><Field label="Story image"><input className={inputClass} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setNewsImage(event.target.files?.[0] ?? null)} /></Field><div className="md:col-span-2 flex gap-2"><Button variant="outline" onClick={() => void publishNews("draft")}>Save draft</Button><Button onClick={() => void publishNews("published")}><Megaphone className="mr-2 h-4 w-4" /> Publish</Button></div></Panel> : <Panel className="p-6 text-sm text-slate-600">News publishing is available to conference administrators and the conference publicist.</Panel>}<div className="space-y-3">{data.news.map((item) => <Panel key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-bold text-slate-950">{item.title}</div><div className="text-sm text-slate-500">{item.category ?? "Conference Update"} · <span className="capitalize">{item.status}</span> · {formatShortDate(item.published_at ?? item.created_at)}</div></div>{canEditNews && <Button variant="outline" size="sm" onClick={() => void run(() => updateRows("news_items", `id=eq.${item.id}`, { status: item.status === "published" ? "draft" : "published", published_at: item.status === "published" ? null : new Date().toISOString() }), item.status === "published" ? "News item returned to draft" : "News item published")}>{item.status === "published" ? "Unpublish" : "Publish"}</Button>}</Panel>)}</div></>}
+
+          {section === "contacts" && data.user.isSuperAdmin && <><div><h2 className="text-2xl font-bold text-slate-950">Contact inbox</h2><p className="text-sm text-slate-600">Messages submitted through the public conference website.</p></div><div className="space-y-4">{data.contactSubmissions.map((submission) => <Panel key={submission.id} className={`p-5 ${submission.status === "new" ? "border-l-4 border-l-conference-gold" : ""}`}><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0"><div className="text-xs font-semibold uppercase tracking-wide text-conference-navy">{submission.subject.replaceAll("_", " ")}</div><h3 className="mt-1 font-bold text-slate-950">{submission.name}{submission.school ? ` · ${submission.school}` : ""}</h3><a className="text-sm text-blue-700 hover:underline" href={`mailto:${submission.email}`}>{submission.email}</a><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{submission.message}</p><div className="mt-3 text-xs text-slate-500">Received {formatShortDate(submission.created_at)} · <span className="capitalize">{submission.status}</span></div></div><div className="flex flex-none gap-2"><a href={`mailto:${submission.email}?subject=${encodeURIComponent(`RVC: ${submission.subject}`)}`}><Button variant="outline" size="sm"><Mail className="mr-2 h-4 w-4" /> Reply</Button></a>{submission.status === "new" && <Button size="sm" onClick={() => void run(() => updateRows("contact_submissions", `id=eq.${submission.id}`, { status: "reviewed", reviewed_at: new Date().toISOString(), reviewed_by: data.user.id }), "Message marked reviewed")}><CheckCircle2 className="mr-2 h-4 w-4" /> Mark reviewed</Button>}</div></div></Panel>)}{!data.contactSubmissions.length && <Panel className="p-10 text-center"><Mail className="mx-auto h-8 w-8 text-slate-400" /><p className="mt-2 font-semibold text-slate-950">No contact messages yet.</p></Panel>}</div></>}
 
           {section === "users" && data.user.isSuperAdmin && <><div><h2 className="text-2xl font-bold text-slate-950">User accounts</h2><p className="text-sm text-slate-600">Review registered users, school assignments, roles, access status, and send password-reset links.</p></div><Panel className="overflow-hidden"><div className="overflow-x-auto"><table className="min-w-full text-sm"><thead className="bg-slate-100"><tr><th className="px-4 py-3 text-left">User</th><th className="px-4 py-3 text-left">Role</th><th className="px-4 py-3 text-left">School</th><th className="px-4 py-3 text-left">Status</th><th className="px-4 py-3 text-left">Last sign-in</th><th className="px-4 py-3"></th></tr></thead><tbody className="divide-y">{data.users.map((user) => <tr key={`${user.user_id}-${user.membership_id ?? "none"}`}><td className="px-4 py-3"><div className="font-semibold">{user.full_name || user.email}</div><div className="text-xs text-slate-500">{user.email}</div></td><td className="px-4 py-3"><select className={inputClass} value={user.role ?? ""} disabled={!user.membership_id} onChange={(event) => void run(() => updateRows("memberships", `id=eq.${user.membership_id}`, { role: event.target.value }), "Role updated")}><option value="">No role</option><option value="conference_admin">Conference admin</option><option value="conference_official">Conference official</option><option value="press_editor">Press editor</option><option value="school_principal">Principal</option><option value="athletic_director">Athletic director</option></select></td><td className="px-4 py-3"><select className={inputClass} value={user.school_id ?? ""} disabled={!user.membership_id} onChange={(event) => void run(() => updateRows("memberships", `id=eq.${user.membership_id}`, { school_id: event.target.value || null }), "School assignment updated")}><option value="">Conference-wide</option>{data.schools.map((school) => <option key={school.id} value={school.id}>{school.short_name ?? school.name}</option>)}</select></td><td className="px-4 py-3"><select className={inputClass} value={user.membership_status ?? ""} disabled={!user.membership_id} onChange={(event) => void run(() => updateRows("memberships", `id=eq.${user.membership_id}`, { status: event.target.value }), "Account status updated")}><option value="invited">Invited</option><option value="active">Active</option><option value="suspended">Suspended</option></select></td><td className="px-4 py-3 text-slate-600">{formatShortDate(user.last_sign_in_at)}</td><td className="px-4 py-3"><Button variant="outline" size="sm" onClick={() => void run(() => sendPasswordReset(user.email), `Password-reset link sent to ${user.email}`)}><KeyRound className="mr-2 h-4 w-4" /> Reset</Button></td></tr>)}</tbody></table></div></Panel><Panel className="p-5 text-sm text-slate-600"><div className="flex items-start gap-3"><AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" /><div><div className="font-semibold text-slate-950">New account invitations</div><p className="mt-1">The directory and reset workflow are active. Secure one-click invitations require a server-side Supabase Auth Admin service; that will be added without exposing administrative credentials to the browser.</p></div></div></Panel></>}
         </main>

@@ -18,27 +18,13 @@ export default function Home() {
         type="website"
       />
       <Navigation />
-      <section id="home">
-        <Hero />
-      </section>
-      <section id="about">
-        <ConferenceOverview />
-      </section>
-      <section id="schools">
-        <MemberSchools />
-      </section>
-      <section id="schedules">
-        <SchedulesResults />
-      </section>
-      <section id="standings">
-        <ConferenceStandings />
-      </section>
-      <section id="news">
-        <NewsAnnouncements />
-      </section>
-      <section id="contact">
-        <ContactSection />
-      </section>
+      <Hero />
+      <ConferenceOverview />
+      <MemberSchools />
+      <SchedulesResults />
+      <ConferenceStandings />
+      <NewsAnnouncements />
+      <ContactSection />
       <Footer />
     </div>
   );

@@ -12,14 +12,25 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { User, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { insertContactSchema } from "@shared/schema";
+import { publicInsertRows, publicSelect } from "@/lib/rvcData";
 
-const contactFormSchema = insertContactSchema.extend({
-  subject: z.string().min(1, "Please select a subject"),
+const contactFormSchema = z.object({
+  name: z.string().trim().min(2, "Please enter your full name").max(120),
+  email: z.string().trim().email("Please enter a valid email address").max(254),
+  school: z.string().trim().max(160).optional(),
+  subject: z.string()
+    .min(1, "Please select a subject")
+    .refine((value) => ["schedules", "membership", "rules", "general", "other"].includes(value), "Please select a valid subject"),
+  message: z.string().trim().min(10, "Please provide a little more detail").max(4_000),
 });
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
+interface ConferenceOfficial {
+  id: string;
+  full_name: string;
+  position: string;
+  school: { name: string } | null;
+}
 
 export default function ContactSection() {
   const { toast } = useToast();
@@ -37,12 +48,23 @@ export default function ContactSection() {
 
   // Fetch conference officials from database
   const { data: conferenceOfficials, isLoading: officialsLoading } = useQuery({
-    queryKey: ['/api/conference-officials'],
+    queryKey: ["public-conference-officials"],
+    queryFn: () => publicSelect<ConferenceOfficial[]>(
+      "conference_officials?is_active=eq.true&select=id,full_name,position,school:schools(name)&order=display_order.asc",
+    ),
+    staleTime: 5 * 60_000,
   });
 
   const contactMutation = useMutation({
     mutationFn: async (data: ContactFormData) => {
-      return apiRequest("POST", "/api/contact", data);
+      return publicInsertRows("contact_submissions", {
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        school: data.school?.trim() || null,
+        subject: data.subject,
+        message: data.message.trim(),
+        status: "new",
+      });
     },
     onSuccess: () => {
       toast({
@@ -51,7 +73,7 @@ export default function ContactSection() {
       });
       form.reset();
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
@@ -124,14 +146,14 @@ export default function ContactSection() {
                         </div>
                       </div>
                     ))
-                  : (conferenceOfficials as any[])?.map((official: any, index: number) => (
-                      <div key={index} className="flex items-center">
+                  : conferenceOfficials?.map((official) => (
+                      <div key={official.id} className="flex items-center">
                         <div className="bg-conference-green text-white p-2 rounded-lg mr-3 flex-shrink-0">
                           <User className="h-4 w-4" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{official.position}</p>
-                          <p className="text-gray-600">{official.name}</p>
+                          <p className="text-gray-600">{official.full_name}</p>
                           {official.school?.name && <p className="text-sm text-gray-500">{official.school.name}</p>}
                         </div>
                       </div>

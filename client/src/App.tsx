@@ -13,7 +13,6 @@ import GameOperations from "@/pages/GameOperations";
 import Login from "@/pages/Login";
 import ResetPassword from "@/pages/ResetPassword";
 import School from "@/pages/School";
-import SportCalendar from "@/pages/SportCalendar";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfUse from "@/pages/TermsOfUse";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -36,6 +35,13 @@ function AuthLinkRedirect() {
 function PublicConferenceRedirect() {
   useEffect(() => {
     window.location.replace("/#standings");
+  }, []);
+  return null;
+}
+
+function PublicScheduleRedirect() {
+  useEffect(() => {
+    window.location.replace("/#schedules");
   }, []);
   return null;
 }
@@ -84,7 +90,7 @@ function Router() {
         </ProtectedRoute>
       )} />
       <Route path="/schools/:id" component={School} />
-      <Route path="/sports/:sportId/calendar" component={SportCalendar} />
+      <Route path="/sports/:sportId/calendar" component={PublicScheduleRedirect} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-use" component={TermsOfUse} />
       <Route component={NotFound} />

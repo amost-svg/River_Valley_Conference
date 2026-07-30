@@ -67,6 +67,14 @@ export function publicSelect<T>(resourceAndQuery: string): Promise<T> {
   return request<T>(`/rest/v1/${resourceAndQuery}`);
 }
 
+export function publicInsertRows(table: string, rows: unknown | unknown[]): Promise<void> {
+  return request<void>(
+    `/rest/v1/${table}`,
+    { method: "POST", body: JSON.stringify(rows) },
+    { prefer: "return=minimal" },
+  );
+}
+
 export function memberSelect<T>(resourceAndQuery: string): Promise<T> {
   return request<T>(`/rest/v1/${resourceAndQuery}`, {}, { authenticated: true });
 }
