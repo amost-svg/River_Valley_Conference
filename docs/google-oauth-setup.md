@@ -11,6 +11,8 @@ The RVC frontend supports **Continue with Google** through Supabase Auth. Google
 5. Supabase returns the authenticated session to `/login` on the active RVC site.
 6. The frontend saves the Supabase session and opens `/admin`.
 
+The frontend builds its return address from `window.location.origin`. The same build therefore supports both the Cloudflare Pages hostname and the RVC custom domain without storing a domain or Google secret in the browser bundle.
+
 Existing confirmed RVC accounts are linked automatically when the Google account uses the same email address. The RVC before-user-created hook continues to prevent unapproved email addresses from creating accounts.
 
 ## 1. Google Cloud project
@@ -40,10 +42,11 @@ Add each origin that will host the login page. Origins do not include paths or t
 
 ```text
 https://river-valley-conference.pages.dev
+https://www.rvc-il.com
 http://localhost:5173
 ```
 
-When an RVC custom domain is connected, add its exact HTTPS origin as well.
+The apex domain `https://rvc-il.com` should redirect to `https://www.rvc-il.com`. Add it separately only if the application will be served directly from both hostnames.
 
 ### Authorized redirect URI
 
@@ -74,22 +77,41 @@ Go to **Authentication → Providers → Google** and:
 
 Go to **Authentication → URL Configuration**.
 
-Use the live RVC site as the Site URL. While the Cloudflare Pages domain is the production host, use:
+While the Cloudflare Pages hostname is serving the new application, keep this Site URL:
 
 ```text
 https://river-valley-conference.pages.dev
 ```
 
-Add these Redirect URLs:
+Add all of these Redirect URLs:
 
 ```text
 https://river-valley-conference.pages.dev/login
+https://www.rvc-il.com/login
 http://localhost:5173/login
 ```
 
-When a custom RVC domain becomes canonical, add its `/login` URL before changing the Site URL.
+When the Cloudflare custom-domain cutover is complete and `www.rvc-il.com` is serving this application, change the Site URL to:
 
-## 5. Validation
+```text
+https://www.rvc-il.com
+```
+
+Keep the Pages `/login` redirect during the transition so existing links and administrative recovery remain available.
+
+## 5. Cloudflare custom-domain cutover
+
+Do not change DNS merely because the OAuth origin has been registered. The current `www.rvc-il.com` site should remain online until the new Pages deployment has been reviewed.
+
+At cutover:
+
+1. Add `www.rvc-il.com` as a custom domain on the River Valley Conference Cloudflare Pages project.
+2. Configure `rvc-il.com` to redirect permanently to `https://www.rvc-il.com`.
+3. Confirm `/`, `/login`, `/admin`, `/reset-password`, and static assets load through the custom domain.
+4. Change the Supabase Site URL to `https://www.rvc-il.com`.
+5. Update the repository sitemap, robots file, canonical metadata, and Search Console property to the custom domain.
+
+## 6. Validation
 
 Test in a private browser window:
 
@@ -101,6 +123,7 @@ Test in a private browser window:
 6. In Supabase Auth, confirm the existing user now has both `email` and `google` identities rather than a duplicate user.
 7. Repeat with one principal or AD from another member school.
 8. Attempt sign-in with an unapproved Google account and confirm access is denied.
+9. Repeat the login test from `https://www.rvc-il.com/login` after the Cloudflare domain cutover.
 
 A completed Google sign-in also counts as use of the OAuth client named in Google's inactivity warning.
 
