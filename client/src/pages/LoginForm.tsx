@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { FcGoogle } from "react-icons/fc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2, Loader2, Mail } from "lucide-react";
-import { sendPasswordReset, signInWithPassword } from "@/lib/supabaseAuth";
+import {
+  captureAuthSessionFromUrl,
+  isAuthCallbackUrl,
+  sendPasswordReset,
+  signInWithGoogle,
+  signInWithPassword,
+} from "@/lib/supabaseAuth";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
@@ -25,7 +32,9 @@ export default function LoginForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const callbackHandled = useRef(false);
   const [error, setError] = useState("");
+  const [googlePending, setGooglePending] = useState(() => isAuthCallbackUrl());
   const [showForgotPassword, setShowForgotPassword] = useState(
     () => new URLSearchParams(window.location.search).get("forgot") === "password",
   );
@@ -36,6 +45,45 @@ export default function LoginForm() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
+
+  useEffect(() => {
+    if (callbackHandled.current || !isAuthCallbackUrl()) return;
+    callbackHandled.current = true;
+    let active = true;
+
+    const finishGoogleSignIn = async () => {
+      setGooglePending(true);
+      setError("");
+
+      try {
+        const session = await captureAuthSessionFromUrl();
+        if (!session) throw new Error("Google sign-in did not return an RVC account session.");
+        if (!active) return;
+
+        window.history.replaceState({}, document.title, "/login");
+        await queryClient.invalidateQueries();
+        toast({
+          title: "Google sign-in successful",
+          description: "Welcome to the River Valley Conference dashboard.",
+        });
+        setLocation("/admin");
+      } catch (nextError) {
+        if (!active) return;
+        window.history.replaceState({}, document.title, "/login");
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : "Google sign-in failed. Please try again or use your RVC account password.",
+        );
+        setGooglePending(false);
+      }
+    };
+
+    void finishGoogleSignIn();
+    return () => {
+      active = false;
+    };
+  }, [queryClient, setLocation, toast]);
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => signInWithPassword(data.email, data.password),
@@ -66,6 +114,22 @@ export default function LoginForm() {
   const onSubmit = (data: LoginFormData) => {
     setError("");
     loginMutation.mutate(data);
+  };
+
+  const handleGoogleSignIn = () => {
+    setError("");
+    setGooglePending(true);
+
+    try {
+      signInWithGoogle();
+    } catch (nextError) {
+      setGooglePending(false);
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : "Google sign-in is not configured yet. Please use your RVC account password.",
+      );
+    }
   };
 
   const handleForgotPassword = () => {
@@ -108,6 +172,34 @@ export default function LoginForm() {
               </Alert>
             )}
 
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full bg-white"
+                onClick={handleGoogleSignIn}
+                disabled={googlePending || loginMutation.isPending}
+              >
+                {googlePending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Completing Google sign-in…</>
+                ) : (
+                  <><FcGoogle className="mr-2 h-5 w-5" aria-hidden="true" />Continue with Google</>
+                )}
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                Use the Google account connected to your approved RVC school email.
+              </p>
+            </div>
+
+            <div className="relative py-1" aria-hidden="true">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">or use email and password</span>
+              </div>
+            </div>
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -139,11 +231,11 @@ export default function LoginForm() {
                 <Button
                   type="submit"
                   className="w-full bg-conference-navy hover:bg-blue-800 text-white"
-                  disabled={loginMutation.isPending}
+                  disabled={loginMutation.isPending || googlePending}
                 >
                   {loginMutation.isPending ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in…</>
-                  ) : "Sign in"}
+                  ) : "Sign in with password"}
                 </Button>
               </form>
             </Form>
