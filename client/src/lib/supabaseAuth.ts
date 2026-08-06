@@ -137,11 +137,27 @@ export function getAuthFlowFromUrl(): RvcAuthFlow {
   return "account";
 }
 
+export function isAuthCallbackUrl(): boolean {
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+  return Boolean(
+    search.get("error") ||
+      search.get("error_description") ||
+      hash.get("error") ||
+      hash.get("error_description") ||
+      (hash.get("access_token") && hash.get("refresh_token")),
+  );
+}
+
 export async function captureAuthSessionFromUrl(): Promise<RvcAuthSession | null> {
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const errorDescription = search.get("error_description") ?? hash.get("error_description");
-  if (errorDescription) throw new Error(errorDescription);
+  const errorCode = search.get("error") ?? hash.get("error");
+  if (errorDescription || errorCode) {
+    throw new Error(errorDescription ?? "Google sign-in was not completed.");
+  }
 
   const tokenHash = search.get("token_hash");
   const type = search.get("type");
@@ -185,6 +201,14 @@ export async function signInWithPassword(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
   return persistAuthPayload(payload);
+}
+
+export function signInWithGoogle() {
+  const config = getConfiguration();
+  const authorizeUrl = new URL(`${config.url}/auth/v1/authorize`);
+  authorizeUrl.searchParams.set("provider", "google");
+  authorizeUrl.searchParams.set("redirect_to", `${window.location.origin}/login`);
+  window.location.assign(authorizeUrl.toString());
 }
 
 export async function sendPasswordReset(email: string) {
