@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { User, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { publicInsertRows, publicSelect } from "@/lib/rvcData";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 const contactFormSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name").max(120),
@@ -34,6 +35,8 @@ interface ConferenceOfficial {
 
 export default function ContactSection() {
   const { toast } = useToast();
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileSiteKey = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim() || "";
   
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
@@ -57,28 +60,62 @@ export default function ContactSection() {
 
   const contactMutation = useMutation({
     mutationFn: async (data: ContactFormData) => {
-      return publicInsertRows("contact_submissions", {
-        name: data.name.trim(),
-        email: data.email.trim().toLowerCase(),
-        school: data.school?.trim() || null,
-        subject: data.subject,
-        message: data.message.trim(),
-        status: "new",
+      if (!turnstileToken) {
+        throw new Error("Please complete the verification before sending your message.");
+      }
+
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
+          school: data.school?.trim() || "",
+          subject: data.subject,
+          message: data.message.trim(),
+          turnstileToken,
+        }),
       });
+
+      const result = (await response.json().catch(() => ({}))) as { error?: string; success?: boolean };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to send message. Please try again.");
+      }
+
+      // Keep the existing contact-submission record as a secondary audit trail.
+      try {
+        await publicInsertRows("contact_submissions", {
+          name: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
+          school: data.school?.trim() || null,
+          subject: data.subject,
+          message: data.message.trim(),
+          status: "new",
+        });
+      } catch (error) {
+        console.warn("Contact email sent, but the submission log could not be saved.", error);
+      }
+
+      return result;
     },
     onSuccess: () => {
       toast({
         title: "Message Sent",
-        description: "Thank you for your message! We will get back to you soon.",
+        description: "Thank you for your message. We will get back to you soon.",
       });
       form.reset();
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: error.message || "Failed to send message. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      setTurnstileToken("");
+      window.turnstile?.reset();
     },
   });
 
@@ -255,10 +292,20 @@ export default function ContactSection() {
                     )}
                   />
 
+                  <div>
+                    {turnstileSiteKey ? (
+                      <TurnstileWidget siteKey={turnstileSiteKey} onToken={setTurnstileToken} />
+                    ) : (
+                      <p className="text-sm text-red-600">
+                        Contact form verification is not configured yet.
+                      </p>
+                    )}
+                  </div>
+
                   <Button 
                     type="submit" 
                     className="w-full bg-conference-navy text-white hover:bg-blue-800 py-3 text-lg font-semibold"
-                    disabled={contactMutation.isPending}
+                    disabled={contactMutation.isPending || !turnstileSiteKey || !turnstileToken}
                   >
                     {contactMutation.isPending ? "Sending..." : "Send Message"}
                   </Button>
