@@ -54,6 +54,7 @@ export default function Navigation() {
     { id: "about", label: "About" },
     { id: "schools", label: "Schools" },
     { id: "schedules", label: "Schedules" },
+    { id: "events", label: "Events" },
     { id: "standings", label: "Standings" },
     { id: "news", label: "News" },
     { id: "contact", label: "Contact" },
@@ -69,7 +70,7 @@ export default function Navigation() {
           </Link>
 
           <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-2">
+            <div className="ml-8 flex items-baseline space-x-1">
               {navItems.map((item) => (
                 <button key={item.id} onClick={() => goToSection(item.id)} className="rounded-md px-2 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-conference-gold">
                   {item.label}
