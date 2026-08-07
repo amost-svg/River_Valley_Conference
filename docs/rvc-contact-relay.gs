@@ -1,5 +1,6 @@
 const RVC_CONTACT_RECIPIENT = "contact@rvc-il.com";
 const RVC_CONTACT_DIRECT_COPY = "amost@gracecrusaders.org";
+const RVC_CONTACT_SENDER = "website@rvc-il.com";
 const RVC_CONTACT_TYPE = "rvc-contact";
 
 function doPost(e) {
@@ -15,6 +16,12 @@ function doPost(e) {
       return json_({ ok: false, error: "Unsupported form type." });
     }
 
+    const aliases = GmailApp.getAliases();
+    if (!aliases.includes(RVC_CONTACT_SENDER)) {
+      console.error("Required Gmail send-as alias is missing.", { aliases });
+      return json_({ ok: false, error: "The RVC sender alias is not configured." });
+    }
+
     const name = clean_(payload.name, 120);
     const email = clean_(payload.email, 254).toLowerCase();
     const school = clean_(payload.school, 160);
@@ -25,6 +32,7 @@ function doPost(e) {
       return json_({ ok: false, error: "Invalid contact submission." });
     }
 
+    const subject = "[RVC Website] " + subjectLabel;
     const plainText = [
       "New message from the River Valley Conference website",
       "",
@@ -47,17 +55,15 @@ function doPost(e) {
       "<p style=\"white-space:pre-wrap\">" + escapeHtml_(message) + "</p>",
     ].join("");
 
-    MailApp.sendEmail({
-      to: RVC_CONTACT_RECIPIENT,
-      cc: RVC_CONTACT_DIRECT_COPY,
-      subject: "[RVC Website] " + subjectLabel,
-      body: plainText,
+    GmailApp.sendEmail(RVC_CONTACT_DIRECT_COPY, subject, plainText, {
+      from: RVC_CONTACT_SENDER,
+      cc: RVC_CONTACT_RECIPIENT,
       htmlBody: htmlBody,
       replyTo: email,
       name: "River Valley Conference Website",
     });
 
-    return json_({ ok: true });
+    return json_({ ok: true, sender: RVC_CONTACT_SENDER });
   } catch (error) {
     console.error(error);
     return json_({ ok: false, error: "Unable to send the message." });
