@@ -1,8 +1,6 @@
 interface Env {
-  CLOUDFLARE_ACCOUNT_ID: string;
-  CLOUDFLARE_EMAIL_API_TOKEN: string;
-  CONTACT_FROM_EMAIL: string;
-  CONTACT_RECIPIENT: string;
+  GOOGLE_SCRIPT_CONTACT_URL: string;
+  CONTACT_FORM_SECRET: string;
   TURNSTILE_SECRET: string;
 }
 
@@ -24,14 +22,9 @@ interface TurnstileVerification {
   "error-codes"?: string[];
 }
 
-interface CloudflareEmailResponse {
-  success: boolean;
-  errors?: Array<{ code?: number; message?: string }>;
-  result?: {
-    delivered?: string[];
-    queued?: string[];
-    permanent_bounces?: string[];
-  } | null;
+interface RelayResponse {
+  ok?: boolean;
+  error?: string;
 }
 
 const SUBJECT_LABELS: Record<ContactSubject, string> = {
@@ -48,6 +41,7 @@ const jsonResponse = (body: unknown, status = 200) =>
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 
@@ -59,13 +53,15 @@ const isEmail = (value: unknown) =>
   value.trim().length <= 254 &&
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+const configuredHttpsUrl = (value: string | undefined) => {
+  try {
+    const url = new URL((value || "").trim());
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
@@ -114,13 +110,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return jsonResponse({ error: "Please check the form and try again." }, 400);
   }
 
-  if (
-    !env.CLOUDFLARE_ACCOUNT_ID ||
-    !env.CLOUDFLARE_EMAIL_API_TOKEN ||
-    !env.CONTACT_FROM_EMAIL ||
-    !env.CONTACT_RECIPIENT ||
-    !env.TURNSTILE_SECRET
-  ) {
+  const relayUrl = configuredHttpsUrl(env.GOOGLE_SCRIPT_CONTACT_URL);
+  if (!relayUrl || !env.CONTACT_FORM_SECRET || !env.TURNSTILE_SECRET) {
     console.error("Contact form environment is incomplete.");
     return jsonResponse({ error: "The contact form is temporarily unavailable." }, 503);
   }
@@ -169,73 +160,41 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const cleanSchool = typeof school === "string" ? school.trim() : "";
   const cleanSubject = subject as ContactSubject;
   const cleanMessage = (message as string).trim();
-  const subjectLabel = SUBJECT_LABELS[cleanSubject];
 
-  const plainText = [
-    "New message from the River Valley Conference website",
-    "",
-    `Name: ${cleanName}`,
-    `Email: ${cleanEmail}`,
-    `School/Organization: ${cleanSchool || "Not provided"}`,
-    `Subject: ${subjectLabel}`,
-    "",
-    "Message:",
-    cleanMessage,
-  ].join("\n");
-
-  const html = `
-    <h2>New message from the River Valley Conference website</h2>
-    <p><strong>Name:</strong> ${escapeHtml(cleanName)}</p>
-    <p><strong>Email:</strong> ${escapeHtml(cleanEmail)}</p>
-    <p><strong>School/Organization:</strong> ${escapeHtml(cleanSchool || "Not provided")}</p>
-    <p><strong>Subject:</strong> ${escapeHtml(subjectLabel)}</p>
-    <hr />
-    <p style="white-space: pre-wrap">${escapeHtml(cleanMessage)}</p>
-  `;
-
-  let emailResponse: Response;
+  let relayResponse: Response;
   try {
-    emailResponse = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(env.CLOUDFLARE_ACCOUNT_ID)}/email/sending/send`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_API_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: {
-            address: env.CONTACT_FROM_EMAIL,
-            name: "River Valley Conference Website",
-          },
-          to: env.CONTACT_RECIPIENT,
-          reply_to: {
-            address: cleanEmail,
-            name: cleanName,
-          },
-          subject: `[RVC Website] ${subjectLabel}`,
-          text: plainText,
-          html,
-        }),
-        signal: AbortSignal.timeout(10_000),
-      },
-    );
+    relayResponse = await fetch(relayUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "rvc-contact",
+        secret: env.CONTACT_FORM_SECRET,
+        name: cleanName,
+        email: cleanEmail,
+        school: cleanSchool,
+        subject: cleanSubject,
+        subjectLabel: SUBJECT_LABELS[cleanSubject],
+        message: cleanMessage,
+      }),
+      redirect: "follow",
+      signal: AbortSignal.timeout(10_000),
+    });
   } catch (error) {
-    console.error("Cloudflare Email Service request failed.", error);
+    console.error("Google Apps Script relay request failed.", error);
     return jsonResponse({ error: "We could not send your message. Please try again." }, 502);
   }
 
-  let emailResult: CloudflareEmailResponse | null = null;
+  let relayResult: RelayResponse | null = null;
   try {
-    emailResult = (await emailResponse.json()) as CloudflareEmailResponse;
+    relayResult = (await relayResponse.json()) as RelayResponse;
   } catch {
-    // The HTTP status still gives us a reliable failure signal if the body is not JSON.
+    relayResult = null;
   }
 
-  if (!emailResponse.ok || !emailResult?.success) {
-    console.error("Cloudflare Email Service rejected a contact message.", {
-      status: emailResponse.status,
-      errors: emailResult?.errors,
+  if (!relayResponse.ok || relayResult?.ok !== true) {
+    console.error("Google Apps Script relay rejected a contact message.", {
+      status: relayResponse.status,
+      error: relayResult?.error,
     });
     return jsonResponse({ error: "We could not send your message. Please try again." }, 502);
   }
