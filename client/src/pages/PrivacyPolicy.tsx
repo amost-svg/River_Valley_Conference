@@ -1,238 +1,122 @@
-import { ArrowLeft, Shield, Eye, Lock, Users, Mail, Calendar, Database } from "lucide-react";
+import { ArrowLeft, Database, Eye, Lock, Mail, Shield, Users } from "lucide-react";
 import { Link } from "wouter";
+import Seo from "@/components/Seo";
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link href="/" className="inline-flex items-center text-conference-navy hover:text-conference-blue transition-colors mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
+    <div className="min-h-screen bg-gray-50">
+      <Seo
+        title="Privacy Policy | River Valley Conference"
+        description="Privacy policy for the official River Valley Conference website, including contact forms, conference accounts, Cloudflare, Supabase, and Google services."
+        url="/privacy-policy"
+      />
+
+      <div className="bg-white shadow-sm">
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+          <Link href="/" className="mb-4 inline-flex items-center text-conference-navy transition-colors hover:text-blue-700">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
           </Link>
           <div className="flex items-center">
-            <Shield className="h-8 w-8 text-conference-green mr-3" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Privacy Policy</h1>
+            <Shield className="mr-3 h-8 w-8 text-conference-green" />
+            <h1 className="text-3xl font-bold text-gray-900">Privacy Policy</h1>
           </div>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">
-            Effective Date: January 1, 2025 | Last Updated: January 1, 2025
-          </p>
+          <p className="mt-2 text-gray-600">Effective and last updated: August 7, 2026</p>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8">
-          
-          {/* Introduction */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Eye className="h-6 w-6 text-conference-blue mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Introduction</h2>
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="space-y-9 rounded-lg bg-white p-8 shadow-sm">
+          <section>
+            <div className="mb-4 flex items-center">
+              <Eye className="mr-2 h-6 w-6 text-conference-blue" />
+              <h2 className="text-2xl font-semibold text-gray-900">Overview</h2>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              The River Valley Conference ("RVC," "we," "us," or "our") is committed to protecting the privacy and security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services related to high school athletic conference management.
+            <p className="leading-relaxed text-gray-700">
+              The River Valley Conference (RVC) operates this website to publish conference schedules, standings, school information, announcements, and other official conference information. This policy describes the information the site collects and the services used to operate it.
             </p>
           </section>
 
-          {/* Information We Collect */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Database className="h-6 w-6 text-conference-green mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Information We Collect</h2>
+          <section>
+            <div className="mb-4 flex items-center">
+              <Database className="mr-2 h-6 w-6 text-conference-green" />
+              <h2 className="text-2xl font-semibold text-gray-900">Information We Collect</h2>
             </div>
-            
-            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-3">Personal Information You Provide</h3>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 mb-4 space-y-2">
-              <li><strong>Contact Information:</strong> Name, email address, phone number, and school affiliation when you submit contact forms or register for services</li>
-              <li><strong>Athletic Director Information:</strong> Professional credentials, school association, and authentication details for administrative access</li>
-              <li><strong>Game Result Submissions:</strong> Team names, scores, game details, and contact information when submitting game results</li>
-              <li><strong>Communication Records:</strong> Messages, inquiries, and correspondence sent through our contact forms</li>
-            </ul>
+            <div className="space-y-4 text-gray-700">
+              <p><strong>Public website use.</strong> Most visitors can browse schedules, standings, school profiles, and announcements without creating an account.</p>
+              <p><strong>Contact forms.</strong> When you send a message through the RVC contact form, we receive the name, email address, school or organization (if provided), inquiry category, and message you submit.</p>
+              <p><strong>Conference accounts.</strong> Authorized principals, athletic directors, conference officials, and administrators may have accounts containing their email address, name, school affiliation, conference role, authentication information, and records of actions taken within conference workflows.</p>
+              <p><strong>Operational data.</strong> The hosting and security providers used by the site may process technical information such as IP address, browser information, request timing, and security signals needed to deliver and protect the service.</p>
+            </div>
+          </section>
 
-            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-3">Information Automatically Collected</h3>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 mb-4 space-y-2">
-              <li><strong>Usage Data:</strong> Pages visited, time spent on site, click patterns, and navigation behavior</li>
-              <li><strong>Device Information:</strong> IP address, browser type, operating system, and device identifiers</li>
-              <li><strong>Log Files:</strong> Server logs including access times, error reports, and system performance data</li>
+          <section>
+            <div className="mb-4 flex items-center">
+              <Users className="mr-2 h-6 w-6 text-conference-gold" />
+              <h2 className="text-2xl font-semibold text-gray-900">How We Use Information</h2>
+            </div>
+            <ul className="list-disc space-y-2 pl-6 text-gray-700">
+              <li>Respond to conference inquiries and route messages to appropriate conference personnel.</li>
+              <li>Authenticate authorized conference users and apply role-based access to administrative tools.</li>
+              <li>Manage schedules, results, standings, conference events, school information, and official conference records.</li>
+              <li>Protect the website against spam, automated abuse, unauthorized access, and other security threats.</li>
+              <li>Diagnose errors and maintain the reliability of the conference website.</li>
             </ul>
           </section>
 
-          {/* How We Use Information */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Users className="h-6 w-6 text-conference-gold mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">How We Use Your Information</h2>
+          <section>
+            <div className="mb-4 flex items-center">
+              <Lock className="mr-2 h-6 w-6 text-conference-navy" />
+              <h2 className="text-2xl font-semibold text-gray-900">Services Used by the Website</h2>
             </div>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li><strong>Conference Administration:</strong> Managing athletic schedules, game results, and conference standings</li>
-              <li><strong>Communication:</strong> Responding to inquiries, sending conference updates, and facilitating school-to-school communication</li>
-              <li><strong>Authentication:</strong> Verifying Athletic Director credentials and maintaining secure access to administrative features</li>
-              <li><strong>Website Improvement:</strong> Analyzing usage patterns to enhance user experience and website functionality</li>
-              <li><strong>Compliance:</strong> Meeting IHSA requirements and maintaining accurate athletic records</li>
-              <li><strong>Security:</strong> Protecting against fraud, unauthorized access, and ensuring data integrity</li>
-            </ul>
+            <div className="space-y-4 text-gray-700">
+              <p><strong>Cloudflare.</strong> RVC uses Cloudflare to host and deliver the website and Cloudflare Turnstile to help protect public forms from automated abuse.</p>
+              <p><strong>Supabase.</strong> RVC uses Supabase for the conference database, authentication, role-based access, and related application services. Public data is separated from authenticated conference information through database access controls.</p>
+              <p><strong>Google Workspace.</strong> The contact form uses a protected server-side relay to deliver inquiries through the conference's Google Workspace email setup. Authorized users may also use Google authentication where configured.</p>
+              <p>These providers process information as necessary to provide their services and maintain their own privacy and security practices.</p>
+            </div>
           </section>
 
-          {/* Information Sharing */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Lock className="h-6 w-6 text-conference-navy mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Information Sharing and Disclosure</h2>
+          <section>
+            <div className="mb-4 flex items-center">
+              <Shield className="mr-2 h-6 w-6 text-conference-green" />
+              <h2 className="text-2xl font-semibold text-gray-900">Data Access and Security</h2>
             </div>
-            
-            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-3">We Share Information With:</h3>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 mb-4 space-y-2">
-              <li><strong>Member Schools:</strong> Athletic Directors and school officials within the RVC network for legitimate conference business</li>
-              <li><strong>IHSA:</strong> Illinois High School Association for compliance and reporting requirements</li>
-              <li><strong>Service Providers:</strong> Trusted third-party vendors who assist with website hosting, email services, and technical support</li>
-              <li><strong>Legal Compliance:</strong> Law enforcement or regulatory bodies when required by law or to protect rights and safety</li>
-            </ul>
-
-            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-3">We Do NOT Share Information With:</h3>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li>Commercial advertisers or marketing companies</li>
-              <li>Data brokers or information resellers</li>
-              <li>Unauthorized third parties for profit</li>
-              <li>Social media platforms beyond official RVC accounts</li>
-            </ul>
-          </section>
-
-          {/* Data Security */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Shield className="h-6 w-6 text-conference-green mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Data Security</h2>
-            </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. These measures include:
-            </p>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li>Encrypted data transmission using SSL/TLS protocols</li>
-              <li>Secure database storage with access controls</li>
-              <li>Regular security audits and vulnerability assessments</li>
-              <li>Staff training on data protection best practices</li>
-              <li>Incident response procedures for potential breaches</li>
-            </ul>
-          </section>
-
-          {/* Your Rights */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Users className="h-6 w-6 text-conference-blue mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Your Rights and Choices</h2>
-            </div>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li><strong>Access:</strong> Request a copy of the personal information we hold about you</li>
-              <li><strong>Correction:</strong> Request correction of inaccurate or incomplete information</li>
-              <li><strong>Deletion:</strong> Request deletion of your personal information, subject to legal requirements</li>
-              <li><strong>Opt-Out:</strong> Unsubscribe from non-essential communications</li>
-              <li><strong>Data Portability:</strong> Request your data in a portable format where technically feasible</li>
-            </ul>
-          </section>
-
-          {/* Cookies and Tracking */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Eye className="h-6 w-6 text-conference-gold mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Cookies and Tracking Technologies</h2>
-            </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              We use cookies and similar technologies to enhance your browsing experience, analyze website usage, and maintain login sessions. You can control cookie settings through your browser preferences.
-            </p>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li><strong>Essential Cookies:</strong> Required for basic website functionality and security</li>
-              <li><strong>Analytics Cookies:</strong> Help us understand how visitors use our website</li>
-              <li><strong>Preference Cookies:</strong> Remember your settings and preferences</li>
-            </ul>
-          </section>
-
-          {/* Third-Party Services */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Calendar className="h-6 w-6 text-conference-navy mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Third-Party Services</h2>
-            </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              Our website integrates with third-party services to provide enhanced functionality:
-            </p>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li><strong>Google Calendar:</strong> For athletic schedule synchronization and event management</li>
-              <li><strong>Streaming Platforms:</strong> NFHS Network and YouTube for game broadcasts</li>
-              <li><strong>Email Services:</strong> For contact form delivery and official communications</li>
-            </ul>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mt-4">
-              These services have their own privacy policies, and we encourage you to review them.
+            <p className="leading-relaxed text-gray-700">
+              RVC limits administrative access according to conference and school roles. Internal conference documents and administrative workflows are not intended for anonymous public access. Data is transmitted over HTTPS, and the application uses database access controls and authentication to separate public information from restricted conference information. No system can guarantee absolute security, but RVC aims to collect only the information reasonably needed to operate the conference website and platform.
             </p>
           </section>
 
-          {/* Data Retention */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Database className="h-6 w-6 text-conference-green mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Data Retention</h2>
+          <section>
+            <div className="mb-4 flex items-center">
+              <Database className="mr-2 h-6 w-6 text-conference-blue" />
+              <h2 className="text-2xl font-semibold text-gray-900">Retention and Corrections</h2>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              We retain personal information for as long as necessary to fulfill the purposes outlined in this policy, comply with legal obligations, and resolve disputes. Specific retention periods include:
-            </p>
-            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li><strong>Athletic Records:</strong> Maintained per IHSA requirements (typically 7 years)</li>
-              <li><strong>Contact Information:</strong> Until withdrawal of consent or account deactivation</li>
-              <li><strong>Website Logs:</strong> Retained for 12 months for security and performance analysis</li>
-              <li><strong>Communication Records:</strong> Retained for 3 years for operational purposes</li>
-            </ul>
-          </section>
-
-          {/* Children's Privacy */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Shield className="h-6 w-6 text-conference-blue mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Children's Privacy</h2>
-            </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              Our website is designed for use by Athletic Directors, school officials, parents, and fans. We do not knowingly collect personal information from children under 13 without parental consent. If we learn that we have inadvertently collected such information, we will promptly delete it.
+            <p className="leading-relaxed text-gray-700">
+              Conference records may be retained when they remain useful for official conference operations, historical records, accountability, or legal obligations. Contact messages and account information may be removed when they are no longer needed. If you believe information about you is inaccurate or should be reviewed, use the contact form on the RVC website.
             </p>
           </section>
 
-          {/* Changes to Policy */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Mail className="h-6 w-6 text-conference-gold mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Changes to This Privacy Policy</h2>
+          <section>
+            <div className="mb-4 flex items-center">
+              <Users className="mr-2 h-6 w-6 text-conference-gold" />
+              <h2 className="text-2xl font-semibold text-gray-900">Student Information</h2>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              We may update this Privacy Policy periodically to reflect changes in our practices, services, or legal requirements. We will notify users of significant changes by posting the updated policy on our website with a new effective date. Your continued use of our services after such changes constitutes acceptance of the updated policy.
+            <p className="leading-relaxed text-gray-700">
+              The public RVC website is intended primarily to publish conference information. RVC does not intentionally publish private student application, academic, contact, or recommendation information through public conference records. Public recognition information, such as an approved student's name, school, award, or athletic result, may be published as part of normal conference reporting.
             </p>
           </section>
 
-          {/* Contact Information */}
-          <section className="mb-8">
-            <div className="flex items-center mb-4">
-              <Mail className="h-6 w-6 text-conference-navy mr-2" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Contact Us</h2>
+          <section>
+            <div className="mb-4 flex items-center">
+              <Mail className="mr-2 h-6 w-6 text-conference-navy" />
+              <h2 className="text-2xl font-semibold text-gray-900">Contact and Policy Changes</h2>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:
+            <p className="leading-relaxed text-gray-700">
+              Questions about this policy or the handling of information can be submitted through the contact form on <Link href="/#contact" className="font-semibold text-conference-navy underline">rvc-il.com</Link>. This policy may be updated as the RVC website and conference platform change; the date at the top of this page will reflect the current version.
             </p>
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              <p className="text-gray-700 dark:text-gray-300">
-                <strong>River Valley Conference</strong><br />
-                Email: <a href="mailto:principals@rvc-il.com" className="text-conference-blue hover:text-conference-navy">principals@rvc-il.com</a><br />
-                Subject Line: "Privacy Policy Inquiry"
-              </p>
-            </div>
           </section>
-
-          {/* Footer */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-8">
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              This Privacy Policy is part of our commitment to transparency and user protection.<br />
-              River Valley Conference - Serving 10 member schools in northeastern Illinois.
-            </p>
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
