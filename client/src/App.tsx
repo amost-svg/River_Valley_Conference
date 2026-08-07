@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import AdminDashboardV2 from "@/pages/AdminDashboardV2";
+import AccountManagement from "@/pages/AccountManagement";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
 import ConferenceContentAdmin from "@/pages/ConferenceContentAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
@@ -68,7 +69,6 @@ function Router() {
       <Route path="/conference-admin" component={AdminDashboardRoute} />
       <Route path="/conference-admin/dashboard" component={AdminDashboardRoute} />
 
-      {/* Existing specialist tools remain available while their workflows are folded into the main dashboard. */}
       <Route path="/conference-admin/core" component={() => (
         <ProtectedRoute>
           <ConferenceAdmin />
@@ -87,6 +87,11 @@ function Router() {
       <Route path="/conference-admin/content" component={() => (
         <ProtectedRoute>
           <ConferenceContentAdmin />
+        </ProtectedRoute>
+      )} />
+      <Route path="/conference-admin/users" component={() => (
+        <ProtectedRoute>
+          <AccountManagement />
         </ProtectedRoute>
       )} />
       <Route path="/schools/:id" component={School} />
