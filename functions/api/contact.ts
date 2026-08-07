@@ -105,7 +105,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     !isEmail(email) ||
     !isStringWithin(message, 10, 4_000) ||
     typeof subject !== "string" ||
-    !(subject in SUBJECT_LABELS) ||
+    !Object.prototype.hasOwnProperty.call(SUBJECT_LABELS, subject) ||
     (school !== undefined && school !== null && !isStringWithin(school, 0, 160)) ||
     typeof turnstileToken !== "string" ||
     turnstileToken.length < 1 ||
