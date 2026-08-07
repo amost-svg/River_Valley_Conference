@@ -1,4 +1,5 @@
 const RVC_CONTACT_RECIPIENT = "contact@rvc-il.com";
+const RVC_CONTACT_DIRECT_COPY = "amost@gracecrusaders.org";
 const RVC_CONTACT_TYPE = "rvc-contact";
 
 function doPost(e) {
@@ -48,6 +49,7 @@ function doPost(e) {
 
     MailApp.sendEmail({
       to: RVC_CONTACT_RECIPIENT,
+      cc: RVC_CONTACT_DIRECT_COPY,
       subject: "[RVC Website] " + subjectLabel,
       body: plainText,
       htmlBody: htmlBody,
