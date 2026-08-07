@@ -25,7 +25,10 @@ interface TurnstileVerification {
 interface RelayResponse {
   ok?: boolean;
   error?: string;
+  sender?: string;
 }
+
+const EXPECTED_RELAY_SENDER = "website@rvc-il.com";
 
 const SUBJECT_LABELS: Record<ContactSubject, string> = {
   schedules: "Schedules & Results",
@@ -191,12 +194,20 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     relayResult = null;
   }
 
-  if (!relayResponse.ok || relayResult?.ok !== true) {
-    console.error("Google Apps Script relay rejected a contact message.", {
+  if (
+    !relayResponse.ok ||
+    relayResult?.ok !== true ||
+    relayResult?.sender?.toLowerCase() !== EXPECTED_RELAY_SENDER
+  ) {
+    console.error("Google Apps Script relay is not on the current RVC sender deployment.", {
       status: relayResponse.status,
       error: relayResult?.error,
+      sender: relayResult?.sender,
     });
-    return jsonResponse({ error: "We could not send your message. Please try again." }, 502);
+    return jsonResponse(
+      { error: "The RVC email relay needs to be redeployed. Please try again shortly." },
+      502,
+    );
   }
 
   return jsonResponse({ success: true });
