@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { User, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { publicInsertRows, publicSelect } from "@/lib/rvcData";
+import { publicSelect } from "@/lib/rvcData";
 import TurnstileWidget from "@/components/TurnstileWidget";
 
 const contactFormSchema = z.object({
@@ -37,7 +37,7 @@ export default function ContactSection() {
   const { toast } = useToast();
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileSiteKey = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim() || "";
-  
+
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
@@ -49,7 +49,6 @@ export default function ContactSection() {
     },
   });
 
-  // Fetch conference officials from database
   const { data: conferenceOfficials, isLoading: officialsLoading } = useQuery({
     queryKey: ["public-conference-officials"],
     queryFn: () => publicSelect<ConferenceOfficial[]>(
@@ -83,20 +82,6 @@ export default function ContactSection() {
         throw new Error(result.error || "Failed to send message. Please try again.");
       }
 
-      // Keep the existing contact-submission record as a secondary audit trail.
-      try {
-        await publicInsertRows("contact_submissions", {
-          name: data.name.trim(),
-          email: data.email.trim().toLowerCase(),
-          school: data.school?.trim() || null,
-          subject: data.subject,
-          message: data.message.trim(),
-          status: "new",
-        });
-      } catch (error) {
-        console.warn("Contact email sent, but the submission log could not be saved.", error);
-      }
-
       return result;
     },
     onSuccess: () => {
@@ -128,54 +113,51 @@ export default function ContactSection() {
       icon: Phone,
       title: "General Conference Information",
       content: "Contact your school's Athletic Director or Principal for conference-related inquiries",
-      bgColor: "bg-conference-navy"
+      bgColor: "bg-conference-navy",
     },
     {
       icon: MapPin,
       title: "River Valley Conference",
-      content: "Serving schools throughout central Illinois with excellence in high school athletics",
-      bgColor: "bg-conference-green"
-    }
+      content: "Serving schools throughout northeastern Illinois with excellence in high school athletics",
+      bgColor: "bg-conference-green",
+    },
   ];
 
   return (
-    <section id="contact" className="py-16 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Contact Us</h2>
+    <section id="contact" className="bg-gray-50 py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-12 text-center">
+          <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">Contact Us</h2>
           <p className="text-lg text-gray-600">Get in touch with conference administration</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Contact Info */}
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
           <div>
-            <h3 className="text-2xl font-semibold mb-6 text-gray-900">Conference Information</h3>
-            
+            <h3 className="mb-6 text-2xl font-semibold text-gray-900">Conference Information</h3>
             <div className="space-y-4">
-              {contactInfo.map((info, index) => {
+              {contactInfo.map((info) => {
                 const Icon = info.icon;
                 return (
-                  <div key={index} className="flex items-start">
-                    <div className={`${info.bgColor} text-white p-3 rounded-lg mr-4 flex-shrink-0`}>
+                  <div key={info.title} className="flex items-start">
+                    <div className={`${info.bgColor} mr-4 flex-shrink-0 rounded-lg p-3 text-white`}>
                       <Icon className="h-6 w-6" />
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900">{info.title}</h4>
-                      <p className="text-gray-600 whitespace-pre-line">{info.content}</p>
+                      <p className="whitespace-pre-line text-gray-600">{info.content}</p>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Conference Officials */}
             <div className="mt-8">
-              <h4 className="text-lg font-semibold mb-4 text-gray-900">Conference Officials</h4>
+              <h4 className="mb-4 text-lg font-semibold text-gray-900">Conference Officials</h4>
               <div className="space-y-3">
                 {officialsLoading
                   ? Array.from({ length: 4 }).map((_, index) => (
                       <div key={index} className="flex items-center">
-                        <Skeleton className="h-8 w-8 rounded-lg mr-3" />
+                        <Skeleton className="mr-3 h-8 w-8 rounded-lg" />
                         <div className="space-y-1">
                           <Skeleton className="h-4 w-24" />
                           <Skeleton className="h-3 w-32" />
@@ -185,7 +167,7 @@ export default function ContactSection() {
                     ))
                   : conferenceOfficials?.map((official) => (
                       <div key={official.id} className="flex items-center">
-                        <div className="bg-conference-green text-white p-2 rounded-lg mr-3 flex-shrink-0">
+                        <div className="mr-3 flex-shrink-0 rounded-lg bg-conference-green p-2 text-white">
                           <User className="h-4 w-4" />
                         </div>
                         <div>
@@ -194,17 +176,15 @@ export default function ContactSection() {
                           {official.school?.name && <p className="text-sm text-gray-500">{official.school.name}</p>}
                         </div>
                       </div>
-                    ))
-                }
+                    ))}
               </div>
             </div>
           </div>
 
-          {/* Contact Form */}
           <Card className="shadow-md">
             <CardContent className="p-8">
-              <h3 className="text-2xl font-semibold mb-6 text-gray-900">Send a Message</h3>
-              
+              <h3 className="mb-6 text-2xl font-semibold text-gray-900">Send a Message</h3>
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <FormField
@@ -213,9 +193,7 @@ export default function ContactSection() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your full name" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="Your full name" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -227,9 +205,7 @@ export default function ContactSection() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="your.email@example.com" {...field} />
-                        </FormControl>
+                        <FormControl><Input type="email" placeholder="your.email@example.com" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -241,9 +217,7 @@ export default function ContactSection() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>School/Organization</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your school or organization" {...field} value={field.value || ""} />
-                        </FormControl>
+                        <FormControl><Input placeholder="Your school or organization" {...field} value={field.value || ""} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -256,11 +230,7 @@ export default function ContactSection() {
                       <FormItem>
                         <FormLabel>Subject</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a subject" />
-                            </SelectTrigger>
-                          </FormControl>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select a subject" /></SelectTrigger></FormControl>
                           <SelectContent>
                             <SelectItem value="schedules">Schedules & Results</SelectItem>
                             <SelectItem value="membership">Membership Inquiry</SelectItem>
@@ -280,13 +250,7 @@ export default function ContactSection() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Message</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Please provide details about your inquiry..."
-                            className="min-h-[120px]"
-                            {...field}
-                          />
-                        </FormControl>
+                        <FormControl><Textarea placeholder="Please provide details about your inquiry..." className="min-h-[120px]" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -296,15 +260,13 @@ export default function ContactSection() {
                     {turnstileSiteKey ? (
                       <TurnstileWidget siteKey={turnstileSiteKey} onToken={setTurnstileToken} />
                     ) : (
-                      <p className="text-sm text-red-600">
-                        Contact form verification is not configured yet.
-                      </p>
+                      <p className="text-sm text-red-600">Contact form verification is not configured yet.</p>
                     )}
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-conference-navy text-white hover:bg-blue-800 py-3 text-lg font-semibold"
+                  <Button
+                    type="submit"
+                    className="w-full bg-conference-navy py-3 text-lg font-semibold text-white hover:bg-blue-800"
                     disabled={contactMutation.isPending || !turnstileSiteKey || !turnstileToken}
                   >
                     {contactMutation.isPending ? "Sending..." : "Send Message"}
