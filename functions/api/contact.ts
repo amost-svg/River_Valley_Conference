@@ -1,4 +1,3 @@
-// Deployment refresh: use the current Apps Script relay URL from Cloudflare environment settings.
 interface Env {
   GOOGLE_SCRIPT_CONTACT_URL: string;
   CONTACT_FORM_SECRET: string;
@@ -30,6 +29,8 @@ interface RelayResponse {
 }
 
 const EXPECTED_RELAY_SENDER = "website@rvc-il.com";
+const SUPABASE_URL = "https://vekqbtfojdnnkdernxzp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KzpxK6h4qY6uH_HJL4oMJw_9nQJyv9N";
 
 const SUBJECT_LABELS: Record<ContactSubject, string> = {
   schedules: "Schedules & Results",
@@ -66,6 +67,41 @@ const configuredHttpsUrl = (value: string | undefined) => {
     return null;
   }
 };
+
+async function logVerifiedSubmission(
+  secret: string,
+  data: {
+    name: string;
+    email: string;
+    school: string;
+    subject: ContactSubject;
+    message: string;
+  },
+) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/log_contact_submission`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      p_secret: secret,
+      p_name: data.name,
+      p_email: data.email,
+      p_school: data.school,
+      p_subject: data.subject,
+      p_message: data.message,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Contact audit log returned ${response.status}: ${detail.slice(0, 300)}`);
+  }
+}
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
@@ -209,6 +245,19 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       { error: "The RVC email relay needs to be redeployed. Please try again shortly." },
       502,
     );
+  }
+
+  try {
+    await logVerifiedSubmission(env.CONTACT_FORM_SECRET, {
+      name: cleanName,
+      email: cleanEmail,
+      school: cleanSchool,
+      subject: cleanSubject,
+      message: cleanMessage,
+    });
+  } catch (error) {
+    // The visitor's message was already delivered. Do not turn a logging issue into a false send failure.
+    console.error("Contact message sent, but the secure audit log failed.", error);
   }
 
   return jsonResponse({ success: true });
