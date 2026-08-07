@@ -1,24 +1,12 @@
 User-agent: *
 Allow: /
 
-# Sitemap
-Sitemap: https://rivervalleyconference.com/sitemap.xml
-
-# Disallow admin areas for search engines
-Disallow: /admin/
+# Keep authenticated and server-only areas out of search results.
+Disallow: /admin
+Disallow: /conference-admin
+Disallow: /login
+Disallow: /reset-password
+Disallow: /set-password
 Disallow: /api/
 
-# Allow access to public assets
-Allow: /assets/
-Allow: /public/
-Allow: /*.css
-Allow: /*.js
-Allow: /*.png
-Allow: /*.jpg
-Allow: /*.jpeg
-Allow: /*.gif
-Allow: /*.svg
-Allow: /*.webp
-
-# Crawl delay
-Crawl-delay: 1
+Sitemap: https://rvc-il.com/sitemap.xml

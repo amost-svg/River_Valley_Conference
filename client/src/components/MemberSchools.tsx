@@ -21,10 +21,6 @@ interface SchoolBrand {
   secondary: string;
 }
 
-// The RVC member-school spreadsheet is the source for school names and mascots.
-// It does not include color fields, so the card palette uses each program's
-// established athletic colors. Hex values are web-safe approximations rather
-// than a claim of school-issued brand standards.
 const schoolBrands: Record<string, SchoolBrand> = {
   beecher: { primary: "#F97316", secondary: "#111827" },
   central: { primary: "#1D4ED8", secondary: "#FFFFFF" },
@@ -91,7 +87,7 @@ export default function MemberSchools() {
                   const mascot = school.mascot ?? "RVC Member";
 
                   return (
-                    <Link key={school.id} href={`/schools/${school.id}`}>
+                    <Link key={school.id} href={`/schools/${school.slug}`}>
                       <Card
                         className="group h-full cursor-pointer overflow-hidden border-0 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                         style={{ borderTop: `6px solid ${brand.primary}` }}

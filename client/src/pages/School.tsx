@@ -8,9 +8,11 @@ import { ArrowLeft, Building, ExternalLink, Globe, MapPin, Phone, Play, Trophy, 
 import { publicSelect } from "@/lib/rvcData";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import Seo from "@/components/Seo";
 
 interface PublicSchool {
   id: string;
+  slug: string;
   name: string;
   short_name: string | null;
   mascot: string | null;
@@ -42,22 +44,64 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export default function SchoolPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: schoolRef } = useParams<{ id: string }>();
   const { data: school, isLoading, error } = useQuery<PublicSchool | null>({
-    queryKey: ["public-school", id],
+    queryKey: ["public-school", schoolRef],
     queryFn: async () => {
+      const ref = schoolRef ?? "";
+      const filter = isUuid(ref)
+        ? `id=eq.${encodeURIComponent(ref)}`
+        : `slug=eq.${encodeURIComponent(ref)}`;
       const rows = await publicSelect<PublicSchool[]>(
-        `schools?id=eq.${encodeURIComponent(id)}&is_active=eq.true&select=id,name,short_name,mascot,address_line1,city,state,postal_code,phone,superintendent_name,principal_name,athletic_director_name,website_url,athletics_url,ihsa_url,livestream_url,livestream_platform,mission_statement,logo_path&limit=1`,
+        `schools?${filter}&is_active=eq.true&select=id,slug,name,short_name,mascot,address_line1,city,state,postal_code,phone,superintendent_name,principal_name,athletic_director_name,website_url,athletics_url,ihsa_url,livestream_url,livestream_platform,mission_statement,logo_path&limit=1`,
       );
       return rows[0] ?? null;
     },
-    enabled: Boolean(id),
+    enabled: Boolean(schoolRef),
     staleTime: 5 * 60_000,
   });
 
+  const displayName = school?.short_name ?? school?.name ?? "Member School";
+
   return (
     <div className="min-h-screen bg-slate-50">
+      {school && (
+        <Seo
+          title={`${displayName} ${school.mascot ?? ""} | River Valley Conference`.replace(/\s+/g, " ").trim()}
+          description={`${school.name} is a member of the River Valley Conference in Illinois. View school leadership, contact information, athletics links, and conference resources.`}
+          url={`/schools/${school.slug}`}
+          image={school.logo_path?.startsWith("http") ? school.logo_path : "/logos/RVC Logo.png"}
+          type="organization"
+          structuredData={{
+            "@context": "https://schema.org",
+            "@type": "EducationalOrganization",
+            name: school.name,
+            url: `https://rvc-il.com/schools/${school.slug}`,
+            telephone: school.phone ?? undefined,
+            logo: school.logo_path ?? undefined,
+            address: school.city
+              ? {
+                  "@type": "PostalAddress",
+                  streetAddress: school.address_line1 ?? undefined,
+                  addressLocality: school.city,
+                  addressRegion: school.state ?? "IL",
+                  postalCode: school.postal_code ?? undefined,
+                  addressCountry: "US",
+                }
+              : undefined,
+            memberOf: {
+              "@type": "SportsOrganization",
+              name: "River Valley Conference",
+              url: "https://rvc-il.com",
+            },
+          }}
+        />
+      )}
       <Navigation />
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
         <Link href="/#schools">
@@ -74,7 +118,7 @@ export default function SchoolPage() {
             <CardHeader className="border-b border-slate-200 bg-white p-8">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
                 <div className="flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-conference-navy to-blue-600 text-3xl font-black text-white shadow-lg">
-                  {school.logo_path?.startsWith("http") ? <img src={school.logo_path} alt={`${school.name} logo`} className="h-full w-full object-contain bg-white p-1" /> : initials(school.short_name ?? school.name)}
+                  {school.logo_path?.startsWith("http") ? <img src={school.logo_path} alt={`${school.name} logo`} className="h-full w-full bg-white object-contain p-1" /> : initials(displayName)}
                 </div>
                 <div>
                   <CardTitle className="text-3xl text-slate-950 sm:text-4xl">{school.name}</CardTitle>

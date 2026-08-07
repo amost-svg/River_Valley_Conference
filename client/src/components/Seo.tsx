@@ -1,128 +1,99 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 interface SeoProps {
   title?: string;
   description?: string;
   image?: string;
   url?: string;
-  type?: 'website' | 'article' | 'organization';
-  structuredData?: Record<string, any>;
+  type?: "website" | "article" | "organization";
+  structuredData?: Record<string, unknown>;
+}
+
+const SITE_ORIGIN = "https://rvc-il.com";
+const DEFAULT_IMAGE = "/logos/RVC Logo.png";
+
+function absoluteUrl(value: string) {
+  return new URL(value, SITE_ORIGIN).toString();
 }
 
 export default function Seo({
-  title = 'River Valley Conference - Excellence in High School Athletics',
-  description = 'Official website of the River Valley Conference IHSA organization featuring school directories, sports schedules, conference standings, and athletic programs.',
-  image = '/rvc-og-image.jpg',
+  title = "River Valley Conference | Illinois High School Athletics",
+  description = "Official website of the River Valley Conference featuring 10 IHSA member schools, schedules, standings, conference news, and school profiles.",
+  image = DEFAULT_IMAGE,
   url,
-  type = 'website',
-  structuredData
+  type = "website",
+  structuredData,
 }: SeoProps) {
-  
   useEffect(() => {
-    // Set document title
     document.title = title;
-    
-    // Get current URL if not provided
-    const currentUrl = url || window.location.href;
-    
-    // Helper function to set or update meta tag
-    const setMetaTag = (name: string, content: string, property?: boolean) => {
-      const attribute = property ? 'property' : 'name';
-      let meta = document.querySelector(`meta[${attribute}="${name}"]`);
-      
+
+    const canonicalUrl = url
+      ? absoluteUrl(url)
+      : absoluteUrl(window.location.pathname || "/");
+    const socialImage = absoluteUrl(image);
+
+    const setMetaTag = (name: string, content: string, property = false) => {
+      const attribute = property ? "property" : "name";
+      let meta = document.querySelector<HTMLMetaElement>(`meta[${attribute}="${name}"]`);
       if (!meta) {
-        meta = document.createElement('meta');
+        meta = document.createElement("meta");
         meta.setAttribute(attribute, name);
         document.head.appendChild(meta);
       }
-      
-      meta.setAttribute('content', content);
+      meta.content = content;
     };
 
-    // Basic meta tags
-    setMetaTag('description', description);
-    // Note: viewport is handled by index.html to avoid duplication
-    
-    // Open Graph tags
-    setMetaTag('og:title', title, true);
-    setMetaTag('og:description', description, true);
-    setMetaTag('og:image', image, true);
-    setMetaTag('og:url', currentUrl, true);
-    setMetaTag('og:type', type, true);
-    setMetaTag('og:site_name', 'River Valley Conference', true);
-    
-    // Twitter Card tags
-    setMetaTag('twitter:card', 'summary_large_image');
-    setMetaTag('twitter:title', title);
-    setMetaTag('twitter:description', description);
-    setMetaTag('twitter:image', image);
-    
-    // Additional mobile-friendly meta tags
-    setMetaTag('format-detection', 'telephone=no');
-    setMetaTag('mobile-web-app-capable', 'yes');
-    setMetaTag('apple-mobile-web-app-capable', 'yes');
-    setMetaTag('apple-mobile-web-app-status-bar-style', 'black-translucent');
-    setMetaTag('theme-color', '#1e3a8a'); // Conference navy color
-    
-    // Canonical URL
-    let canonical = document.querySelector('link[rel="canonical"]');
+    setMetaTag("description", description);
+    setMetaTag("robots", "index,follow,max-image-preview:large");
+    setMetaTag("og:title", title, true);
+    setMetaTag("og:description", description, true);
+    setMetaTag("og:image", socialImage, true);
+    setMetaTag("og:url", canonicalUrl, true);
+    setMetaTag("og:type", type, true);
+    setMetaTag("og:site_name", "River Valley Conference", true);
+    setMetaTag("twitter:card", socialImage.endsWith("RVC%20Logo.png") ? "summary" : "summary_large_image");
+    setMetaTag("twitter:title", title);
+    setMetaTag("twitter:description", description);
+    setMetaTag("twitter:image", socialImage);
+    setMetaTag("theme-color", "#0940AE");
+
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.setAttribute('rel', 'canonical');
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
       document.head.appendChild(canonical);
     }
-    canonical.setAttribute('href', currentUrl);
+    canonical.href = canonicalUrl;
 
-    // Add or update structured data
-    if (structuredData) {
-      let scriptTag = document.querySelector('script[type="application/ld+json"]');
-      if (!scriptTag) {
-        scriptTag = document.createElement('script');
-        scriptTag.setAttribute('type', 'application/ld+json');
-        document.head.appendChild(scriptTag);
-      }
-      scriptTag.textContent = JSON.stringify(structuredData);
+    const schema = structuredData ?? {
+      "@context": "https://schema.org",
+      "@type": "SportsOrganization",
+      name: "River Valley Conference",
+      description:
+        "Illinois high school conference serving 10 IHSA member schools through athletics, academics, and fine-arts competition.",
+      url: SITE_ORIGIN,
+      logo: absoluteUrl(DEFAULT_IMAGE),
+      foundingDate: "1940",
+      areaServed: {
+        "@type": "State",
+        name: "Illinois",
+      },
+      memberOf: {
+        "@type": "Organization",
+        name: "Illinois High School Association",
+        url: "https://www.ihsa.org",
+      },
+    };
+
+    let script = document.querySelector<HTMLScriptElement>('script[type="application/ld+json"][data-rvc-seo="true"]');
+    if (!script) {
+      script = document.createElement("script");
+      script.type = "application/ld+json";
+      script.dataset.rvcSeo = "true";
+      document.head.appendChild(script);
     }
-
+    script.textContent = JSON.stringify(schema);
   }, [title, description, image, url, type, structuredData]);
 
-  // Add default organization structured data
-  useEffect(() => {
-    if (!structuredData) {
-      const organizationData = {
-        "@context": "https://schema.org",
-        "@type": "SportsOrganization",
-        "name": "River Valley Conference",
-        "description": "Illinois High School Association conference featuring 10 member schools competing in various athletic programs",
-        "url": window.location.origin,
-        "logo": `${window.location.origin}/rvc-logo.png`,
-        "foundingDate": "1950",
-        "address": {
-          "@type": "PostalAddress",
-          "addressRegion": "Illinois",
-          "addressCountry": "US"
-        },
-        "sport": [
-          "Volleyball", "Soccer", "Basketball", "Baseball", "Softball", 
-          "Track and Field", "Scholastic Bowl", "Cross Country"
-        ],
-        "memberOf": {
-          "@type": "Organization",
-          "name": "Illinois High School Association",
-          "url": "https://www.ihsa.org"
-        }
-      };
-
-      let scriptTag = document.querySelector('script[type="application/ld+json"][data-default="true"]');
-      if (!scriptTag) {
-        scriptTag = document.createElement('script');
-        scriptTag.setAttribute('type', 'application/ld+json');
-        scriptTag.setAttribute('data-default', 'true');
-        document.head.appendChild(scriptTag);
-      }
-      scriptTag.textContent = JSON.stringify(organizationData);
-    }
-  }, [structuredData]);
-
-  return null; // This component doesn't render anything visible
+  return null;
 }

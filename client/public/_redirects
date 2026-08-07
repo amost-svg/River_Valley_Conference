@@ -1,1 +1,7 @@
+/index.html / 301
+/about-us.html /#about 301
+/schools.html /#schools 301
+/home.html / 301
+
+# Preserve client-side routes after the legacy redirects above.
 /* /index.html 200

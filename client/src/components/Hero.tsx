@@ -30,14 +30,10 @@ export default function Hero() {
     const element = document.getElementById(sectionId);
     if (element) {
       const offsetTop = element.offsetTop - 64;
-      window.scrollTo({
-        top: offsetTop,
-        behavior: 'smooth'
-      });
+      window.scrollTo({ top: offsetTop, behavior: "smooth" });
     }
   };
 
-  // School logos in alphabetical order by school name
   const schoolLogos = [
     { slug: "beecher", name: "Beecher", logo: beecherLogo },
     { slug: "central", name: "Central", logo: centralLogo },
@@ -52,44 +48,32 @@ export default function Hero() {
   ];
 
   return (
-    <section id="home" className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-white text-white min-h-screen flex items-center">
-      <div className="relative w-full h-full flex items-center">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="text-center w-full py-20">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white drop-shadow-lg">River Valley Conference</h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-50">Excellence in High School Athletics</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Button 
-                onClick={() => scrollToSection("schedules")}
-                className="bg-conference-gold text-conference-navy hover:bg-yellow-400 px-8 py-3 text-lg font-semibold"
-              >
+    <section id="home" className="relative flex min-h-screen items-center bg-gradient-to-br from-blue-600 via-blue-700 to-white text-white">
+      <div className="relative flex h-full w-full items-center">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="w-full py-20 text-center">
+            <h1 className="mb-4 text-4xl font-bold text-white drop-shadow-lg md:text-6xl">River Valley Conference</h1>
+            <p className="mb-8 text-xl text-blue-50 md:text-2xl">Excellence in High School Athletics</p>
+            <div className="mb-8 flex flex-col justify-center gap-4 sm:flex-row">
+              <Button onClick={() => scrollToSection("schedules")} className="bg-conference-gold px-8 py-3 text-lg font-semibold text-conference-navy hover:bg-yellow-400">
                 View Schedules
               </Button>
-              <Button 
-                onClick={() => scrollToSection("schools")}
-                variant="outline"
-                className="border-2 border-white hover:bg-white hover:text-conference-navy px-8 py-3 text-lg font-semibold text-[#23252f]"
-              >
+              <Button onClick={() => scrollToSection("schools")} variant="outline" className="border-2 border-white px-8 py-3 text-lg font-semibold text-[#23252f] hover:bg-white hover:text-conference-navy">
                 Member Schools
               </Button>
             </div>
-            
-            {/* School Logos - Hidden on mobile */}
-            <div className="hidden md:flex justify-center items-center gap-6 mt-8">
+
+            <div className="mt-8 hidden items-center justify-center gap-6 md:flex">
               {schoolLogos.map((schoolLogo) => {
                 const school = schools?.find((item) => item.slug === schoolLogo.slug);
                 const logo = (
-                  <div className="w-12 h-12 hover:scale-110 transition-transform cursor-pointer bg-white rounded-lg p-1 flex items-center justify-center">
-                    <img
-                      src={schoolLogo.logo}
-                      alt={`${schoolLogo.name} logo`}
-                      className="w-full h-full object-contain"
-                    />
+                  <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-lg bg-white p-1 transition-transform hover:scale-110">
+                    <img src={schoolLogo.logo} alt={`${schoolLogo.name} logo`} className="h-full w-full object-contain" />
                   </div>
                 );
 
                 return school ? (
-                  <Link key={school.id} href={`/schools/${school.id}`}>
+                  <Link key={school.id} href={`/schools/${school.slug}`}>
                     {logo}
                   </Link>
                 ) : (
