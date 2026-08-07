@@ -2,22 +2,30 @@ import { MapPin, Mail } from "lucide-react";
 import { Link } from "wouter";
 import rvcLogoPath from "@assets/RVC logo (3)_1754081720129.png";
 
+interface QuickLink {
+  label: string;
+  sectionId?: string;
+  href?: string;
+}
+
 export default function Footer() {
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      const offsetTop = element.offsetTop - 64;
-      window.scrollTo({ top: offsetTop, behavior: "smooth" });
+  const goToSection = (sectionId: string) => {
+    if (window.location.pathname !== "/") {
+      window.location.assign(`/#${sectionId}`);
+      return;
     }
+    const element = document.getElementById(sectionId);
+    if (element) window.scrollTo({ top: element.offsetTop - 64, behavior: "smooth" });
   };
 
-  const quickLinks = [
-    { id: "home", label: "Home" },
-    { id: "schedules", label: "Schedules & Results" },
-    { id: "schools", label: "Member Schools" },
-    { id: "about", label: "About RVC" },
-    { id: "news", label: "News & Updates" },
-    { id: "contact", label: "Contact" },
+  const quickLinks: QuickLink[] = [
+    { sectionId: "home", label: "Home" },
+    { sectionId: "schedules", label: "Schedules & Results" },
+    { href: "/calendar", label: "Full Calendar" },
+    { sectionId: "schools", label: "Member Schools" },
+    { sectionId: "about", label: "About RVC" },
+    { sectionId: "news", label: "News & Updates" },
+    { sectionId: "contact", label: "Contact" },
   ];
 
   const sports = [
@@ -53,10 +61,14 @@ export default function Footer() {
             <h3 className="mb-4 text-lg font-semibold">Quick Links</h3>
             <ul className="space-y-2">
               {quickLinks.map((link) => (
-                <li key={link.id}>
-                  <button onClick={() => scrollToSection(link.id)} className="text-left text-gray-300 transition-colors hover:text-white">
-                    {link.label}
-                  </button>
+                <li key={link.label}>
+                  {link.href ? (
+                    <Link href={link.href} className="text-gray-300 transition-colors hover:text-white">{link.label}</Link>
+                  ) : (
+                    <button onClick={() => link.sectionId && goToSection(link.sectionId)} className="text-left text-gray-300 transition-colors hover:text-white">
+                      {link.label}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -76,7 +88,7 @@ export default function Footer() {
                 <MapPin className="mr-2 mt-0.5 h-5 w-5 flex-shrink-0" />
                 <span>Serving member schools across northeastern Illinois</span>
               </p>
-              <button onClick={() => scrollToSection("contact")} className="flex items-center text-left transition-colors hover:text-white">
+              <button onClick={() => goToSection("contact")} className="flex items-center text-left transition-colors hover:text-white">
                 <Mail className="mr-2 h-5 w-5 flex-shrink-0" />
                 Send a message through the conference contact form
               </button>

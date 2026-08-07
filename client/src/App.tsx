@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
+import CalendarPage from "@/pages/Calendar";
 import AdminDashboardV2 from "@/pages/AdminDashboardV2";
 import AccountManagement from "@/pages/AccountManagement";
 import ConferenceAdmin from "@/pages/ConferenceAdmin";
@@ -43,7 +44,9 @@ function PublicConferenceRedirect() {
 
 function PublicScheduleRedirect() {
   useEffect(() => {
-    window.location.replace("/#schedules");
+    const sportId = window.location.pathname.split("/")[2];
+    const target = sportId ? `/calendar?sport=${encodeURIComponent(sportId)}` : "/calendar";
+    window.location.replace(target);
   }, []);
   return null;
 }
@@ -60,6 +63,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/calendar" component={CalendarPage} />
       <Route path="/conference" component={PublicConferenceRedirect} />
       <Route path="/conference/tournaments" component={PublicConferenceRedirect} />
       <Route path="/login" component={Login} />

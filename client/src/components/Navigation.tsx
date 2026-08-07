@@ -4,6 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import rvcLogo from "@assets/RVC logo (3)_1754081720129.png";
 
+interface NavItem {
+  label: string;
+  sectionId?: string;
+  href?: string;
+}
+
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -49,15 +55,15 @@ export default function Navigation() {
     setIsMenuOpen(false);
   };
 
-  const navItems = [
-    { id: "home", label: "Home" },
-    { id: "about", label: "About" },
-    { id: "schools", label: "Schools" },
-    { id: "schedules", label: "Schedules" },
-    { id: "events", label: "Events" },
-    { id: "standings", label: "Standings" },
-    { id: "news", label: "News" },
-    { id: "contact", label: "Contact" },
+  const navItems: NavItem[] = [
+    { sectionId: "home", label: "Home" },
+    { sectionId: "about", label: "About" },
+    { sectionId: "schools", label: "Schools" },
+    { sectionId: "schedules", label: "Schedules" },
+    { href: "/calendar", label: "Calendar" },
+    { sectionId: "standings", label: "Standings" },
+    { sectionId: "news", label: "News" },
+    { sectionId: "contact", label: "Contact" },
   ];
 
   return (
@@ -71,8 +77,12 @@ export default function Navigation() {
 
           <div className="hidden md:block">
             <div className="ml-8 flex items-baseline space-x-1">
-              {navItems.map((item) => (
-                <button key={item.id} onClick={() => goToSection(item.id)} className="rounded-md px-2 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-conference-gold">
+              {navItems.map((item) => item.href ? (
+                <Link key={item.label} href={item.href} className="rounded-md px-2 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-conference-gold">
+                  {item.label}
+                </Link>
+              ) : (
+                <button key={item.label} onClick={() => item.sectionId && goToSection(item.sectionId)} className="rounded-md px-2 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-conference-gold">
                   {item.label}
                 </button>
               ))}
@@ -106,10 +116,16 @@ export default function Navigation() {
         <nav ref={mobileMenuRef} id="mobile-menu" className="border-t border-blue-800 bg-conference-navy md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
             {navItems.map((item) => (
-              <li key={item.id}>
-                <button onClick={() => goToSection(item.id)} className="block min-h-[44px] w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-300 transition-colors hover:bg-blue-800 hover:text-white">
-                  {item.label}
-                </button>
+              <li key={item.label}>
+                {item.href ? (
+                  <Link href={item.href} onClick={() => setIsMenuOpen(false)} className="block min-h-[44px] w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-300 transition-colors hover:bg-blue-800 hover:text-white">
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button onClick={() => item.sectionId && goToSection(item.sectionId)} className="block min-h-[44px] w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-300 transition-colors hover:bg-blue-800 hover:text-white">
+                    {item.label}
+                  </button>
+                )}
               </li>
             ))}
             <li className="mt-2 border-t border-blue-800 pt-2">
