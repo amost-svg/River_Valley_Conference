@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { CalendarClock, Database, Home, Newspaper, ShieldCheck } from "lucide-react";
+import { CalendarClock, Database, Home, Newspaper, ShieldCheck, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Seo from "@/components/Seo";
 
@@ -22,6 +22,12 @@ const workspaces = [
     title: "News & Resources",
     description: "Write complete public announcements and manage the private rules, operations guides, and conference resources library.",
   },
+  {
+    href: "/conference-admin/users",
+    icon: UserCog,
+    title: "Account Management",
+    description: "Find missing Principal and Athletic Director accounts, send secure invitations, and assign current school access.",
+  },
 ] as const;
 
 export default function ConferenceWorkspaceHome() {
@@ -29,7 +35,7 @@ export default function ConferenceWorkspaceHome() {
     <div className="min-h-screen bg-slate-50">
       <Seo
         title="RVC Conference Management"
-        description="Secure River Valley Conference management workspace for schedules, results, standings, news, honors, and resources."
+        description="Secure River Valley Conference management workspace for schedules, results, standings, news, honors, resources, and conference accounts."
         type="website"
       />
       <header className="bg-conference-navy text-white">
@@ -48,7 +54,7 @@ export default function ConferenceWorkspaceHome() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2">
           {workspaces.map(({ href, icon: Icon, title, description }) => (
             <div key={href} className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-conference-navy text-white">
