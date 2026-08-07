@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { CalendarClock, Database, Home, Newspaper, ShieldCheck, UserCog } from "lucide-react";
+import { CalendarClock, Clock3, Database, Home, Newspaper, ShieldCheck, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Seo from "@/components/Seo";
 
@@ -9,6 +9,12 @@ const workspaces = [
     icon: Database,
     title: "Conference Data",
     description: "Import and validate schedules, submit and confirm scores, resolve standings ties, manage honors, events, co-ops, and data-quality issues.",
+  },
+  {
+    href: "/conference-admin/verify-schedule",
+    icon: Clock3,
+    title: "Verify Game Times",
+    description: "Review imported home games still showing Time TBA, confirm the actual start time, and correct the game location before the season begins.",
   },
   {
     href: "/conference-admin/games",
