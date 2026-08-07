@@ -151,7 +151,7 @@ export default function ScheduleVerification() {
   const updateDraft = (gameId: string, values: Partial<GameDraft>) => {
     setDrafts((current) => ({
       ...current,
-      [gameId]: { time: "", location: "", ...current[gameId], ...values },
+      [gameId]: { ...(current[gameId] ?? { time: "", location: "" }), ...values },
     }));
   };
 
