@@ -1,3 +1,4 @@
+// Deployment refresh: use the current Apps Script relay URL from Cloudflare environment settings.
 interface Env {
   GOOGLE_SCRIPT_CONTACT_URL: string;
   CONTACT_FORM_SECRET: string;
