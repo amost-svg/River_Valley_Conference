@@ -12,8 +12,8 @@ import ConferenceAdmin from "@/pages/ConferenceAdmin";
 import ConferenceContentAdmin from "@/pages/ConferenceContentAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
 import GameOperations from "@/pages/GameOperations";
-import ScheduleVerification from "@/pages/ScheduleVerification";
 import IntegrationCenter from "@/pages/IntegrationCenter";
+import ScheduleVerification from "@/pages/ScheduleVerification";
 import Login from "@/pages/Login";
 import ResetPassword from "@/pages/ResetPassword";
 import School from "@/pages/School";
@@ -90,14 +90,14 @@ function Router() {
           <GameOperations />
         </ProtectedRoute>
       )} />
-      <Route path="/conference-admin/verify-schedule" component={() => (
-        <ProtectedRoute>
-          <ScheduleVerification />
-        </ProtectedRoute>
-      )} />
       <Route path="/conference-admin/integrations" component={() => (
         <ProtectedRoute>
           <IntegrationCenter />
+        </ProtectedRoute>
+      )} />
+      <Route path="/conference-admin/verify-schedule" component={() => (
+        <ProtectedRoute>
+          <ScheduleVerification />
         </ProtectedRoute>
       )} />
       <Route path="/conference-admin/content" component={() => (
