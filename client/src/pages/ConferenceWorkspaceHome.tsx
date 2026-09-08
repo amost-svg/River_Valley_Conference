@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { CalendarClock, Clock3, Database, Home, Newspaper, ShieldCheck, UserCog } from "lucide-react";
+import { Cable, CalendarClock, Clock3, Database, Home, Newspaper, ShieldCheck, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Seo from "@/components/Seo";
 
@@ -23,6 +23,12 @@ const workspaces = [
     description: "Reschedule, postpone, cancel, or record a conference-authorized forfeit with the required explanation and audit trail.",
   },
   {
+    href: "/conference-admin/integrations",
+    icon: Cable,
+    title: "Integration Center",
+    description: "Manage Arbiter, Horizon, MaxPreps, and future provider connections, mappings, sync health, officiating status, and data conflicts.",
+  },
+  {
     href: "/conference-admin/content",
     icon: Newspaper,
     title: "News & Resources",
@@ -41,7 +47,7 @@ export default function ConferenceWorkspaceHome() {
     <div className="min-h-screen bg-slate-50">
       <Seo
         title="RVC Conference Management"
-        description="Secure River Valley Conference management workspace for schedules, results, standings, news, honors, resources, and conference accounts."
+        description="Secure River Valley Conference management workspace for schedules, results, standings, news, honors, resources, conference accounts, and integrations."
         type="website"
       />
       <header className="bg-conference-navy text-white">
@@ -51,7 +57,7 @@ export default function ConferenceWorkspaceHome() {
           </div>
           <h1 className="mt-3 text-3xl font-bold sm:text-4xl">Manage the RVC Source of Truth</h1>
           <p className="mt-3 max-w-3xl text-slate-200">
-            Approved schedules, results, standings, and public announcements entered here feed the public website. Rules and conference documents remain inside this signed-in domain.
+            Approved schedules, results, standings, and public announcements entered here feed the public website. Rules, conference documents, and provider integrations remain inside this signed-in domain.
           </p>
           <div className="mt-6">
             <Link href="/"><Button className="bg-conference-gold text-conference-navy hover:bg-yellow-400"><Home className="mr-2 h-4 w-4" /> Open public homepage</Button></Link>
