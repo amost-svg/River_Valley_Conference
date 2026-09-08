@@ -12,6 +12,7 @@ import ConferenceAdmin from "@/pages/ConferenceAdmin";
 import ConferenceContentAdmin from "@/pages/ConferenceContentAdmin";
 import ConferenceWorkspaceHome from "@/pages/ConferenceWorkspaceHome";
 import GameOperations from "@/pages/GameOperations";
+import IntegrationCenter from "@/pages/IntegrationCenter";
 import ScheduleVerification from "@/pages/ScheduleVerification";
 import Login from "@/pages/Login";
 import ResetPassword from "@/pages/ResetPassword";
@@ -87,6 +88,11 @@ function Router() {
       <Route path="/conference-admin/games" component={() => (
         <ProtectedRoute>
           <GameOperations />
+        </ProtectedRoute>
+      )} />
+      <Route path="/conference-admin/integrations" component={() => (
+        <ProtectedRoute>
+          <IntegrationCenter />
         </ProtectedRoute>
       )} />
       <Route path="/conference-admin/verify-schedule" component={() => (
