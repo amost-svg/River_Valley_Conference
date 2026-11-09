@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import ArbiterAdministration from "@/components/ArbiterAdministration";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Seo from "@/components/Seo";
 import { memberSelect } from "@/lib/rvcData";
 import { getRvcUserContext } from "@/lib/supabaseAuth";
-import { coverageLabel, summarizeOfficiatingCoverage } from "@/lib/integrations";
+
 
 interface ProviderRow {
   provider_key: string;
@@ -150,15 +150,6 @@ export default function IntegrationCenter() {
     },
   });
 
-  const mockCoverage = useMemo(
-    () => summarizeOfficiatingCoverage([
-      { normalized_status: "accepted" },
-      { normalized_status: "accepted" },
-      { normalized_status: "assigned" },
-    ], 3),
-    [],
-  );
-
   if (isLoading) {
     return <div className="min-h-screen bg-slate-50 px-6 py-16 text-center text-slate-600">Loading integration foundation…</div>;
   }
@@ -215,13 +206,14 @@ export default function IntegrationCenter() {
               </p>
             </div>
             <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm text-slate-100">
-              Phase 1 foundation · no production provider credentials required
+              Read-only Arbiter integration · canonical RVC records protected
             </div>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+        <ArbiterAdministration />
         <section className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-3">
@@ -348,24 +340,7 @@ export default function IntegrationCenter() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Normalization contract preview</CardTitle>
-              <CardDescription>This is a Phase 1 fixture, not live provider data.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-xl bg-slate-950 p-5 text-white">
-                <div className="text-sm text-slate-300">Mock 3-person crew</div>
-                <div className="mt-2 text-xl font-bold">{coverageLabel(mockCoverage.status)}</div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-white/10 p-3"><div className="text-xl font-bold">{mockCoverage.assignedCount}</div><div className="text-xs text-slate-300">Assigned</div></div>
-                  <div className="rounded-lg bg-white/10 p-3"><div className="text-xl font-bold">{mockCoverage.acceptedCount}</div><div className="text-xs text-slate-300">Accepted</div></div>
-                  <div className="rounded-lg bg-white/10 p-3"><div className="text-xl font-bold">{mockCoverage.declinedCount}</div><div className="text-xs text-slate-300">Declined</div></div>
-                </div>
-                <p className="mt-4 text-xs leading-5 text-slate-300">Provider-specific statuses are reduced to RVC's small vocabulary before the dashboard uses them.</p>
-              </div>
-            </CardContent>
-          </Card>
+
         </section>
       </main>
     </div>

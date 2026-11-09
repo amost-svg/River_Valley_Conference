@@ -43,11 +43,11 @@ export function normalizeAssignmentStatus(rawStatus: string | null | undefined):
   const value = rawStatus?.trim().toLowerCase();
   if (!value) return "unknown";
 
-  if (REMOVED_WORDS.some((word) => value.includes(word))) return "removed";
-  if (DECLINED_WORDS.some((word) => value.includes(word))) return "declined";
-  if (ACCEPTED_WORDS.some((word) => value.includes(word))) return "accepted";
-  if (ASSIGNED_WORDS.some((word) => value.includes(word))) return "assigned";
-  if (OPEN_WORDS.some((word) => value.includes(word))) return "open";
+  if (REMOVED_WORDS.some((word) => value === word)) return "removed";
+  if (DECLINED_WORDS.some((word) => value === word)) return "declined";
+  if (ACCEPTED_WORDS.some((word) => value === word)) return "accepted";
+  if (ASSIGNED_WORDS.some((word) => value === word)) return "assigned";
+  if (OPEN_WORDS.some((word) => value === word)) return "open";
   return "unknown";
 }
 

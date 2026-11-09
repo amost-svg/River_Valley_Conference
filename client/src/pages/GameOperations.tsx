@@ -1,3 +1,4 @@
+import OfficiatingGames from "@/components/OfficiatingGames";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -139,6 +140,7 @@ export default function GameOperations() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        {selectedGame && <OfficiatingGames gameId={selectedGame.id} />}
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
           <div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 flex-none" /><p>Postponements and cancellations require an explanation. A final result can only be created through the confirmed-score workflow or a conference-authorized forfeit.</p></div>
         </div>

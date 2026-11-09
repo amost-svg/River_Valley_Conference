@@ -12,3 +12,6 @@ uploads
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Supabase CLI transient state
+supabase/.temp/
