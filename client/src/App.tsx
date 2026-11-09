@@ -1,3 +1,4 @@
+import Officiating from "@/pages/Officiating";
 import { useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -85,6 +86,7 @@ function Router() {
           <ConferenceWorkspaceHome />
         </ProtectedRoute>
       )} />
+      <Route path="/admin/officiating" component={() => <ProtectedRoute><Officiating /></ProtectedRoute>} />
       <Route path="/conference-admin/games" component={() => (
         <ProtectedRoute>
           <GameOperations />

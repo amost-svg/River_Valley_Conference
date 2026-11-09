@@ -187,3 +187,10 @@ export function toPostgrestIn(values: string[]): string {
 export function normalizeLookupValue(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
+
+/** Server function invocation carries the current user JWT; the function rechecks
+ * conference membership before accessing any credential. */
+export function refreshArbiter(): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>('/functions/v1/rvc-arbiter-sync',
+    { method: 'POST', body: '{}' }, { authenticated: true });
+}
